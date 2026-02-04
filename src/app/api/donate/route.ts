@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
-import type { DonationInsert } from "@/types/database";
+import type { Donation, DonationInsert } from "@/types/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -69,19 +69,21 @@ export async function POST(request: NextRequest) {
       payment_reference: paymentReference,
     };
 
-    const { data, error } = await supabase
+    const { data: insertedData, error } = await supabase
       .from("donations")
-      .insert(insertData)
+      .insert(insertData as never)
       .select()
       .single();
 
-    if (error) {
+    if (error || !insertedData) {
       console.error("Supabase insert error:", error);
       return NextResponse.json(
         { success: false, error: "Failed to save donation" },
         { status: 500 }
       );
     }
+
+    const data = insertedData as Donation;
 
     // Sync to Google Sheets (async, non-blocking)
     syncDonationToSheets(data).catch(console.error);

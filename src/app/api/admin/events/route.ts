@@ -1,5 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import type { Event, EventInsert, EventSponsorshipInsert } from "@/types/database";
+
+type RegistrationStats = {
+  adults: number;
+  kids: number;
+  subtotal: number;
+  payment_status: string;
+  sponsorship_id: string | null;
+};
 
 export async function GET(request: NextRequest) {
   try {
@@ -20,7 +29,7 @@ export async function GET(request: NextRequest) {
       eventsQuery = eventsQuery.gte("date", startDate).lte("date", endDate);
     }
 
-    const { data: events, error: eventsError } = await eventsQuery;
+    const { data: eventsData, error: eventsError } = await eventsQuery;
 
     if (eventsError) {
       console.error("Supabase events query error:", eventsError);
@@ -30,15 +39,18 @@ export async function GET(request: NextRequest) {
       );
     }
 
+    const events = (eventsData || []) as Event[];
+
     // Get registration stats for each event
     const eventsWithStats = await Promise.all(
-      (events || []).map(async (event) => {
-        const { data: registrations } = await supabase
+      events.map(async (event) => {
+        const { data: registrationsData } = await supabase
           .from("event_registrations")
           .select("adults, kids, subtotal, payment_status, sponsorship_id")
           .eq("event_id", event.id);
 
-        const successful = registrations?.filter((r) => r.payment_status === "success") || [];
+        const registrations = (registrationsData || []) as RegistrationStats[];
+        const successful = registrations.filter((r) => r.payment_status === "success");
 
         return {
           ...event,
@@ -53,12 +65,13 @@ export async function GET(request: NextRequest) {
     );
 
     // Get available years
-    const { data: allEvents } = await supabase
+    const { data: allEventsData } = await supabase
       .from("events")
       .select("date");
 
+    const allEventsDates = (allEventsData || []) as { date: string }[];
     const availableYears = [
-      ...new Set(allEvents?.map((e) => new Date(e.date).getFullYear())),
+      ...new Set(allEventsDates.map((e) => new Date(e.date).getFullYear())),
     ].sort((a, b) => b - a);
 
     // If no years available, add current year
@@ -108,25 +121,27 @@ export async function POST(request: NextRequest) {
     const supabase = createServerClient();
 
     // Create event
-    const { data: event, error: eventError } = await supabase
+    const eventInsert: EventInsert = {
+      slug,
+      title,
+      description: description || null,
+      date,
+      start_time: startTime || null,
+      end_time: endTime || null,
+      location: location || null,
+      location_url: locationUrl || null,
+      image_url: imageUrl || null,
+      price_per_adult: pricePerAdult || 0,
+      kids_price: kidsPrice || 0,
+    };
+
+    const { data: eventData, error: eventError } = await supabase
       .from("events")
-      .insert({
-        slug,
-        title,
-        description: description || null,
-        date,
-        start_time: startTime || null,
-        end_time: endTime || null,
-        location: location || null,
-        location_url: locationUrl || null,
-        image_url: imageUrl || null,
-        price_per_adult: pricePerAdult || 0,
-        kids_price: kidsPrice || 0,
-      })
+      .insert(eventInsert as never)
       .select()
       .single();
 
-    if (eventError) {
+    if (eventError || !eventData) {
       console.error("Supabase event insert error:", eventError);
       return NextResponse.json(
         { success: false, error: "Failed to create event" },
@@ -134,9 +149,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const event = eventData as Event;
+
     // Create sponsorships if provided
     if (sponsorships && sponsorships.length > 0) {
-      const sponsorshipData = sponsorships.map((s: { name: string; price: number; description?: string }) => ({
+      const sponsorshipData: EventSponsorshipInsert[] = sponsorships.map((s: { name: string; price: number; description?: string }) => ({
         event_id: event.id,
         name: s.name,
         price: s.price,
@@ -145,7 +162,7 @@ export async function POST(request: NextRequest) {
 
       const { error: sponsorshipError } = await supabase
         .from("event_sponsorships")
-        .insert(sponsorshipData);
+        .insert(sponsorshipData as never);
 
       if (sponsorshipError) {
         console.error("Supabase sponsorship insert error:", sponsorshipError);

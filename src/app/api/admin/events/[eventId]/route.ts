@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import type { EventRegistration, EventSponsorship } from "@/types/database";
 
 export async function GET(
   request: NextRequest,
@@ -24,23 +25,27 @@ export async function GET(
     }
 
     // Get sponsorships for this event
-    const { data: sponsorships } = await supabase
+    const { data: sponsorshipsData } = await supabase
       .from("event_sponsorships")
       .select("*")
       .eq("event_id", eventId)
       .order("price", { ascending: false });
 
+    const sponsorships = (sponsorshipsData || []) as EventSponsorship[];
+
     // Get registrations for this event
-    const { data: registrations } = await supabase
+    const { data: registrationsData } = await supabase
       .from("event_registrations")
       .select("*")
       .eq("event_id", eventId)
       .order("created_at", { ascending: false });
 
+    const registrations = (registrationsData || []) as EventRegistration[];
+
     // Calculate stats
-    const successful = registrations?.filter((r) => r.payment_status === "success") || [];
-    const failed = registrations?.filter((r) => r.payment_status === "failed") || [];
-    const pending = registrations?.filter((r) => r.payment_status === "pending") || [];
+    const successful = registrations.filter((r) => r.payment_status === "success");
+    const failed = registrations.filter((r) => r.payment_status === "failed");
+    const pending = registrations.filter((r) => r.payment_status === "pending");
 
     const stats = {
       totalRegistrations: successful.length,

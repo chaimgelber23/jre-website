@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncContactToSheets } from "@/lib/google-sheets/sync";
-import type { EmailSignupInsert } from "@/types/database";
+import type { EmailSignup, EmailSignupInsert } from "@/types/database";
 
 export async function POST(request: NextRequest) {
   try {
@@ -38,19 +38,21 @@ export async function POST(request: NextRequest) {
       source: "contact_form",
     };
 
-    const { data, error } = await supabase
+    const { data: insertedData, error } = await supabase
       .from("email_signups")
-      .insert(insertData)
+      .insert(insertData as never)
       .select()
       .single();
 
-    if (error) {
+    if (error || !insertedData) {
       console.error("Supabase insert error:", error);
       return NextResponse.json(
         { success: false, error: "Failed to save contact submission" },
         { status: 500 }
       );
     }
+
+    const data = insertedData as EmailSignup;
 
     // Sync to Google Sheets (async, non-blocking)
     syncContactToSheets(data).catch(console.error);

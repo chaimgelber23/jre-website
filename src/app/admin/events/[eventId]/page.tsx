@@ -100,11 +100,16 @@ export default function EventDetailPage({
     });
   };
 
-  const registrationColumns = [
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const registrationColumns: {
+    key: string;
+    header: string;
+    render: (item: any) => React.ReactNode;
+  }[] = [
     {
       key: "name",
       header: "Attendee",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <div>
           <p className="font-medium text-gray-900">{item.name}</p>
           <p className="text-sm text-gray-500">{item.email}</p>
@@ -114,7 +119,7 @@ export default function EventDetailPage({
     {
       key: "attendees",
       header: "Attendees",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <div className="text-sm">
           <span className="font-medium">{item.adults}</span> adults
           {item.kids > 0 && (
@@ -126,7 +131,7 @@ export default function EventDetailPage({
     {
       key: "sponsorship",
       header: "Sponsorship",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <span className="text-sm">
           {item.sponsorship_name ? (
             <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
@@ -142,7 +147,7 @@ export default function EventDetailPage({
     {
       key: "subtotal",
       header: "Amount",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <span className="font-medium text-gray-900">
           {formatCurrency(item.subtotal)}
         </span>
@@ -151,14 +156,14 @@ export default function EventDetailPage({
     {
       key: "payment_status",
       header: "Status",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <PaymentStatusBadge status={item.payment_status} />
       ),
     },
     {
       key: "created_at",
       header: "Registered",
-      render: (item: EventRegistrationWithSponsorship) => (
+      render: (item) => (
         <span className="text-sm text-gray-500">
           {formatDateTime(item.created_at)}
         </span>

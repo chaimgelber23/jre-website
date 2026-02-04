@@ -34,12 +34,15 @@ export async function GET(request: NextRequest) {
     }
 
     // Get stats
-    const { data: allSignups } = await supabase
+    const { data: allSignupsData } = await supabase
       .from("email_signups")
       .select("created_at, subject");
 
+    type SignupStats = { created_at: string; subject: string | null };
+    const allSignups = (allSignupsData || []) as SignupStats[];
+
     const now = new Date();
-    const thisMonth = allSignups?.filter((s) => {
+    const thisMonth = allSignups.filter((s) => {
       const date = new Date(s.created_at);
       return (
         date.getMonth() === now.getMonth() &&
@@ -47,7 +50,7 @@ export async function GET(request: NextRequest) {
       );
     });
 
-    const bySubject = allSignups?.reduce(
+    const bySubject = allSignups.reduce(
       (acc, s) => {
         const subj = s.subject || "general";
         acc[subj] = (acc[subj] || 0) + 1;

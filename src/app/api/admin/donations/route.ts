@@ -52,9 +52,19 @@ export async function GET(request: NextRequest) {
       .from("donations")
       .select("amount, payment_status, is_recurring, created_at");
 
+    // Type for the stats query result
+    type DonationStats = {
+      amount: number;
+      payment_status: string;
+      is_recurring: boolean;
+      created_at: string;
+    };
+
+    const donations = (allDonations || []) as DonationStats[];
+
     // Calculate stats
-    const successful = allDonations?.filter((d) => d.payment_status === "success") || [];
-    const failed = allDonations?.filter((d) => d.payment_status === "failed") || [];
+    const successful = donations.filter((d) => d.payment_status === "success");
+    const failed = donations.filter((d) => d.payment_status === "failed");
     const recurringDonations = successful.filter((d) => d.is_recurring);
 
     const totalAmount = successful.reduce((sum, d) => sum + Number(d.amount), 0);
@@ -72,7 +82,7 @@ export async function GET(request: NextRequest) {
 
     // Get available years
     const availableYears = [
-      ...new Set(allDonations?.map((d) => new Date(d.created_at).getFullYear())),
+      ...new Set(donations.map((d) => new Date(d.created_at).getFullYear())),
     ].sort((a, b) => b - a);
 
     return NextResponse.json({

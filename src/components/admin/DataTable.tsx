@@ -2,28 +2,30 @@
 
 import { motion } from "framer-motion";
 
-interface Column<T> {
+interface Column {
   key: string;
   header: string;
-  render?: (item: T) => React.ReactNode;
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  render?: (item: any) => React.ReactNode;
   className?: string;
 }
 
-interface DataTableProps<T> {
-  columns: Column<T>[];
-  data: T[];
-  keyField: keyof T;
+interface DataTableProps {
+  columns: Column[];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  data: any[];
+  keyField: string;
   emptyMessage?: string;
   isLoading?: boolean;
 }
 
-export default function DataTable<T extends Record<string, unknown>>({
+export default function DataTable({
   columns,
   data,
   keyField,
   emptyMessage = "No data found",
   isLoading = false,
-}: DataTableProps<T>) {
+}: DataTableProps) {
   if (isLoading) {
     return (
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">

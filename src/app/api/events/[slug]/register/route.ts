@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncRegistrationToSheets } from "@/lib/google-sheets/sync";
-import type { EventRegistrationInsert } from "@/types/database";
+import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
 export async function POST(
   request: NextRequest,
@@ -43,32 +43,35 @@ export async function POST(
     const supabase = createServerClient();
 
     // Get the event by slug
-    const { data: event, error: eventError } = await supabase
+    const { data: eventData, error: eventError } = await supabase
       .from("events")
       .select("*")
       .eq("slug", slug)
       .single();
 
-    if (eventError || !event) {
+    if (eventError || !eventData) {
       return NextResponse.json(
         { success: false, error: "Event not found" },
         { status: 404 }
       );
     }
 
+    const event = eventData as Event;
+
     // Calculate subtotal
     let subtotal = numAdults * event.price_per_adult + numKids * event.kids_price;
 
     // If sponsorship is selected, get sponsorship price
-    let sponsorshipName = null;
+    let sponsorshipName: string | null = null;
     if (sponsorshipId) {
-      const { data: sponsorship } = await supabase
+      const { data: sponsorshipData } = await supabase
         .from("event_sponsorships")
         .select("*")
         .eq("id", sponsorshipId)
         .single();
 
-      if (sponsorship) {
+      if (sponsorshipData) {
+        const sponsorship = sponsorshipData as EventSponsorship;
         subtotal = sponsorship.price; // Sponsorship replaces base price
         sponsorshipName = sponsorship.name;
       }
@@ -94,19 +97,21 @@ export async function POST(
       payment_reference: paymentReference,
     };
 
-    const { data: registration, error: insertError } = await supabase
+    const { data: registrationData, error: insertError } = await supabase
       .from("event_registrations")
-      .insert(insertData)
+      .insert(insertData as never)
       .select()
       .single();
 
-    if (insertError) {
+    if (insertError || !registrationData) {
       console.error("Supabase insert error:", insertError);
       return NextResponse.json(
         { success: false, error: "Failed to save registration" },
         { status: 500 }
       );
     }
+
+    const registration = registrationData as EventRegistration;
 
     // Sync to Google Sheets (async, non-blocking)
     syncRegistrationToSheets(registration, event).catch(console.error);
