@@ -79,8 +79,7 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
 
                         <!-- Header Banner -->
                         <tr>
-                          <td style="background: linear-gradient(135deg, #EF8046 0%, #f59e0b 100%); padding: 40px 30px; text-align: center;">
-                            <div style="font-size: 48px; margin-bottom: 10px;">✨</div>
+                          <td style="background: linear-gradient(135deg, #EF8046 0%, #f59e0b 100%); padding: 50px 30px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Thank You for Your Generosity!</h1>
                           </td>
                         </tr>
@@ -242,8 +241,7 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
 
                         <!-- Header Banner -->
                         <tr>
-                          <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 40px 30px; text-align: center;">
-                            <div style="font-size: 48px; margin-bottom: 10px;">🎉</div>
+                          <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 50px 30px; text-align: center;">
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">You're Registered!</h1>
                           </td>
                         </tr>
@@ -276,43 +274,16 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                                   <h3 style="color: #92400e; font-size: 14px; margin: 0 0 20px; text-transform: uppercase; letter-spacing: 2px;">Event Details</h3>
                                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                     <tr>
-                                      <td style="padding: 12px 0;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0">
-                                          <tr>
-                                            <td style="font-size: 24px; padding-right: 15px; vertical-align: middle;">📅</td>
-                                            <td>
-                                              <div style="color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Date</div>
-                                              <div style="color: #2d3748; font-size: 16px; font-weight: 600;">${data.eventDate}</div>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
+                                      <td style="color: #718096; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">Date</td>
+                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">${data.eventDate}</td>
                                     </tr>
                                     <tr>
-                                      <td style="padding: 12px 0;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0">
-                                          <tr>
-                                            <td style="font-size: 24px; padding-right: 15px; vertical-align: middle;">🕐</td>
-                                            <td>
-                                              <div style="color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Time</div>
-                                              <div style="color: #2d3748; font-size: 16px; font-weight: 600;">${data.eventTime}</div>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
+                                      <td style="color: #718096; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">Time</td>
+                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">${data.eventTime}</td>
                                     </tr>
                                     <tr>
-                                      <td style="padding: 12px 0;">
-                                        <table role="presentation" cellspacing="0" cellpadding="0">
-                                          <tr>
-                                            <td style="font-size: 24px; padding-right: 15px; vertical-align: middle;">📍</td>
-                                            <td>
-                                              <div style="color: #92400e; font-size: 12px; text-transform: uppercase; letter-spacing: 1px;">Location</div>
-                                              <div style="color: #2d3748; font-size: 16px; font-weight: 600;">${data.eventLocation}</div>
-                                            </td>
-                                          </tr>
-                                        </table>
-                                      </td>
+                                      <td style="color: #718096; font-size: 14px; padding: 10px 0;">Location</td>
+                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0;">${data.eventLocation}</td>
                                     </tr>
                                   </table>
                                 </td>
@@ -444,7 +415,6 @@ export async function sendHonoreeNotification(data: HonoreeEmailData) {
                         <!-- Header Banner -->
                         <tr>
                           <td style="background: linear-gradient(135deg, #EF8046 0%, #f59e0b 100%); padding: 50px 30px; text-align: center;">
-                            <div style="font-size: 56px; margin-bottom: 15px;">💝</div>
                             <h1 style="color: #ffffff; margin: 0; font-size: 32px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">You've Been Honored!</h1>
                           </td>
                         </tr>
