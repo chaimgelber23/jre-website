@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { processPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
-import { sheets, SPREADSHEET_ID } from "@/lib/google-sheets/client";
+import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
 // Purim event details
 const PURIM_EVENT = {
@@ -125,44 +125,38 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Sync to Google Sheets - Purim25 sheet
-    if (SPREADSHEET_ID) {
-      try {
-        const values = [
-          [
-            registrationId,
-            new Date().toLocaleString(),
-            name,
-            email,
-            phone,
-            spouseName || "",
-            spouseEmail || "",
-            spousePhone || "",
-            numAdults,
-            numKids,
-            allAttendees.join("; "),
-            sponsorship || "None",
-            sponsorshipAmount || 0,
-            totalAmount,
-            paymentMethod,
-            paymentStatus,
-            paymentReference,
-            message || "",
-          ],
-        ];
+    // Sync to Google Sheets - Auto-creates "Purim25" tab if needed
+    try {
+      const rowData = [
+        registrationId,
+        new Date().toLocaleString(),
+        name,
+        email,
+        phone,
+        spouseName || "",
+        spouseEmail || "",
+        spousePhone || "",
+        numAdults,
+        numKids,
+        allAttendees.join("; "),
+        sponsorship || "None",
+        sponsorshipAmount || 0,
+        totalAmount,
+        paymentMethod,
+        paymentStatus,
+        paymentReference,
+        message || "",
+      ];
 
-        await sheets.spreadsheets.values.append({
-          spreadsheetId: SPREADSHEET_ID,
-          range: "Purim25!A:R",
-          valueInputOption: "USER_ENTERED",
-          requestBody: { values },
-        });
-
+      const sheetResult = await appendEventRegistration("Purim25", rowData);
+      if (sheetResult.success) {
         console.log("Purim registration synced to Google Sheets:", registrationId);
-      } catch (sheetError) {
-        console.error("Failed to sync to Google Sheets:", sheetError);
-        // Don't fail the registration if sheets sync fails
+      } else {
+        console.error("Failed to sync to Google Sheets:", sheetResult.error);
       }
+    } catch (sheetError) {
+      console.error("Failed to sync to Google Sheets:", sheetError);
+      // Don't fail the registration if sheets sync fails
     }
 
     // Optionally save to Supabase if you want to track in the database
