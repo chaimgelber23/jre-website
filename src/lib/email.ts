@@ -1,8 +1,19 @@
 import { Resend } from "resend";
 
-const resend = new Resend(process.env.RESEND_API_KEY);
-
 const FROM_EMAIL = "The JRE <noreply@thejre.org>"; // Will use Resend's domain until you verify thejre.org
+
+// Lazy initialization to avoid build-time errors
+let resendClient: Resend | null = null;
+
+function getResendClient(): Resend | null {
+  if (!process.env.RESEND_API_KEY) {
+    return null;
+  }
+  if (!resendClient) {
+    resendClient = new Resend(process.env.RESEND_API_KEY);
+  }
+  return resendClient;
+}
 
 interface DonationEmailData {
   to: string;
@@ -35,7 +46,8 @@ interface HonoreeEmailData {
 }
 
 export async function sendDonationConfirmation(data: DonationEmailData) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log("Resend API key not configured, skipping email");
     return { success: false, error: "Email not configured" };
   }
@@ -197,7 +209,8 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
 }
 
 export async function sendRegistrationConfirmation(data: RegistrationEmailData) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log("Resend API key not configured, skipping email");
     return { success: false, error: "Email not configured" };
   }
@@ -370,7 +383,8 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
 }
 
 export async function sendHonoreeNotification(data: HonoreeEmailData) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log("Resend API key not configured, skipping email");
     return { success: false, error: "Email not configured" };
   }
@@ -504,7 +518,8 @@ export async function sendContactFormNotification(data: {
   subject?: string;
   message: string;
 }) {
-  if (!process.env.RESEND_API_KEY) {
+  const resend = getResendClient();
+  if (!resend) {
     console.log("Resend API key not configured, skipping email");
     return { success: false, error: "Email not configured" };
   }
