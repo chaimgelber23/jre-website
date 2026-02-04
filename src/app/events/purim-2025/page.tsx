@@ -1,6 +1,7 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -11,12 +12,10 @@ import {
   Users,
   ArrowLeft,
   Plus,
-  Minus,
   Check,
   CreditCard,
   Trash2,
   UserPlus,
-  ChevronDown,
   ChevronUp,
   PartyPopper,
   Music,
@@ -25,7 +24,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import { FadeUp, SlideInLeft, SlideInRight } from "@/components/ui/motion";
+import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
 const purimEvent = {
@@ -38,7 +37,7 @@ const purimEvent = {
   pricePerAdult: 40,
   kidsPrice: 10,
   familyMax: 100,
-  image: "/images/events/Dinner.jpg", // Replace with Purim image when available
+  image: "/images/events/Purim25.jpg",
   description: `Join us for an unforgettable Purim celebration featuring Megillah reading, live music, an open bar, a festive banquet, and activities for kids of all ages!
 
 Experience the joy of Purim with your community as we celebrate together with delicious food, inspiring words, and joyful singing.
@@ -95,6 +94,44 @@ export default function PurimEventPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Elegant confetti celebration when registration is successful
+  useEffect(() => {
+    if (isSubmitted) {
+      // Brand colors: orange and complementary golds
+      const colors = ["#EF8046", "#F5A623", "#D4A574", "#FFD700", "#FFA500"];
+
+      // Fire confetti burst from center
+      const fireConfetti = () => {
+        confetti({
+          particleCount: 80,
+          spread: 70,
+          origin: { y: 0.6 },
+          colors: colors,
+          ticks: 200,
+          gravity: 1.2,
+          scalar: 0.9,
+          drift: 0,
+        });
+      };
+
+      // Initial burst
+      fireConfetti();
+
+      // Second subtle burst after a short delay
+      setTimeout(() => {
+        confetti({
+          particleCount: 40,
+          spread: 100,
+          origin: { y: 0.5 },
+          colors: colors,
+          ticks: 150,
+          gravity: 1,
+          scalar: 0.7,
+        });
+      }, 200);
+    }
+  }, [isSubmitted]);
 
   // Calculate totals
   const baseAdults = 1 + (showFamilyDetails && formState.spouseName ? 1 : 0);
