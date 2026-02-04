@@ -48,7 +48,10 @@ export default function Header() {
         <div className="container mx-auto px-6 lg:px-8">
           <nav className="flex items-center justify-between">
             {/* Logo */}
-            <Link href="/" className="relative z-10">
+            <button
+              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
+              className="relative z-10 cursor-pointer"
+            >
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400 }}
@@ -77,7 +80,7 @@ export default function Header() {
                   />
                 )}
               </motion.div>
-            </Link>
+            </button>
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-10">

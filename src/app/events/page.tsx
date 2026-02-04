@@ -8,8 +8,6 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   FadeUp,
-  StaggerContainer,
-  StaggerItem,
   ScaleOnHover,
 } from "@/components/ui/motion";
 
@@ -108,14 +106,14 @@ export default function EventsPage() {
       {/* Upcoming Events */}
       <section className="section bg-white">
         <div className="container mx-auto px-6">
-          <StaggerContainer className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-            {events.map((event) => (
-              <StaggerItem key={event.id}>
-                <ScaleOnHover scale={1.02}>
+          <div className="overflow-x-auto pb-4 -mx-6 px-6 scrollbar-thin scrollbar-thumb-[#EF8046]/30 scrollbar-track-transparent hover:scrollbar-thumb-[#EF8046]/50">
+            <div className="flex gap-6 min-w-max">
+              {events.map((event) => (
+                <ScaleOnHover key={event.id} scale={1.02}>
                   <Link href={`/events/${event.id}`}>
                     <motion.div
                       whileHover={{ y: -5 }}
-                      className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer h-full flex flex-col"
+                      className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer w-[350px] flex flex-col"
                     >
                       <div className="relative h-48">
                         <Image
@@ -156,9 +154,9 @@ export default function EventsPage() {
                     </motion.div>
                   </Link>
                 </ScaleOnHover>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 
@@ -174,10 +172,10 @@ export default function EventsPage() {
             </h2>
           </FadeUp>
 
-          <StaggerContainer className="grid md:grid-cols-3 gap-6">
-            {pastEvents.map((event, index) => (
-              <StaggerItem key={index}>
-                <div className="relative h-64 rounded-xl overflow-hidden group">
+          <div className="overflow-x-auto pb-4 -mx-6 px-6 scrollbar-thin scrollbar-thumb-[#EF8046]/30 scrollbar-track-transparent hover:scrollbar-thumb-[#EF8046]/50">
+            <div className="flex gap-6 min-w-max">
+              {pastEvents.map((event, index) => (
+                <div key={index} className="relative h-64 w-[350px] rounded-xl overflow-hidden group flex-shrink-0">
                   <Image
                     src={event.image}
                     alt={event.title}
@@ -194,9 +192,9 @@ export default function EventsPage() {
                     </h3>
                   </div>
                 </div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
+              ))}
+            </div>
+          </div>
         </div>
       </section>
 

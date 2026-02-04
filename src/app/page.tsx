@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -19,6 +20,8 @@ import {
 } from "@/components/ui/motion";
 
 export default function Home() {
+  const [isVideoPlaying, setIsVideoPlaying] = useState(false);
+
   return (
     <main className="min-h-screen">
       <Header />
@@ -84,14 +87,12 @@ export default function Home() {
               className="flex flex-col sm:flex-row gap-4 justify-center"
             >
               <Link href="/events">
-                <motion.button
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
+                <button
                   className="bg-[#EF8046] text-white px-8 py-4 rounded font-medium text-lg shadow-lg hover:shadow-xl hover:bg-[#d96a2f] transition-all flex items-center gap-2"
                 >
                   Upcoming Events
                   <ArrowRight className="w-5 h-5" />
-                </motion.button>
+                </button>
               </Link>
               <Link href="/about">
                 <motion.button
@@ -133,28 +134,36 @@ export default function Home() {
           <div className="grid lg:grid-cols-2 gap-12 lg:gap-20 items-center">
             {/* Video */}
             <SlideInLeft>
-              <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl group">
-                <Image
-                  src="/images/describejre.jpg"
-                  alt="About The JRE"
-                  fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-105"
-                />
-                <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                  <a
-                    href="https://www.youtube.com/watch?v=-pmAhUobfUM"
-                    target="_blank"
-                    rel="noopener noreferrer"
-                  >
-                    <motion.div
-                      whileHover={{ scale: 1.1 }}
-                      whileTap={{ scale: 0.95 }}
-                      className="w-20 h-20 bg-[#EF8046] rounded-full flex items-center justify-center shadow-lg cursor-pointer"
-                    >
-                      <Play className="w-8 h-8 text-white ml-1" />
-                    </motion.div>
-                  </a>
-                </div>
+              <div className="relative aspect-video rounded-lg overflow-hidden shadow-2xl">
+                {isVideoPlaying ? (
+                  <iframe
+                    src="https://www.youtube.com/embed/-pmAhUobfUM?autoplay=1"
+                    title="About The JRE"
+                    allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                    allowFullScreen
+                    className="absolute inset-0 w-full h-full"
+                  />
+                ) : (
+                  <>
+                    <Image
+                      src="/images/describejre.jpg"
+                      alt="About The JRE"
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
+                      <button onClick={() => setIsVideoPlaying(true)}>
+                        <motion.div
+                          whileHover={{ scale: 1.1 }}
+                          whileTap={{ scale: 0.95 }}
+                          className="w-20 h-20 bg-[#EF8046] rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                        >
+                          <Play className="w-8 h-8 text-white ml-1" />
+                        </motion.div>
+                      </button>
+                    </div>
+                  </>
+                )}
               </div>
             </SlideInLeft>
 
