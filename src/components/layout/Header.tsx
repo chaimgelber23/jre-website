@@ -48,10 +48,7 @@ export default function Header() {
         <div className="container mx-auto px-6 lg:px-8">
           <nav className="flex items-center justify-between">
             {/* Logo */}
-            <button
-              onClick={() => window.scrollTo({ top: 0, behavior: 'smooth' })}
-              className="relative z-10 cursor-pointer"
-            >
+            <Link href="/" className="relative z-10">
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400 }}
@@ -80,7 +77,7 @@ export default function Header() {
                   />
                 )}
               </motion.div>
-            </button>
+            </Link>
 
             {/* Desktop Navigation */}
             <div className="hidden lg:flex items-center gap-10">
@@ -162,13 +159,15 @@ export default function Header() {
               <div className="flex flex-col h-full">
                 {/* Mobile Header */}
                 <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                  <Image
-                    src="/images/logo.png"
-                    alt="The JRE"
-                    width={120}
-                    height={40}
-                    className="h-10 w-auto"
-                  />
+                  <Link href="/" onClick={() => setIsMobileMenuOpen(false)}>
+                    <Image
+                      src="/images/logo.png"
+                      alt="The JRE"
+                      width={120}
+                      height={40}
+                      className="h-10 w-auto"
+                    />
+                  </Link>
                   <button
                     onClick={() => setIsMobileMenuOpen(false)}
                     className="p-2 rounded-lg hover:bg-gray-100 transition-colors"
