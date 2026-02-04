@@ -64,12 +64,36 @@ export default function DonatePage() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // TODO: Integrate with Banquest API
-    // For now, simulate submission
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const response = await fetch("/api/donate", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          amount,
+          isRecurring,
+          name: formState.name,
+          email: formState.email,
+          phone: formState.phone,
+          honorName: formState.honorName,
+          honorEmail: formState.honorEmail,
+          sponsorship: formState.sponsorship,
+          message: formState.message,
+        }),
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to process donation");
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Donation error:", error);
+      alert("Failed to process donation. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {

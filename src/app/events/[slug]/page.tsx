@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, use } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
@@ -48,8 +48,9 @@ This event is perfect for the whole family. Kids activities included!`,
 export default function EventDetailPage({
   params,
 }: {
-  params: { slug: string };
+  params: Promise<{ slug: string }>;
 }) {
+  const { slug } = use(params);
   // Get event data - in production, this would fetch from your data source
   const event = eventData["chanukah-2025"]; // Using sample data for now
 
@@ -90,11 +91,34 @@ export default function EventDetailPage({
     e.preventDefault();
     setIsSubmitting(true);
 
-    // TODO: Integrate with Banquest API and Google Sheets
-    await new Promise((resolve) => setTimeout(resolve, 2000));
+    try {
+      const response = await fetch(`/api/events/${slug}/register`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          adults,
+          kids,
+          name: formState.name,
+          email: formState.email,
+          phone: formState.phone,
+          sponsorshipId: selectedSponsorship,
+          message: formState.message,
+        }),
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      const data = await response.json();
+
+      if (!data.success) {
+        throw new Error(data.error || "Failed to register");
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Registration error:", error);
+      alert("Failed to complete registration. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
