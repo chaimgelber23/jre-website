@@ -66,7 +66,6 @@ export async function POST(request: NextRequest) {
         description: sponsorship
           ? `JRE Donation - ${sponsorship}`
           : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
-        isRecurring,
       });
 
       if (!paymentResult.success) {
