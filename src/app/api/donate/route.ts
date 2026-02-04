@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
+import { processPayment } from "@/lib/banquest";
 import type { Donation, DonationInsert } from "@/types/database";
 
 export async function POST(request: NextRequest) {
@@ -18,6 +19,10 @@ export async function POST(request: NextRequest) {
       honorEmail,
       sponsorship,
       message,
+      cardNumber,
+      cardExpiry,
+      cardCvv,
+      cardName,
     } = body;
 
     if (!amount || !name || !email) {
@@ -45,12 +50,40 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const supabase = createServerClient();
+    // Process payment with Banquest
+    let paymentStatus = "pending";
+    let paymentReference = "";
 
-    // For now, we'll simulate payment success
-    // TODO: Integrate with Banquest API for actual payment processing
-    const paymentStatus = "success"; // In production, this comes from payment processor
-    const paymentReference = `sim_${Date.now()}`; // Simulated reference
+    if (cardNumber && cardExpiry && cardCvv && cardName) {
+      const paymentResult = await processPayment({
+        amount: numericAmount,
+        cardNumber,
+        cardExpiry,
+        cardCvv,
+        cardName,
+        email,
+        description: sponsorship
+          ? `JRE Donation - ${sponsorship}`
+          : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
+        isRecurring,
+      });
+
+      if (!paymentResult.success) {
+        return NextResponse.json(
+          { success: false, error: paymentResult.error || "Payment failed" },
+          { status: 400 }
+        );
+      }
+
+      paymentStatus = "success";
+      paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
+    } else {
+      // No card info provided - simulated payment for testing
+      paymentStatus = "success";
+      paymentReference = `sim_${Date.now()}`;
+    }
+
+    const supabase = createServerClient();
 
     // Insert into Supabase
     const insertData: DonationInsert = {

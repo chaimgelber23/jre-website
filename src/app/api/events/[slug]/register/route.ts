@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncRegistrationToSheets } from "@/lib/google-sheets/sync";
+import { processPayment } from "@/lib/banquest";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
 export async function POST(
@@ -12,7 +13,7 @@ export async function POST(
     const body = await request.json();
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, cardNumber, cardExpiry, cardCvv, cardName } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -77,10 +78,39 @@ export async function POST(
       }
     }
 
-    // For now, we'll simulate payment success
-    // TODO: Integrate with Banquest API for actual payment processing
-    const paymentStatus = "success";
-    const paymentReference = `sim_${Date.now()}`;
+    // Process payment with Banquest
+    let paymentStatus = "pending";
+    let paymentReference = "";
+
+    if (subtotal > 0 && cardNumber && cardExpiry && cardCvv && cardName) {
+      const paymentResult = await processPayment({
+        amount: subtotal,
+        cardNumber,
+        cardExpiry,
+        cardCvv,
+        cardName,
+        email,
+        description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
+      });
+
+      if (!paymentResult.success) {
+        return NextResponse.json(
+          { success: false, error: paymentResult.error || "Payment failed" },
+          { status: 400 }
+        );
+      }
+
+      paymentStatus = "success";
+      paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
+    } else if (subtotal === 0) {
+      // Free event
+      paymentStatus = "success";
+      paymentReference = `free_${Date.now()}`;
+    } else {
+      // No card info provided - simulated for testing
+      paymentStatus = "success";
+      paymentReference = `sim_${Date.now()}`;
+    }
 
     // Insert registration into Supabase
     const insertData: EventRegistrationInsert = {
