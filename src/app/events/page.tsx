@@ -14,6 +14,18 @@ import {
 // Sample events data - this will come from Google Sheets later
 const events = [
   {
+    id: "purim-2025",
+    title: "JRE's Next-Level Purim Experience",
+    date: "Sunday, March 2, 2025",
+    time: "6:00 PM",
+    location: "Life, The Place To Be - Ardsley, NY",
+    price: 40,
+    image: "/images/events/Purim25.jpg",
+    description:
+      "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $100.",
+    featured: true,
+  },
+  {
     id: "chanukah-2025",
     title: "Light It Up - Chanukah Celebration",
     date: "December 16, 2025",
@@ -34,17 +46,6 @@ const events = [
     image: "/images/events/ScotchNSteak.jpg",
     description:
       "An evening of fine scotch, premium steak, and thought-provoking Torah discussion for men.",
-  },
-  {
-    id: "purim-2026",
-    title: "Purim Celebration",
-    date: "March 15, 2026",
-    time: "5:00 PM - 8:00 PM",
-    location: "JRE - 1495 Weaver Street, Scarsdale",
-    price: 25,
-    image: "/images/events/JREevent.jpg",
-    description:
-      "Costumes, music, food, and joy! Celebrate Purim with the whole family.",
   },
 ];
 
@@ -113,7 +114,7 @@ export default function EventsPage() {
                   <Link href={`/events/${event.id}`}>
                     <motion.div
                       whileHover={{ y: -5 }}
-                      className="bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer w-[350px] flex flex-col"
+                      className={`bg-white rounded-xl overflow-hidden shadow-lg hover:shadow-2xl transition-all cursor-pointer w-[350px] flex flex-col ${event.featured ? 'ring-2 ring-[#EF8046]' : ''}`}
                     >
                       <div className="relative h-48">
                         <Image
@@ -122,6 +123,11 @@ export default function EventsPage() {
                           fill
                           className="object-cover"
                         />
+                        {event.featured && (
+                          <div className="absolute top-3 left-3 bg-[#EF8046] text-white px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wide shadow-lg">
+                            Next Event
+                          </div>
+                        )}
                       </div>
                       <div className="p-6 flex-grow flex flex-col">
                         <h3 className="text-xl font-bold text-gray-900 mb-3">

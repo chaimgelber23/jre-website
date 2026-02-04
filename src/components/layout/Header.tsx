@@ -61,21 +61,15 @@ export default function Header() {
                   height={60}
                   className={cn(
                     "w-auto transition-all duration-500",
-                    isScrolled ? "h-12" : "h-16 brightness-0 invert opacity-95 drop-shadow-lg"
+                    isScrolled
+                      ? "h-12"
+                      : "h-16 brightness-0 invert opacity-95"
                   )}
+                  style={!isScrolled ? {
+                    filter: 'brightness(0) invert(1) drop-shadow(0 0 3px #EF8046) drop-shadow(0 0 6px #EF8046)',
+                  } : undefined}
                   priority
                 />
-                {/* Orange flame overlay - visible only on dark backgrounds */}
-                {!isScrolled && (
-                  <div
-                    className="absolute top-0 left-[8px] w-5 h-6 pointer-events-none"
-                    style={{
-                      background: 'radial-gradient(ellipse at center, #EF8046 0%, #EF8046 50%, transparent 75%)',
-                      filter: 'blur(1px)',
-                      mixBlendMode: 'screen',
-                    }}
-                  />
-                )}
               </motion.div>
             </Link>
 
