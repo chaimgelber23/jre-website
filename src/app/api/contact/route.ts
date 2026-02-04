@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncContactToSheets } from "@/lib/google-sheets/sync";
+import { sendContactFormNotification } from "@/lib/email";
 import type { EmailSignup, EmailSignupInsert } from "@/types/database";
 
 export async function POST(request: NextRequest) {
@@ -56,6 +57,15 @@ export async function POST(request: NextRequest) {
 
     // Sync to Google Sheets (async, non-blocking)
     syncContactToSheets(data).catch(console.error);
+
+    // Send email notification to office (async, non-blocking)
+    sendContactFormNotification({
+      name,
+      email,
+      phone: phone || undefined,
+      subject: subject || undefined,
+      message,
+    }).catch(console.error);
 
     return NextResponse.json({
       success: true,

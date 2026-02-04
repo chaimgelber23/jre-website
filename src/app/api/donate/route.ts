@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
 import { processPayment } from "@/lib/banquest";
+import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
 import type { Donation, DonationInsert } from "@/types/database";
 
 export async function POST(request: NextRequest) {
@@ -120,6 +121,26 @@ export async function POST(request: NextRequest) {
 
     // Sync to Google Sheets (async, non-blocking)
     syncDonationToSheets(data).catch(console.error);
+
+    // Send confirmation email to donor (async, non-blocking)
+    sendDonationConfirmation({
+      to: email,
+      name,
+      amount: numericAmount,
+      isRecurring: Boolean(isRecurring),
+      sponsorship: sponsorship || undefined,
+      transactionId: paymentReference,
+    }).catch(console.error);
+
+    // If honoring someone with an email, notify them (async, non-blocking)
+    if (honorName && honorEmail) {
+      sendHonoreeNotification({
+        to: honorEmail,
+        honoreeName: honorName,
+        donorName: name,
+        message: message || undefined,
+      }).catch(console.error);
+    }
 
     return NextResponse.json({
       success: true,

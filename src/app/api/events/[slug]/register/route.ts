@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncRegistrationToSheets } from "@/lib/google-sheets/sync";
 import { processPayment } from "@/lib/banquest";
+import { sendRegistrationConfirmation } from "@/lib/email";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
 export async function POST(
@@ -145,6 +146,26 @@ export async function POST(
 
     // Sync to Google Sheets (async, non-blocking)
     syncRegistrationToSheets(registration, event).catch(console.error);
+
+    // Send confirmation email (async, non-blocking)
+    sendRegistrationConfirmation({
+      to: email,
+      name,
+      eventTitle: event.title,
+      eventDate: new Date(event.date).toLocaleDateString("en-US", {
+        weekday: "long",
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      }),
+      eventTime: event.start_time || "See event details",
+      eventLocation: event.location || "See event details",
+      adults: numAdults,
+      kids: numKids,
+      total: subtotal,
+      sponsorship: sponsorshipName || undefined,
+      transactionId: paymentReference,
+    }).catch(console.error);
 
     return NextResponse.json({
       success: true,
