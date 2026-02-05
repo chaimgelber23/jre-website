@@ -20,6 +20,7 @@ import {
   Baby,
   Sparkles,
   Award,
+  Star,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -147,15 +148,6 @@ export default function PurimEventPage() {
       }, 150);
     }
   }, [showSponsorship]);
-
-  // When a sponsorship tier is selected, scroll down to total + payment
-  useEffect(() => {
-    if (selectedSponsorship && totalRef.current) {
-      setTimeout(() => {
-        totalRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
-      }, 150);
-    }
-  }, [selectedSponsorship]);
 
   // When payment method changes, scroll to show card fields + submit button
   useEffect(() => {
@@ -587,50 +579,93 @@ export default function PurimEventPage() {
                           >
                             <div className="space-y-3 pt-4">
                               <p className="text-xs text-gray-400 text-center font-medium tracking-wide uppercase">Select a sponsorship level</p>
-                              {purimEvent.sponsorships.map((s, i) => (
-                                <motion.button
-                                  key={s.name}
-                                  type="button"
-                                  initial={{ opacity: 0, y: 10 }}
-                                  animate={{ opacity: 1, y: 0 }}
-                                  transition={{ delay: i * 0.06 }}
-                                  onClick={() => setSelectedSponsorship(selectedSponsorship === s.name ? null : s.name)}
-                                  className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${
-                                    selectedSponsorship === s.name
-                                      ? "border-[#EF8046] bg-[#EF8046]/5 shadow-md shadow-[#EF8046]/10"
-                                      : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
-                                  }`}
-                                >
-                                  <div className="flex items-center justify-between">
-                                    <div className="flex-1">
-                                      <div className="flex items-center gap-2">
-                                        <Award className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${
-                                          selectedSponsorship === s.name ? "text-[#EF8046]" : "text-gray-300 group-hover:text-[#EF8046]/60"
-                                        }`} />
-                                        <p className="font-semibold text-gray-900 text-sm">{s.name}</p>
+                              {(() => {
+                                const maxPrice = Math.max(...purimEvent.sponsorships.map(sp => sp.price), 1);
+                                return purimEvent.sponsorships.map((s, i) => {
+                                  const ratio = s.price / maxPrice;
+                                  const isTop = ratio > 0.8;
+                                  const isHigh = ratio > 0.5;
+                                  const glowSpread = Math.round(ratio * 18);
+                                  const glowAlpha = (ratio * 0.35).toFixed(2);
+                                  const isSelected = selectedSponsorship === s.name;
+
+                                  return (
+                                    <motion.button
+                                      key={s.name}
+                                      type="button"
+                                      initial={{ opacity: 0, y: 10 }}
+                                      animate={isSelected ? { opacity: 1, y: 0 } : {
+                                        opacity: 1,
+                                        y: 0,
+                                        boxShadow: isHigh ? [
+                                          `0 0 0px rgba(239, 128, 70, 0)`,
+                                          `0 0 ${glowSpread}px rgba(239, 128, 70, ${glowAlpha})`,
+                                          `0 0 0px rgba(239, 128, 70, 0)`,
+                                        ] : "0 0 0px rgba(239, 128, 70, 0)",
+                                      }}
+                                      transition={isSelected ? { delay: 0 } : isHigh ? {
+                                        opacity: { delay: i * 0.06, duration: 0.3 },
+                                        y: { delay: i * 0.06, duration: 0.3 },
+                                        boxShadow: { duration: 2.5, repeat: Infinity, repeatDelay: isTop ? 0.5 : 1.5, ease: "easeInOut" },
+                                      } : { delay: i * 0.06 }}
+                                      onClick={() => setSelectedSponsorship(isSelected ? null : s.name)}
+                                      className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${
+                                        isSelected
+                                          ? "border-[#EF8046] bg-[#EF8046]/5"
+                                          : isTop
+                                            ? "border-[#EF8046]/30 bg-gradient-to-r from-[#EF8046]/[0.03] to-white hover:border-[#EF8046]/60"
+                                            : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
+                                      }`}
+                                    >
+                                      {/* Shimmer for top-tier sponsorships */}
+                                      {isHigh && !isSelected && (
+                                        <motion.div
+                                          className="absolute inset-0 bg-gradient-to-r from-transparent via-[#EF8046]/[0.07] to-transparent"
+                                          animate={{ x: ["-100%", "200%"] }}
+                                          transition={{ duration: 3, repeat: Infinity, repeatDelay: isTop ? 2 : 4, ease: "easeInOut" }}
+                                        />
+                                      )}
+                                      <div className="relative flex items-center justify-between">
+                                        <div className="flex-1">
+                                          <div className="flex items-center gap-2">
+                                            {isTop ? (
+                                              <motion.div
+                                                animate={{ rotate: [0, 10, -10, 0] }}
+                                                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                                              >
+                                                <Star className="w-4 h-4 flex-shrink-0 text-[#EF8046] fill-[#EF8046]" />
+                                              </motion.div>
+                                            ) : (
+                                              <Award className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${
+                                                isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/50" : "text-gray-300 group-hover:text-[#EF8046]/60"
+                                              }`} />
+                                            )}
+                                            <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
+                                          </div>
+                                        </div>
+                                        <div className="flex items-center gap-3 ml-4">
+                                          <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${
+                                            isSelected ? "text-[#EF8046]" : isTop ? "text-[#EF8046]" : "text-gray-700"
+                                          }`}>
+                                            {s.price > 0 ? `$${s.price}` : "Any $"}
+                                          </span>
+                                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
+                                            isSelected
+                                              ? "border-[#EF8046] bg-[#EF8046]"
+                                              : "border-gray-300 group-hover:border-[#EF8046]/40"
+                                          }`}>
+                                            {isSelected && (
+                                              <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
+                                                <Check className="w-3 h-3 text-white" />
+                                              </motion.div>
+                                            )}
+                                          </div>
+                                        </div>
                                       </div>
-                                    </div>
-                                    <div className="flex items-center gap-3 ml-4">
-                                      <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${
-                                        selectedSponsorship === s.name ? "text-[#EF8046]" : "text-gray-700"
-                                      }`}>
-                                        {s.price > 0 ? `$${s.price}` : "Any $"}
-                                      </span>
-                                      <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
-                                        selectedSponsorship === s.name
-                                          ? "border-[#EF8046] bg-[#EF8046]"
-                                          : "border-gray-300 group-hover:border-[#EF8046]/40"
-                                      }`}>
-                                        {selectedSponsorship === s.name && (
-                                          <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
-                                            <Check className="w-3 h-3 text-white" />
-                                          </motion.div>
-                                        )}
-                                      </div>
-                                    </div>
-                                  </div>
-                                </motion.button>
-                              ))}
+                                    </motion.button>
+                                  );
+                                });
+                              })()}
 
                               {selectedSponsorship === "\"Because I'm Happy\" Sponsorship - Any Amount" && (
                                 <motion.div
