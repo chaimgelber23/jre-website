@@ -32,8 +32,16 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
     return { success: false, error: "Payment system not configured" };
   }
 
+  // Validate card expiry format
+  if (!data.cardExpiry || !data.cardExpiry.includes("/")) {
+    return { success: false, error: "Invalid expiry date format. Please use MM/YY or MM/YYYY" };
+  }
+
   // Parse expiry date - handle both MM/YY and MM/YYYY formats
   const expiryParts = data.cardExpiry.split("/");
+  if (expiryParts.length < 2 || !expiryParts[0] || !expiryParts[1]) {
+    return { success: false, error: "Invalid expiry date format. Please use MM/YY or MM/YYYY" };
+  }
   const expMonth = expiryParts[0].padStart(2, "0");
   let expYear = expiryParts[1];
   // If 4-digit year, take last 2 digits

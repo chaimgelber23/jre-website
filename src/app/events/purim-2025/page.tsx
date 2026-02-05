@@ -98,6 +98,9 @@ export default function PurimEventPage() {
   // Elegant confetti celebration when registration is successful
   useEffect(() => {
     if (isSubmitted) {
+      // Scroll to top so user can see the thank you message
+      window.scrollTo({ top: 0, behavior: "smooth" });
+
       // Brand colors: orange and complementary golds
       const colors = ["#EF8046", "#F5A623", "#D4A574", "#FFD700", "#FFA500"];
 
