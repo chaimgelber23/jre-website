@@ -443,7 +443,7 @@ export default function EventDetailPage({
       </section>
 
       {/* Content */}
-      <section className="py-12 bg-white relative">
+      <section className="pt-12 pb-24 bg-white relative">
         <div className="absolute top-0 right-0 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
 
         <div className="container mx-auto px-6 relative z-10">
@@ -577,7 +577,7 @@ export default function EventDetailPage({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-hidden">
+                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-8rem)]">
                   {/* Form Header */}
                   <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-6 text-white">
                     <h3 className="text-xl font-bold flex items-center gap-2">
