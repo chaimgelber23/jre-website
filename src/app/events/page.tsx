@@ -328,6 +328,58 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   );
 }
 
+// Standalone events that have their own dedicated pages (not in Supabase)
+const standaloneUpcoming: DisplayEvent[] = [
+  {
+    id: "purim-2025",
+    title: "JRE's Next-Level Purim Experience",
+    date: "Sunday, March 2, 2025",
+    time: "6:00 PM",
+    location: "Life, The Place To Be - Ardsley, NY",
+    price: 40,
+    image: "/images/events/Purim25.jpg",
+    description:
+      "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $100.",
+    featured: false,
+  },
+];
+
+const standalonePast: DisplayEvent[] = [
+  {
+    id: "high-holidays-2024",
+    title: "High Holiday Services 2024",
+    date: "September 2024",
+    time: "",
+    location: "",
+    price: 0,
+    image: "/images/events/JREBensoussan.jpeg",
+    description: "",
+    featured: false,
+  },
+  {
+    id: "womens-retreat-2024",
+    title: "Women's Retreat",
+    date: "August 2024",
+    time: "",
+    location: "",
+    price: 0,
+    image: "/images/events/women2.jpg",
+    description: "",
+    featured: false,
+  },
+  {
+    id: "summer-bbq-2024",
+    title: "Summer BBQ",
+    date: "July 2024",
+    time: "",
+    location: "",
+    price: 0,
+    image: "/images/events/Dinner.jpg",
+    description: "",
+    featured: false,
+  },
+];
+
 export default function EventsPage() {
   const [upcomingEvents, setUpcomingEvents] = useState<DisplayEvent[]>([]);
   const [pastEvents, setPastEvents] = useState<DisplayEvent[]>([]);
@@ -343,17 +395,46 @@ export default function EventsPage() {
           const upcoming: Event[] = data.upcoming || [];
           const past: Event[] = data.past || [];
 
-          // First upcoming event is featured
-          const displayUpcoming = upcoming.map((e, i) =>
+          // Convert DB events to display format
+          const dbUpcoming = upcoming.map((e, i) =>
             eventToDisplay(e, i === 0)
           );
-          const displayPast = past.map((e) => eventToDisplay(e, false));
+          const dbPast = past.map((e) => eventToDisplay(e, false));
 
-          setUpcomingEvents(displayUpcoming);
-          setPastEvents(displayPast);
+          // Merge: DB events first, then standalone events (skip duplicates by id)
+          const dbUpcomingIds = new Set(dbUpcoming.map((e) => e.id));
+          const mergedUpcoming = [
+            ...dbUpcoming,
+            ...standaloneUpcoming.filter((e) => !dbUpcomingIds.has(e.id)),
+          ];
+
+          // Mark the first upcoming event as featured
+          if (mergedUpcoming.length > 0) {
+            mergedUpcoming[0] = { ...mergedUpcoming[0], featured: true };
+          }
+
+          const dbPastIds = new Set(dbPast.map((e) => e.id));
+          const mergedPast = [
+            ...dbPast,
+            ...standalonePast.filter((e) => !dbPastIds.has(e.id)),
+          ];
+
+          setUpcomingEvents(mergedUpcoming);
+          setPastEvents(mergedPast);
+        } else {
+          // API failed, show standalone events as fallback
+          const fallback = [...standaloneUpcoming];
+          if (fallback.length > 0) fallback[0] = { ...fallback[0], featured: true };
+          setUpcomingEvents(fallback);
+          setPastEvents(standalonePast);
         }
       } catch (err) {
         console.error("Failed to fetch events:", err);
+        // Network error, show standalone events as fallback
+        const fallback = [...standaloneUpcoming];
+        if (fallback.length > 0) fallback[0] = { ...fallback[0], featured: true };
+        setUpcomingEvents(fallback);
+        setPastEvents(standalonePast);
       } finally {
         setIsLoading(false);
       }
