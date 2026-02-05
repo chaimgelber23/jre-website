@@ -97,28 +97,30 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // Helper: scroll form container to the bottom
-  const scrollFormToBottom = (delay = 200) => {
-    setTimeout(() => {
-      if (formContainerRef.current) {
-        formContainerRef.current.scrollTo({
-          top: formContainerRef.current.scrollHeight,
-          behavior: "smooth",
-        });
-      }
-    }, delay);
-  };
-
-  // When a sponsorship is selected, scroll form to bottom to show total + payment
+  // When a sponsorship is selected, scroll to show total + payment
   useEffect(() => {
-    if (selectedSponsorship) {
-      scrollFormToBottom(200);
+    if (selectedSponsorship && totalRef.current) {
+      setTimeout(() => {
+        totalRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest"
+        });
+      }, 500);
     }
   }, [selectedSponsorship]);
 
-  // When payment method changes, scroll form to bottom to show fields + submit
+  // When payment method changes, scroll to show payment fields + submit
   useEffect(() => {
-    scrollFormToBottom(350);
+    if (paymentRef.current) {
+      setTimeout(() => {
+        paymentRef.current?.scrollIntoView({
+          behavior: "smooth",
+          block: "center",
+          inline: "nearest"
+        });
+      }, 500);
+    }
   }, [paymentMethod]);
 
   // Scroll form to top when error appears so user sees it
@@ -417,7 +419,7 @@ export default function EventDetailPage({
           <div className="absolute bottom-0 left-0 right-0 container mx-auto px-6 pb-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
@@ -709,11 +711,10 @@ export default function EventDetailPage({
                               setSelectedSponsorship(null);
                             }
                           }}
-                          className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                            showSponsorship
+                          className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
                               ? "bg-gray-50 text-gray-500 border border-gray-200"
                               : "bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white shadow-lg shadow-[#EF8046]/25"
-                          }`}
+                            }`}
                           whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
@@ -772,16 +773,16 @@ export default function EventDetailPage({
                                             ? "0 4px 20px rgba(239, 128, 70, 0.25)"
                                             : isTop
                                               ? [
-                                                  "0 2px 8px rgba(239, 128, 70, 0.1)",
-                                                  "0 4px 24px rgba(239, 128, 70, 0.3)",
-                                                  "0 2px 8px rgba(239, 128, 70, 0.1)",
-                                                ]
+                                                "0 2px 8px rgba(239, 128, 70, 0.1)",
+                                                "0 4px 24px rgba(239, 128, 70, 0.3)",
+                                                "0 2px 8px rgba(239, 128, 70, 0.1)",
+                                              ]
                                               : isHigh
                                                 ? [
-                                                    "0 1px 4px rgba(239, 128, 70, 0.05)",
-                                                    "0 2px 12px rgba(239, 128, 70, 0.15)",
-                                                    "0 1px 4px rgba(239, 128, 70, 0.05)",
-                                                  ]
+                                                  "0 1px 4px rgba(239, 128, 70, 0.05)",
+                                                  "0 2px 12px rgba(239, 128, 70, 0.15)",
+                                                  "0 1px 4px rgba(239, 128, 70, 0.05)",
+                                                ]
                                                 : "0 1px 3px rgba(0,0,0,0.05)",
                                         }}
                                         transition={{
@@ -795,15 +796,14 @@ export default function EventDetailPage({
                                         onClick={() => setSelectedSponsorship(isSelected ? null : s.id)}
                                         whileHover={{ y: -3, scale: 1.02 }}
                                         whileTap={{ scale: 0.97 }}
-                                        className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${
-                                          isSelected
+                                        className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${isSelected
                                             ? "border-[#EF8046] bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5"
                                             : isTop
                                               ? "border-[#EF8046]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
                                               : isHigh
                                                 ? "border-[#EF8046]/20 bg-white hover:border-[#EF8046]/40"
                                                 : "border-gray-200 bg-white hover:border-gray-300"
-                                        }`}
+                                          }`}
                                       >
                                         {/* Shine sweep for top/high tiers */}
                                         {(isTop || isHigh) && !isSelected && (
@@ -830,9 +830,8 @@ export default function EventDetailPage({
                                                   <Star className="w-4 h-4 text-[#EF8046] fill-[#EF8046]" />
                                                 </motion.div>
                                               ) : (
-                                                <Award className={`w-4 h-4 transition-colors duration-200 ${
-                                                  isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/60" : "text-gray-300"
-                                                }`} />
+                                                <Award className={`w-4 h-4 transition-colors duration-200 ${isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/60" : "text-gray-300"
+                                                  }`} />
                                               )}
                                               <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
                                               {isTop && !isSelected && (
@@ -846,16 +845,14 @@ export default function EventDetailPage({
                                             )}
                                           </div>
                                           <div className="flex items-center gap-3 ml-4">
-                                            <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${
-                                              isSelected || isTop ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/80" : "text-gray-700"
-                                            }`}>
+                                            <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${isSelected || isTop ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/80" : "text-gray-700"
+                                              }`}>
                                               ${s.price}
                                             </span>
-                                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
-                                              isSelected
+                                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${isSelected
                                                 ? "border-[#EF8046] bg-[#EF8046]"
                                                 : "border-gray-300"
-                                            }`}>
+                                              }`}>
                                               {isSelected && (
                                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
                                                   <Check className="w-3 h-3 text-white" />
@@ -922,11 +919,10 @@ export default function EventDetailPage({
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("online")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            paymentMethod === "online"
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "online"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
-                          }`}
+                            }`}
                         >
                           <CreditCard className="w-5 h-5 mx-auto mb-1" />
                           <span className="text-sm font-medium">Credit Card</span>
@@ -934,11 +930,10 @@ export default function EventDetailPage({
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("check")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            paymentMethod === "check"
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "check"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
-                          }`}
+                            }`}
                         >
                           <span className="text-lg block mb-1">&#9993;</span>
                           <span className="text-sm font-medium">Send a Check</span>

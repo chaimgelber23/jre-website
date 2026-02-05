@@ -65,109 +65,103 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Thank You for Your Donation</title>
         </head>
-        <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        <body style="margin: 0; padding: 0; background: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh; background: #f8f9fa;">
             <tr>
-              <td align="center" style="padding: 40px 20px;">
+              <td align="center" style="padding: 60px 20px;">
                 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%;">
 
-                  <!-- Logo Section -->
+                  <!-- Logo Header -->
                   <tr>
-                    <td align="center" style="padding-bottom: 30px;">
-                      <table role="presentation" cellspacing="0" cellpadding="0">
-                        <tr>
-                          <td style="background: linear-gradient(135deg, #EF8046, #f59e0b); padding: 15px 30px; border-radius: 50px;">
-                            <span style="color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px;">THE JRE</span>
-                          </td>
-                        </tr>
-                      </table>
+                    <td align="center" style="padding: 0 0 8px 0;">
+                      <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
                     </td>
                   </tr>
 
                   <!-- Main Card -->
                   <tr>
                     <td>
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);">
 
-                        <!-- Header Banner -->
+                        <!-- Subtle Brand Accent -->
                         <tr>
-                          <td style="background: linear-gradient(135deg, #EF8046 0%, #f59e0b 100%); padding: 50px 30px; text-align: center;">
-                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">Thank You for Your Generosity!</h1>
+                          <td style="height: 3px; background: linear-gradient(90deg, #EF8046, #f59e0b);"></td>
+                        </tr>
+
+                        <!-- Header -->
+                        <tr>
+                          <td style="padding: 56px 48px 48px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <div style="width: 40px; height: 2px; background: linear-gradient(90deg, transparent, #EF8046, transparent); margin: 0 auto 32px;"></div>
+                            <h1 style="color: #1a1a1a; margin: 0 0 12px; font-size: 36px; font-weight: 600; letter-spacing: -0.8px;">Thank You</h1>
+                            <p style="color: #6b7280; margin: 0; font-size: 15px; font-weight: 400; line-height: 1.6;">Your generosity makes a meaningful difference</p>
                           </td>
                         </tr>
 
                         <!-- Content -->
                         <tr>
-                          <td style="padding: 40px 30px;">
-                            <p style="color: #2d3748; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">Dear <strong>${data.name}</strong>,</p>
-                            <p style="color: #4a5568; font-size: 16px; margin: 0 0 30px; line-height: 1.8;">Thank you for your ${data.isRecurring ? "monthly " : ""}donation to The JRE. Your generous support helps us continue providing meaningful Jewish experiences for the Westchester community.</p>
+                          <td style="padding: 48px 48px 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; margin: 0 0 8px; line-height: 1.5;">Dear ${data.name},</p>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0 0 40px; line-height: 1.6;">Thank you for your ${data.isRecurring ? "monthly " : ""}donation to The JRE. Your generous support helps us continue providing meaningful Jewish experiences for the Westchester community.</p>
 
                             <!-- Amount Display -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
-                                <td align="center">
-                                  <table role="presentation" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #fff7ed, #fef3c7); border-radius: 16px; padding: 30px 50px; border: 2px solid #EF8046;">
-                                    <tr>
-                                      <td align="center">
-                                        <div style="color: #92400e; font-size: 14px; text-transform: uppercase; letter-spacing: 2px; margin-bottom: 8px;">Your ${data.isRecurring ? "Monthly " : ""}Donation</div>
-                                        <div style="color: #EF8046; font-size: 48px; font-weight: 800;">$${data.amount.toFixed(2)}</div>
-                                        ${data.isRecurring ? '<div style="color: #92400e; font-size: 14px; margin-top: 5px;">per month</div>' : ""}
-                                      </td>
-                                    </tr>
-                                  </table>
+                                <td style="padding: 32px; background: #fafafa; border-left: 4px solid #EF8046; border-radius: 8px; text-align: center;">
+                                  <div style="color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600;">Your ${data.isRecurring ? "Monthly " : ""}Donation</div>
+                                  <div style="color: #EF8046; font-size: 40px; font-weight: 600; letter-spacing: -1px;">$${data.amount.toFixed(2)}</div>
+                                  ${data.isRecurring ? '<div style="color: #6b7280; font-size: 13px; margin-top: 8px;">per month</div>' : ""}
                                 </td>
                               </tr>
                             </table>
 
-                            <!-- Details Box -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f7fafc; border-radius: 12px; margin: 30px 0;">
+                            <!-- Details -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
-                                <td style="padding: 25px;">
-                                  <h3 style="color: #2d3748; font-size: 16px; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px;">Donation Details</h3>
+                                <td>
+                                  <h3 style="color: #9ca3af; font-size: 11px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Transaction Details</h3>
                                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Amount</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">$${data.amount.toFixed(2)}</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">Amount</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">$${data.amount.toFixed(2)}</td>
                                     </tr>
                                     ${data.isRecurring ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Frequency</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Monthly</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">Frequency</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">Monthly</td>
                                     </tr>
                                     ` : ""}
                                     ${data.sponsorship ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Sponsorship</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${data.sponsorship}</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">Sponsorship</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${data.sponsorship}</td>
                                     </tr>
                                     ` : ""}
+                                    <tr>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">Date</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #f0f0f0;">${new Date().toLocaleDateString("en-US", { year: "numeric", month: "long", day: "numeric" })}</td>
+                                    </tr>
                                     ${data.transactionId ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Transaction ID</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${data.transactionId}</td>
+                                      <td colspan="2" style="color: #9ca3af; font-size: 12px; padding: 12px 0 0;">Transaction ID: ${data.transactionId}</td>
                                     </tr>
                                     ` : ""}
-                                    <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0;">Date</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0;">${new Date().toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })}</td>
-                                    </tr>
                                   </table>
                                 </td>
                               </tr>
                             </table>
 
                             <!-- Tax Notice -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #ebf8ff, #e0f2fe); border-radius: 12px; border-left: 4px solid #3182ce; margin: 30px 0;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin: 0 0 40px;">
                               <tr>
                                 <td style="padding: 20px;">
-                                  <p style="color: #2c5282; font-size: 14px; margin: 0; line-height: 1.6;">
-                                    <strong>Tax-Deductible:</strong> Your donation is tax-deductible. The JRE is a registered 501(c)(3) nonprofit organization. Please save this email for your records.
+                                  <p style="color: #065f46; font-size: 13px; margin: 0; line-height: 1.6;">
+                                    <strong style="font-weight: 600;">Tax-Deductible:</strong> The JRE is a registered 501(c)(3) nonprofit. Please save this email for your tax records.
                                   </p>
                                 </td>
                               </tr>
                             </table>
 
-                            <p style="color: #4a5568; font-size: 16px; margin: 30px 0 0; line-height: 1.6;">With heartfelt gratitude,<br><strong style="color: #EF8046;">The JRE Team</strong></p>
+                            <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">With gratitude,<br><span style="color: #1a1a1a; font-weight: 500;">The JRE Team</span></p>
                           </td>
                         </tr>
                       </table>
@@ -176,13 +170,15 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
 
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 40px 20px; text-align: center;">
-                      <p style="color: #a0aec0; font-size: 16px; font-weight: 600; margin: 0 0 5px;">Jewish Renaissance Experience</p>
-                      <p style="color: #718096; font-size: 14px; margin: 0 0 15px;">Igniting Jewish life in Westchester</p>
-                      <p style="color: #718096; font-size: 13px; margin: 0;">1495 Weaver Street, Scarsdale, NY 10583</p>
-                      <p style="color: #718096; font-size: 13px; margin: 5px 0 0;">
-                        <a href="mailto:office@thejre.org" style="color: #EF8046; text-decoration: none;">office@thejre.org</a> &nbsp;|&nbsp;
-                        <a href="tel:914-713-4355" style="color: #EF8046; text-decoration: none;">914-713-4355</a>
+                    <td style="padding: 48px 20px; text-align: center;">
+                      <div style="width: 32px; height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); margin: 0 auto 24px;"></div>
+                      <p style="color: #1a1a1a; font-size: 11px; margin: 0 0 4px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">The JRE</p>
+                      <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px; font-weight: 400;">Jewish Renaissance Experience</p>
+                      <p style="color: #d1d5db; font-size: 11px; margin: 0 0 12px; line-height: 1.6;">1495 Weaver Street<br>Scarsdale, NY 10583</p>
+                      <p style="color: #d1d5db; font-size: 11px; margin: 0;">
+                        <a href="mailto:office@thejre.org" style="color: #9ca3af; text-decoration: none; transition: color 0.2s;">office@thejre.org</a>
+                        <span style="color: #e5e7eb; margin: 0 8px;">·</span>
+                        <a href="tel:914-713-4355" style="color: #9ca3af; text-decoration: none; transition: color 0.2s;">914-713-4355</a>
                       </p>
                     </td>
                   </tr>
@@ -228,99 +224,104 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
           <meta name="viewport" content="width=device-width, initial-scale=1.0">
           <title>Event Registration Confirmation</title>
         </head>
-        <body style="margin: 0; padding: 0; background: linear-gradient(135deg, #1a202c 0%, #2d3748 50%, #1a202c 100%); font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh;">
+        <body style="margin: 0; padding: 0; background: #f8f9fa; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="min-height: 100vh; background: #f8f9fa;">
             <tr>
-              <td align="center" style="padding: 40px 20px;">
+              <td align="center" style="padding: 60px 20px;">
                 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%;">
+
+                  <!-- Logo Header (on white) -->
+                  <tr>
+                    <td align="center" style="padding: 0 0 8px 0;">
+                      <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
+                    </td>
+                  </tr>
 
                   <!-- Main Card -->
                   <tr>
                     <td>
-                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);">
 
-                        <!-- Header Banner with Logo -->
+                        <!-- Subtle Brand Accent -->
                         <tr>
-                          <td style="background: linear-gradient(135deg, #EF8046 0%, #d96a2f 100%); padding: 40px 30px; text-align: center;">
-                            <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="180" style="display: block; margin: 0 auto 20px; max-width: 180px; height: auto;" />
-                            <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">You're Registered!</h1>
+                          <td style="height: 3px; background: linear-gradient(90deg, #EF8046, #f59e0b);"></td>
+                        </tr>
+
+                        <!-- Header -->
+                        <tr>
+                          <td style="padding: 56px 48px 48px; text-align: center; border-bottom: 1px solid #f0f0f0;">
+                            <div style="width: 40px; height: 2px; background: linear-gradient(90deg, transparent, #EF8046, transparent); margin: 0 auto 32px;"></div>
+                            <h1 style="color: #1a1a1a; margin: 0 0 12px; font-size: 36px; font-weight: 600; letter-spacing: -0.8px;">You're Registered</h1>
+                            <p style="color: #6b7280; margin: 0; font-size: 15px; font-weight: 400; line-height: 1.6;">We look forward to seeing you at the event</p>
                           </td>
                         </tr>
 
                         <!-- Content -->
                         <tr>
-                          <td style="padding: 40px 30px;">
-                            <p style="color: #2d3748; font-size: 18px; margin: 0 0 20px; line-height: 1.6;">Dear <strong>${data.name}</strong>,</p>
-                            <p style="color: #4a5568; font-size: 16px; margin: 0 0 30px; line-height: 1.8;">Great news! You're registered for our upcoming event. We can't wait to see you there!</p>
+                          <td style="padding: 48px 48px 40px;">
+                            <p style="color: #1a1a1a; font-size: 16px; margin: 0 0 8px; line-height: 1.5;">Dear ${data.name},</p>
+                            <p style="color: #6b7280; font-size: 15px; margin: 0 0 40px; line-height: 1.6;">Your registration has been confirmed. Here are your event details:</p>
 
                             <!-- Event Title -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 30px 0;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
-                                <td align="center">
-                                  <table role="presentation" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #2d3748, #1a202c); border-radius: 16px; padding: 25px 40px; width: 100%;">
-                                    <tr>
-                                      <td align="center">
-                                        <div style="color: #EF8046; font-size: 24px; font-weight: 700;">${data.eventTitle}</div>
-                                      </td>
-                                    </tr>
-                                  </table>
+                                <td style="padding: 24px; background: #fafafa; border-left: 4px solid #EF8046; border-radius: 8px;">
+                                  <h2 style="color: #1a1a1a; font-size: 22px; font-weight: 600; margin: 0; line-height: 1.3;">${data.eventTitle}</h2>
                                 </td>
                               </tr>
                             </table>
 
                             <!-- Event Details -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: linear-gradient(135deg, #fef3c7, #fff7ed); border-radius: 16px; margin: 30px 0;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
-                                <td style="padding: 25px;">
-                                  <h3 style="color: #92400e; font-size: 14px; margin: 0 0 20px; text-transform: uppercase; letter-spacing: 2px;">Event Details</h3>
+                                <td>
                                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">Date</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">${data.eventDate}</td>
+                                      <td style="color: #9ca3af; font-size: 13px; padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Date</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 15px; font-weight: 500; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">${data.eventDate}</td>
                                     </tr>
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">Time</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0; border-bottom: 1px solid #fcd9b6;">${data.eventTime}</td>
+                                      <td style="color: #9ca3af; font-size: 13px; padding: 16px 0; border-bottom: 1px solid #f0f0f0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Time</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 15px; font-weight: 500; padding: 16px 0; border-bottom: 1px solid #f0f0f0;">${data.eventTime}</td>
                                     </tr>
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 10px 0;">Location</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 10px 0;">${data.eventLocation}</td>
+                                      <td style="color: #9ca3af; font-size: 13px; padding: 16px 0; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 500;">Location</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 15px; font-weight: 500; padding: 16px 0;">${data.eventLocation}</td>
                                     </tr>
                                   </table>
                                 </td>
                               </tr>
                             </table>
 
-                            <!-- Registration Details -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f7fafc; border-radius: 12px; margin: 30px 0;">
+                            <!-- Registration Summary -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fafafa; border-radius: 8px; padding: 24px; margin: 0 0 40px;">
                               <tr>
-                                <td style="padding: 25px;">
-                                  <h3 style="color: #2d3748; font-size: 14px; margin: 0 0 15px; text-transform: uppercase; letter-spacing: 1px;">Your Registration</h3>
+                                <td>
+                                  <h3 style="color: #9ca3af; font-size: 11px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600;">Registration Summary</h3>
                                   <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Adults</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${data.adults}</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">Adults</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.adults}</td>
                                     </tr>
                                     ${data.kids > 0 ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Children</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${data.kids}</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">Children</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.kids}</td>
                                     </tr>
                                     ` : ""}
                                     ${data.sponsorship ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Sponsorship</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">${data.sponsorship}</td>
+                                      <td style="color: #6b7280; font-size: 14px; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">Sponsorship</td>
+                                      <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 10px 0; border-bottom: 1px solid #e5e7eb;">${data.sponsorship}</td>
                                     </tr>
                                     ` : ""}
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">Total</td>
-                                      <td align="right" style="color: #EF8046; font-size: 18px; font-weight: 700; padding: 8px 0; border-bottom: 1px solid #e2e8f0;">$${data.total.toFixed(2)}</td>
+                                      <td style="color: #1a1a1a; font-size: 15px; padding: 14px 0 0; font-weight: 600;">Total</td>
+                                      <td align="right" style="color: #EF8046; font-size: 20px; font-weight: 600; padding: 14px 0 0;">$${data.total.toFixed(2)}</td>
                                     </tr>
                                     ${data.transactionId ? `
                                     <tr>
-                                      <td style="color: #718096; font-size: 14px; padding: 8px 0;">Confirmation #</td>
-                                      <td align="right" style="color: #2d3748; font-size: 14px; font-weight: 600; padding: 8px 0;">${data.transactionId}</td>
+                                      <td colspan="2" style="color: #9ca3af; font-size: 12px; padding: 12px 0 0;">Confirmation: ${data.transactionId}</td>
                                     </tr>
                                     ` : ""}
                                   </table>
@@ -328,8 +329,9 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                               </tr>
                             </table>
 
-                            <p style="color: #4a5568; font-size: 16px; margin: 30px 0 0; line-height: 1.6;">If you have any questions, please don't hesitate to reach out.</p>
-                            <p style="color: #4a5568; font-size: 16px; margin: 20px 0 0; line-height: 1.6;">See you soon!<br><strong style="color: #EF8046;">The JRE Team</strong></p>
+                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 32px; line-height: 1.6;">If you have any questions, feel free to reach out. We look forward to seeing you!</p>
+
+                            <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">Best regards,<br><span style="color: #1a1a1a; font-weight: 500;">The JRE Team</span></p>
                           </td>
                         </tr>
                       </table>
@@ -338,13 +340,15 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
 
                   <!-- Footer -->
                   <tr>
-                    <td style="padding: 40px 20px; text-align: center;">
-                      <p style="color: #a0aec0; font-size: 16px; font-weight: 600; margin: 0 0 5px;">Jewish Renaissance Experience</p>
-                      <p style="color: #718096; font-size: 14px; margin: 0 0 15px;">Igniting Jewish life in Westchester</p>
-                      <p style="color: #718096; font-size: 13px; margin: 0;">1495 Weaver Street, Scarsdale, NY 10583</p>
-                      <p style="color: #718096; font-size: 13px; margin: 5px 0 0;">
-                        <a href="mailto:office@thejre.org" style="color: #EF8046; text-decoration: none;">office@thejre.org</a> &nbsp;|&nbsp;
-                        <a href="tel:914-713-4355" style="color: #EF8046; text-decoration: none;">914-713-4355</a>
+                    <td style="padding: 48px 20px; text-align: center;">
+                      <div style="width: 32px; height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); margin: 0 auto 24px;"></div>
+                      <p style="color: #1a1a1a; font-size: 11px; margin: 0 0 4px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase;">The JRE</p>
+                      <p style="color: #9ca3af; font-size: 12px; margin: 0 0 12px; font-weight: 400;">Jewish Renaissance Experience</p>
+                      <p style="color: #d1d5db; font-size: 11px; margin: 0 0 12px; line-height: 1.6;">1495 Weaver Street<br>Scarsdale, NY 10583</p>
+                      <p style="color: #d1d5db; font-size: 11px; margin: 0;">
+                        <a href="mailto:office@thejre.org" style="color: #9ca3af; text-decoration: none; transition: color 0.2s;">office@thejre.org</a>
+                        <span style="color: #e5e7eb; margin: 0 8px;">·</span>
+                        <a href="tel:914-713-4355" style="color: #9ca3af; text-decoration: none; transition: color 0.2s;">914-713-4355</a>
                       </p>
                     </td>
                   </tr>
