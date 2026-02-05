@@ -177,9 +177,16 @@ export default function AdminEventsPage() {
                 <div className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md hover:border-[#EF8046]/30 transition-all cursor-pointer group">
                   <div className="flex items-center justify-between">
                     <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#EF8046] transition-colors">
-                        {event.title}
-                      </h3>
+                      <div className="flex items-center gap-2">
+                        <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#EF8046] transition-colors">
+                          {event.title}
+                        </h3>
+                        {!event.is_active && (
+                          <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
+                            Inactive
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-4 mt-2 text-sm text-gray-500">
                         <span className="flex items-center gap-1">
                           <Calendar className="w-4 h-4" />

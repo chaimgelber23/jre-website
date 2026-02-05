@@ -2,6 +2,7 @@
 
 import { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   ArrowLeft,
@@ -17,6 +18,10 @@ import {
   Trash2,
   X,
   Save,
+  Eye,
+  EyeOff,
+  ExternalLink,
+  Plus,
 } from "lucide-react";
 import StatsCard from "@/components/admin/StatsCard";
 import PaymentStatusBadge from "@/components/admin/PaymentStatusBadge";
@@ -44,7 +49,7 @@ interface EventDetailData {
   };
 }
 
-interface EditFormData {
+interface EditRegFormData {
   name: string;
   email: string;
   phone: string;
@@ -56,22 +61,45 @@ interface EditFormData {
   message: string;
 }
 
+interface EditEventFormData {
+  title: string;
+  slug: string;
+  description: string;
+  date: string;
+  start_time: string;
+  end_time: string;
+  location: string;
+  location_url: string;
+  image_url: string;
+  price_per_adult: number;
+  kids_price: number;
+  is_active: boolean;
+}
+
+interface SponsorshipFormItem {
+  id?: string;
+  name: string;
+  price: string;
+  description: string;
+}
+
 export default function EventDetailPage({
   params,
 }: {
   params: Promise<{ eventId: string }>;
 }) {
   const { eventId } = use(params);
+  const router = useRouter();
   const [data, setData] = useState<EventDetailData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [activeTab, setActiveTab] = useState<"registrations" | "sponsorships">(
     "registrations"
   );
 
-  // Edit modal state
+  // Edit registration modal state
   const [editingRegistration, setEditingRegistration] =
     useState<EventRegistrationWithSponsorship | null>(null);
-  const [editForm, setEditForm] = useState<EditFormData>({
+  const [editRegForm, setEditRegForm] = useState<EditRegFormData>({
     name: "",
     email: "",
     phone: "",
@@ -82,13 +110,37 @@ export default function EventDetailPage({
     payment_status: "success",
     message: "",
   });
-  const [isSaving, setIsSaving] = useState(false);
-  const [editError, setEditError] = useState<string | null>(null);
+  const [isSavingReg, setIsSavingReg] = useState(false);
+  const [editRegError, setEditRegError] = useState<string | null>(null);
 
-  // Delete confirmation state
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [deletingName, setDeletingName] = useState<string>("");
-  const [isDeleting, setIsDeleting] = useState(false);
+  // Edit event modal state
+  const [showEditEvent, setShowEditEvent] = useState(false);
+  const [editEventForm, setEditEventForm] = useState<EditEventFormData>({
+    title: "",
+    slug: "",
+    description: "",
+    date: "",
+    start_time: "",
+    end_time: "",
+    location: "",
+    location_url: "",
+    image_url: "",
+    price_per_adult: 0,
+    kids_price: 0,
+    is_active: true,
+  });
+  const [editSponsorships, setEditSponsorships] = useState<SponsorshipFormItem[]>([]);
+  const [isSavingEvent, setIsSavingEvent] = useState(false);
+  const [editEventError, setEditEventError] = useState<string | null>(null);
+
+  // Delete registration state
+  const [deletingRegId, setDeletingRegId] = useState<string | null>(null);
+  const [deletingRegName, setDeletingRegName] = useState<string>("");
+  const [isDeletingReg, setIsDeletingReg] = useState(false);
+
+  // Delete event state
+  const [showDeleteEvent, setShowDeleteEvent] = useState(false);
+  const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
   // Toast state
   const [toast, setToast] = useState<{
@@ -129,7 +181,7 @@ export default function EventDetailPage({
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-US", {
+    return new Date(dateString + "T00:00:00").toLocaleDateString("en-US", {
       weekday: "long",
       month: "long",
       day: "numeric",
@@ -146,10 +198,10 @@ export default function EventDetailPage({
     });
   };
 
-  // Open edit modal
-  const openEditModal = (registration: EventRegistrationWithSponsorship) => {
+  // === EDIT REGISTRATION ===
+  const openEditRegModal = (registration: EventRegistrationWithSponsorship) => {
     setEditingRegistration(registration);
-    setEditForm({
+    setEditRegForm({
       name: registration.name,
       email: registration.email,
       phone: registration.phone || "",
@@ -160,14 +212,13 @@ export default function EventDetailPage({
       payment_status: registration.payment_status,
       message: registration.message || "",
     });
-    setEditError(null);
+    setEditRegError(null);
   };
 
-  // Save edit
-  const handleSaveEdit = async () => {
+  const handleSaveReg = async () => {
     if (!editingRegistration) return;
-    setIsSaving(true);
-    setEditError(null);
+    setIsSavingReg(true);
+    setEditRegError(null);
 
     try {
       const response = await fetch(
@@ -176,15 +227,15 @@ export default function EventDetailPage({
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: editForm.name,
-            email: editForm.email,
-            phone: editForm.phone || null,
-            adults: editForm.adults,
-            kids: editForm.kids,
-            sponsorship_id: editForm.sponsorship_id,
-            subtotal: editForm.subtotal,
-            payment_status: editForm.payment_status,
-            message: editForm.message || null,
+            name: editRegForm.name,
+            email: editRegForm.email,
+            phone: editRegForm.phone || null,
+            adults: editRegForm.adults,
+            kids: editRegForm.kids,
+            sponsorship_id: editRegForm.sponsorship_id,
+            subtotal: editRegForm.subtotal,
+            payment_status: editRegForm.payment_status,
+            message: editRegForm.message || null,
           }),
         }
       );
@@ -195,35 +246,29 @@ export default function EventDetailPage({
         showToast("Registration updated successfully", "success");
         await fetchEventDetails();
       } else {
-        setEditError(result.error || "Failed to update");
+        setEditRegError(result.error || "Failed to update");
       }
     } catch {
-      setEditError("Network error. Please try again.");
+      setEditRegError("Network error. Please try again.");
     } finally {
-      setIsSaving(false);
+      setIsSavingReg(false);
     }
   };
 
-  // Confirm delete
-  const confirmDelete = (reg: EventRegistrationWithSponsorship) => {
-    setDeletingId(reg.id);
-    setDeletingName(reg.name);
-  };
-
-  // Delete registration
-  const handleDelete = async () => {
-    if (!deletingId) return;
-    setIsDeleting(true);
+  // === DELETE REGISTRATION ===
+  const handleDeleteReg = async () => {
+    if (!deletingRegId) return;
+    setIsDeletingReg(true);
 
     try {
       const response = await fetch(
-        `/api/admin/registrations/${deletingId}`,
+        `/api/admin/registrations/${deletingRegId}`,
         { method: "DELETE" }
       );
 
       const result = await response.json();
       if (result.success) {
-        setDeletingId(null);
+        setDeletingRegId(null);
         showToast("Registration deleted", "success");
         await fetchEventDetails();
       } else {
@@ -232,7 +277,128 @@ export default function EventDetailPage({
     } catch {
       showToast("Network error. Please try again.", "error");
     } finally {
-      setIsDeleting(false);
+      setIsDeletingReg(false);
+    }
+  };
+
+  // === EDIT EVENT ===
+  const openEditEventModal = () => {
+    if (!data) return;
+    const { event, sponsorships } = data;
+    setEditEventForm({
+      title: event.title,
+      slug: event.slug,
+      description: event.description || "",
+      date: event.date,
+      start_time: event.start_time || "",
+      end_time: event.end_time || "",
+      location: event.location || "",
+      location_url: event.location_url || "",
+      image_url: event.image_url || "",
+      price_per_adult: event.price_per_adult,
+      kids_price: event.kids_price,
+      is_active: event.is_active,
+    });
+    setEditSponsorships(
+      sponsorships.map((s) => ({
+        id: s.id,
+        name: s.name,
+        price: String(s.price),
+        description: s.description || "",
+      }))
+    );
+    setEditEventError(null);
+    setShowEditEvent(true);
+  };
+
+  const handleSaveEvent = async () => {
+    setIsSavingEvent(true);
+    setEditEventError(null);
+
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          title: editEventForm.title,
+          slug: editEventForm.slug,
+          description: editEventForm.description || null,
+          date: editEventForm.date,
+          start_time: editEventForm.start_time || null,
+          end_time: editEventForm.end_time || null,
+          location: editEventForm.location || null,
+          location_url: editEventForm.location_url || null,
+          image_url: editEventForm.image_url || null,
+          price_per_adult: editEventForm.price_per_adult,
+          kids_price: editEventForm.kids_price,
+          is_active: editEventForm.is_active,
+          sponsorships: editSponsorships
+            .filter((s) => s.name && s.price)
+            .map((s) => ({
+              id: s.id || undefined,
+              name: s.name,
+              price: Number(s.price),
+              description: s.description || null,
+            })),
+        }),
+      });
+
+      const result = await response.json();
+      if (result.success) {
+        setShowEditEvent(false);
+        showToast("Event updated successfully", "success");
+        await fetchEventDetails();
+      } else {
+        setEditEventError(result.error || "Failed to update event");
+      }
+    } catch {
+      setEditEventError("Network error. Please try again.");
+    } finally {
+      setIsSavingEvent(false);
+    }
+  };
+
+  // === TOGGLE ACTIVE ===
+  const handleToggleActive = async () => {
+    if (!data) return;
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ is_active: !data.event.is_active }),
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(
+          data.event.is_active ? "Event deactivated" : "Event activated",
+          "success"
+        );
+        await fetchEventDetails();
+      }
+    } catch {
+      showToast("Failed to update event status", "error");
+    }
+  };
+
+  // === DELETE EVENT ===
+  const handleDeleteEvent = async () => {
+    setIsDeletingEvent(true);
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}`, {
+        method: "DELETE",
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast("Event deleted", "success");
+        router.push("/admin/events");
+      } else {
+        showToast(result.error || "Failed to delete event", "error");
+        setShowDeleteEvent(false);
+      }
+    } catch {
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      setIsDeletingEvent(false);
     }
   };
 
@@ -294,25 +460,92 @@ export default function EventDetailPage({
           <ArrowLeft className="w-4 h-4" />
           Back to Events
         </Link>
-        <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
-        <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
-          <span className="flex items-center gap-1">
-            <Calendar className="w-4 h-4" />
-            {formatDate(event.date)}
-          </span>
-          {event.start_time && (
-            <span className="flex items-center gap-1">
-              <Clock className="w-4 h-4" />
-              {event.start_time}
-              {event.end_time && ` - ${event.end_time}`}
-            </span>
-          )}
-          {event.location && (
-            <span className="flex items-center gap-1">
-              <MapPin className="w-4 h-4" />
-              {event.location}
-            </span>
-          )}
+
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <div className="flex items-center gap-3 mb-1">
+              <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
+              <span
+                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                  event.is_active
+                    ? "bg-green-100 text-green-700"
+                    : "bg-gray-100 text-gray-500"
+                }`}
+              >
+                {event.is_active ? (
+                  <>
+                    <Eye className="w-3 h-3" /> Live
+                  </>
+                ) : (
+                  <>
+                    <EyeOff className="w-3 h-3" /> Inactive
+                  </>
+                )}
+              </span>
+            </div>
+            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+              <span className="flex items-center gap-1">
+                <Calendar className="w-4 h-4" />
+                {formatDate(event.date)}
+              </span>
+              {event.start_time && (
+                <span className="flex items-center gap-1">
+                  <Clock className="w-4 h-4" />
+                  {event.start_time}
+                  {event.end_time && ` - ${event.end_time}`}
+                </span>
+              )}
+              {event.location && (
+                <span className="flex items-center gap-1">
+                  <MapPin className="w-4 h-4" />
+                  {event.location}
+                </span>
+              )}
+              <a
+                href={`/events/${event.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[#EF8046] hover:underline"
+              >
+                <ExternalLink className="w-3.5 h-3.5" />
+                View public page
+              </a>
+            </div>
+          </div>
+
+          {/* Action Buttons */}
+          <div className="flex items-center gap-2 ml-4">
+            <button
+              onClick={handleToggleActive}
+              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+                event.is_active
+                  ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
+                  : "bg-green-50 text-green-700 hover:bg-green-100"
+              }`}
+            >
+              {event.is_active ? (
+                <>
+                  <EyeOff className="w-4 h-4" /> Deactivate
+                </>
+              ) : (
+                <>
+                  <Eye className="w-4 h-4" /> Activate
+                </>
+              )}
+            </button>
+            <button
+              onClick={openEditEventModal}
+              className="flex items-center gap-1.5 px-3 py-2 bg-[#EF8046] text-white rounded-lg text-sm font-medium hover:bg-[#d96a2f] transition-colors"
+            >
+              <Pencil className="w-4 h-4" /> Edit Event
+            </button>
+            <button
+              onClick={() => setShowDeleteEvent(true)}
+              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+            >
+              <Trash2 className="w-4 h-4" /> Delete
+            </button>
+          </div>
         </div>
       </div>
 
@@ -389,7 +622,19 @@ export default function EventDetailPage({
       {activeTab === "registrations" ? (
         registrations.length === 0 ? (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-8 text-center">
-            <p className="text-gray-500">No registrations yet</p>
+            <Users className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+            <p className="text-gray-500 mb-1">No registrations yet</p>
+            <p className="text-gray-400 text-sm">
+              Registrations will appear here when people sign up at{" "}
+              <a
+                href={`/events/${event.slug}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[#EF8046] hover:underline"
+              >
+                /events/{event.slug}
+              </a>
+            </p>
           </div>
         ) : (
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -471,14 +716,17 @@ export default function EventDetailPage({
                       <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => openEditModal(reg)}
+                            onClick={() => openEditRegModal(reg)}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-[#EF8046] hover:bg-[#EF8046]/10 transition-colors"
                             title="Edit registration"
                           >
                             <Pencil className="w-4 h-4" />
                           </button>
                           <button
-                            onClick={() => confirmDelete(reg)}
+                            onClick={() => {
+                              setDeletingRegId(reg.id);
+                              setDeletingRegName(reg.name);
+                            }}
                             className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
                             title="Delete registration"
                           >
@@ -548,7 +796,391 @@ export default function EventDetailPage({
         </div>
       )}
 
-      {/* Edit Registration Modal */}
+      {/* ============ EDIT EVENT MODAL ============ */}
+      <AnimatePresence>
+        {showEditEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => !isSavingEvent && setShowEditEvent(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-2xl shadow-xl w-full max-w-2xl max-h-[90vh] overflow-y-auto"
+            >
+              {/* Header */}
+              <div className="sticky top-0 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100 z-10">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Edit Event
+                </h3>
+                <button
+                  onClick={() => !isSavingEvent && setShowEditEvent(false)}
+                  className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
+                >
+                  <X className="w-5 h-5" />
+                </button>
+              </div>
+
+              {/* Body */}
+              <div className="px-6 py-5 space-y-5">
+                {editEventError && (
+                  <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+                    {editEventError}
+                  </div>
+                )}
+
+                {/* Title */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Event Title *
+                  </label>
+                  <input
+                    type="text"
+                    value={editEventForm.title}
+                    onChange={(e) =>
+                      setEditEventForm({ ...editEventForm, title: e.target.value })
+                    }
+                    className={inputClassName}
+                  />
+                </div>
+
+                {/* Slug */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    URL Slug
+                  </label>
+                  <input
+                    type="text"
+                    value={editEventForm.slug}
+                    onChange={(e) =>
+                      setEditEventForm({ ...editEventForm, slug: e.target.value })
+                    }
+                    className={inputClassName}
+                  />
+                  <p className="text-xs text-gray-400 mt-1">
+                    /events/{editEventForm.slug}
+                  </p>
+                </div>
+
+                {/* Date & Times */}
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Date *
+                    </label>
+                    <input
+                      type="date"
+                      value={editEventForm.date}
+                      onChange={(e) =>
+                        setEditEventForm({ ...editEventForm, date: e.target.value })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Start Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editEventForm.start_time}
+                      onChange={(e) =>
+                        setEditEventForm({
+                          ...editEventForm,
+                          start_time: e.target.value,
+                        })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      End Time
+                    </label>
+                    <input
+                      type="time"
+                      value={editEventForm.end_time}
+                      onChange={(e) =>
+                        setEditEventForm({
+                          ...editEventForm,
+                          end_time: e.target.value,
+                        })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                </div>
+
+                {/* Location */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location
+                  </label>
+                  <input
+                    type="text"
+                    value={editEventForm.location}
+                    onChange={(e) =>
+                      setEditEventForm({
+                        ...editEventForm,
+                        location: e.target.value,
+                      })
+                    }
+                    className={inputClassName}
+                    placeholder="JRE - 1495 Weaver Street, Scarsdale"
+                  />
+                </div>
+
+                {/* Location URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Location URL (Google Maps)
+                  </label>
+                  <input
+                    type="url"
+                    value={editEventForm.location_url}
+                    onChange={(e) =>
+                      setEditEventForm({
+                        ...editEventForm,
+                        location_url: e.target.value,
+                      })
+                    }
+                    className={inputClassName}
+                  />
+                </div>
+
+                {/* Image URL */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Image URL
+                  </label>
+                  <input
+                    type="text"
+                    value={editEventForm.image_url}
+                    onChange={(e) =>
+                      setEditEventForm({
+                        ...editEventForm,
+                        image_url: e.target.value,
+                      })
+                    }
+                    className={inputClassName}
+                    placeholder="/images/events/my-event.jpg"
+                  />
+                </div>
+
+                {/* Description */}
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">
+                    Description
+                  </label>
+                  <textarea
+                    value={editEventForm.description}
+                    onChange={(e) =>
+                      setEditEventForm({
+                        ...editEventForm,
+                        description: e.target.value,
+                      })
+                    }
+                    rows={3}
+                    className={`${inputClassName} resize-none`}
+                  />
+                </div>
+
+                {/* Pricing */}
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price per Adult ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editEventForm.price_per_adult}
+                      onChange={(e) =>
+                        setEditEventForm({
+                          ...editEventForm,
+                          price_per_adult: Number(e.target.value) || 0,
+                        })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Price per Kid ($)
+                    </label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={editEventForm.kids_price}
+                      onChange={(e) =>
+                        setEditEventForm({
+                          ...editEventForm,
+                          kids_price: Number(e.target.value) || 0,
+                        })
+                      }
+                      className={inputClassName}
+                    />
+                  </div>
+                </div>
+
+                {/* Active Toggle */}
+                <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+                  <div>
+                    <p className="text-sm font-medium text-gray-700">
+                      Event Status
+                    </p>
+                    <p className="text-xs text-gray-500">
+                      Inactive events won&apos;t appear on the public site
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() =>
+                      setEditEventForm({
+                        ...editEventForm,
+                        is_active: !editEventForm.is_active,
+                      })
+                    }
+                    className={`relative w-12 h-6 rounded-full transition-colors ${
+                      editEventForm.is_active ? "bg-green-500" : "bg-gray-300"
+                    }`}
+                  >
+                    <span
+                      className={`absolute top-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform ${
+                        editEventForm.is_active
+                          ? "translate-x-6"
+                          : "translate-x-0.5"
+                      }`}
+                    />
+                  </button>
+                </div>
+
+                {/* Sponsorship Tiers */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <label className="text-sm font-medium text-gray-700">
+                      Sponsorship Tiers
+                    </label>
+                    <button
+                      type="button"
+                      onClick={() =>
+                        setEditSponsorships([
+                          ...editSponsorships,
+                          { name: "", price: "", description: "" },
+                        ])
+                      }
+                      className="flex items-center gap-1 text-sm text-[#EF8046] hover:text-[#d96a2f]"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add Tier
+                    </button>
+                  </div>
+                  {editSponsorships.length === 0 ? (
+                    <p className="text-sm text-gray-400">No sponsorship tiers</p>
+                  ) : (
+                    <div className="space-y-3">
+                      {editSponsorships.map((s, i) => (
+                        <div
+                          key={i}
+                          className="p-3 bg-gray-50 rounded-lg border border-gray-200"
+                        >
+                          <div className="flex items-start gap-3">
+                            <div className="flex-1 grid grid-cols-2 gap-3">
+                              <input
+                                type="text"
+                                value={s.name}
+                                onChange={(e) => {
+                                  const updated = [...editSponsorships];
+                                  updated[i].name = e.target.value;
+                                  setEditSponsorships(updated);
+                                }}
+                                className={inputClassName}
+                                placeholder="Tier name"
+                              />
+                              <input
+                                type="number"
+                                value={s.price}
+                                onChange={(e) => {
+                                  const updated = [...editSponsorships];
+                                  updated[i].price = e.target.value;
+                                  setEditSponsorships(updated);
+                                }}
+                                className={inputClassName}
+                                placeholder="Price"
+                              />
+                              <input
+                                type="text"
+                                value={s.description}
+                                onChange={(e) => {
+                                  const updated = [...editSponsorships];
+                                  updated[i].description = e.target.value;
+                                  setEditSponsorships(updated);
+                                }}
+                                className={`${inputClassName} col-span-2`}
+                                placeholder="Description (optional)"
+                              />
+                            </div>
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setEditSponsorships(
+                                  editSponsorships.filter((_, idx) => idx !== i)
+                                )
+                              }
+                              className="p-1.5 text-gray-400 hover:text-red-500"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              {/* Footer */}
+              <div className="sticky bottom-0 bg-white flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
+                <button
+                  onClick={() => setShowEditEvent(false)}
+                  disabled={isSavingEvent}
+                  className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  onClick={handleSaveEvent}
+                  disabled={isSavingEvent}
+                  className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#EF8046] hover:bg-[#d96a2f] rounded-lg transition-colors disabled:opacity-50"
+                >
+                  {isSavingEvent ? (
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{
+                        duration: 1,
+                        repeat: Infinity,
+                        ease: "linear",
+                      }}
+                      className="w-4 h-4 border-2 border-white border-t-transparent rounded-full"
+                    />
+                  ) : (
+                    <Save className="w-4 h-4" />
+                  )}
+                  {isSavingEvent ? "Saving..." : "Save Event"}
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============ EDIT REGISTRATION MODAL ============ */}
       <AnimatePresence>
         {editingRegistration && (
           <motion.div
@@ -557,86 +1189,77 @@ export default function EventDetailPage({
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
           >
-            {/* Backdrop */}
             <div
               className="absolute inset-0 bg-black/50"
-              onClick={() => !isSaving && setEditingRegistration(null)}
+              onClick={() => !isSavingReg && setEditingRegistration(null)}
             />
-
-            {/* Modal */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
               className="relative bg-white rounded-2xl shadow-xl w-full max-w-lg max-h-[90vh] overflow-y-auto"
             >
-              {/* Modal Header */}
               <div className="sticky top-0 bg-white flex items-center justify-between px-6 py-4 border-b border-gray-100 z-10">
                 <h3 className="text-lg font-semibold text-gray-900">
                   Edit Registration
                 </h3>
                 <button
-                  onClick={() => !isSaving && setEditingRegistration(null)}
+                  onClick={() => !isSavingReg && setEditingRegistration(null)}
                   className="p-1 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors"
                 >
                   <X className="w-5 h-5" />
                 </button>
               </div>
 
-              {/* Modal Body */}
               <div className="px-6 py-5 space-y-4">
-                {editError && (
+                {editRegError && (
                   <div className="p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-                    {editError}
+                    {editRegError}
                   </div>
                 )}
 
-                {/* Name */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Full Name
                   </label>
                   <input
                     type="text"
-                    value={editForm.name}
+                    value={editRegForm.name}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, name: e.target.value })
+                      setEditRegForm({ ...editRegForm, name: e.target.value })
                     }
                     className={inputClassName}
                   />
                 </div>
 
-                {/* Email */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Email
                   </label>
                   <input
                     type="email"
-                    value={editForm.email}
+                    value={editRegForm.email}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, email: e.target.value })
+                      setEditRegForm({ ...editRegForm, email: e.target.value })
                     }
                     className={inputClassName}
                   />
                 </div>
 
-                {/* Phone */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Phone
                   </label>
                   <input
                     type="tel"
-                    value={editForm.phone}
+                    value={editRegForm.phone}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, phone: e.target.value })
+                      setEditRegForm({ ...editRegForm, phone: e.target.value })
                     }
                     className={inputClassName}
                   />
                 </div>
 
-                {/* Adults & Kids */}
                 <div className="grid grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
@@ -645,10 +1268,10 @@ export default function EventDetailPage({
                     <input
                       type="number"
                       min="0"
-                      value={editForm.adults}
+                      value={editRegForm.adults}
                       onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
+                        setEditRegForm({
+                          ...editRegForm,
                           adults: parseInt(e.target.value) || 0,
                         })
                       }
@@ -662,10 +1285,10 @@ export default function EventDetailPage({
                     <input
                       type="number"
                       min="0"
-                      value={editForm.kids}
+                      value={editRegForm.kids}
                       onChange={(e) =>
-                        setEditForm({
-                          ...editForm,
+                        setEditRegForm({
+                          ...editRegForm,
                           kids: parseInt(e.target.value) || 0,
                         })
                       }
@@ -674,16 +1297,15 @@ export default function EventDetailPage({
                   </div>
                 </div>
 
-                {/* Sponsorship */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Sponsorship
                   </label>
                   <select
-                    value={editForm.sponsorship_id || ""}
+                    value={editRegForm.sponsorship_id || ""}
                     onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
+                      setEditRegForm({
+                        ...editRegForm,
                         sponsorship_id: e.target.value || null,
                       })
                     }
@@ -698,7 +1320,6 @@ export default function EventDetailPage({
                   </select>
                 </div>
 
-                {/* Amount */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Amount ($)
@@ -707,10 +1328,10 @@ export default function EventDetailPage({
                     type="number"
                     min="0"
                     step="0.01"
-                    value={editForm.subtotal}
+                    value={editRegForm.subtotal}
                     onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
+                      setEditRegForm({
+                        ...editRegForm,
                         subtotal: parseFloat(e.target.value) || 0,
                       })
                     }
@@ -718,16 +1339,15 @@ export default function EventDetailPage({
                   />
                 </div>
 
-                {/* Payment Status */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Payment Status
                   </label>
                   <select
-                    value={editForm.payment_status}
+                    value={editRegForm.payment_status}
                     onChange={(e) =>
-                      setEditForm({
-                        ...editForm,
+                      setEditRegForm({
+                        ...editRegForm,
                         payment_status: e.target.value,
                       })
                     }
@@ -740,15 +1360,14 @@ export default function EventDetailPage({
                   </select>
                 </div>
 
-                {/* Message */}
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">
                     Message
                   </label>
                   <textarea
-                    value={editForm.message}
+                    value={editRegForm.message}
                     onChange={(e) =>
-                      setEditForm({ ...editForm, message: e.target.value })
+                      setEditRegForm({ ...editRegForm, message: e.target.value })
                     }
                     rows={2}
                     className={`${inputClassName} resize-none`}
@@ -756,21 +1375,20 @@ export default function EventDetailPage({
                 </div>
               </div>
 
-              {/* Modal Footer */}
               <div className="sticky bottom-0 bg-white flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100">
                 <button
                   onClick={() => setEditingRegistration(null)}
-                  disabled={isSaving}
+                  disabled={isSavingReg}
                   className="px-4 py-2 text-sm font-medium text-gray-700 hover:text-gray-900 hover:bg-gray-100 rounded-lg transition-colors"
                 >
                   Cancel
                 </button>
                 <button
-                  onClick={handleSaveEdit}
-                  disabled={isSaving}
+                  onClick={handleSaveReg}
+                  disabled={isSavingReg}
                   className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-[#EF8046] hover:bg-[#d96a2f] rounded-lg transition-colors disabled:opacity-50"
                 >
-                  {isSaving ? (
+                  {isSavingReg ? (
                     <motion.div
                       animate={{ rotate: 360 }}
                       transition={{
@@ -783,7 +1401,7 @@ export default function EventDetailPage({
                   ) : (
                     <Save className="w-4 h-4" />
                   )}
-                  {isSaving ? "Saving..." : "Save Changes"}
+                  {isSavingReg ? "Saving..." : "Save Changes"}
                 </button>
               </div>
             </motion.div>
@@ -791,9 +1409,9 @@ export default function EventDetailPage({
         )}
       </AnimatePresence>
 
-      {/* Delete Confirmation Modal */}
+      {/* ============ DELETE REGISTRATION MODAL ============ */}
       <AnimatePresence>
-        {deletingId && (
+        {deletingRegId && (
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -802,7 +1420,7 @@ export default function EventDetailPage({
           >
             <div
               className="absolute inset-0 bg-black/50"
-              onClick={() => !isDeleting && setDeletingId(null)}
+              onClick={() => !isDeletingReg && setDeletingRegId(null)}
             />
             <motion.div
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
@@ -820,28 +1438,87 @@ export default function EventDetailPage({
                 <p className="text-sm text-gray-500 mb-1">
                   Are you sure you want to delete{" "}
                   <span className="font-medium text-gray-700">
-                    {deletingName}
+                    {deletingRegName}
                   </span>
                   &apos;s registration?
                 </p>
                 <p className="text-sm text-gray-500 mb-6">
-                  This will remove them from the event and update all counts.
                   This cannot be undone.
                 </p>
                 <div className="flex gap-3">
                   <button
-                    onClick={() => setDeletingId(null)}
-                    disabled={isDeleting}
+                    onClick={() => setDeletingRegId(null)}
+                    disabled={isDeletingReg}
                     className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
                   >
                     Cancel
                   </button>
                   <button
-                    onClick={handleDelete}
-                    disabled={isDeleting}
+                    onClick={handleDeleteReg}
+                    disabled={isDeletingReg}
                     className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
                   >
-                    {isDeleting ? "Deleting..." : "Delete"}
+                    {isDeletingReg ? "Deleting..." : "Delete"}
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* ============ DELETE EVENT MODAL ============ */}
+      <AnimatePresence>
+        {showDeleteEvent && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-50 flex items-center justify-center p-4"
+          >
+            <div
+              className="absolute inset-0 bg-black/50"
+              onClick={() => !isDeletingEvent && setShowDeleteEvent(false)}
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.95, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.95, y: 20 }}
+              className="relative bg-white rounded-2xl shadow-xl w-full max-w-sm p-6"
+            >
+              <div className="text-center">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center mx-auto mb-4">
+                  <Trash2 className="w-6 h-6 text-red-600" />
+                </div>
+                <h3 className="text-lg font-semibold text-gray-900 mb-2">
+                  Delete Event
+                </h3>
+                <p className="text-sm text-gray-500 mb-1">
+                  Are you sure you want to delete{" "}
+                  <span className="font-medium text-gray-700">
+                    {event.title}
+                  </span>
+                  ?
+                </p>
+                <p className="text-sm text-red-500 mb-6">
+                  This will permanently delete the event, all {registrations.length}{" "}
+                  registration{registrations.length !== 1 ? "s" : ""}, and all
+                  sponsorship tiers. This cannot be undone.
+                </p>
+                <div className="flex gap-3">
+                  <button
+                    onClick={() => setShowDeleteEvent(false)}
+                    disabled={isDeletingEvent}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-lg transition-colors"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    onClick={handleDeleteEvent}
+                    disabled={isDeletingEvent}
+                    className="flex-1 px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors disabled:opacity-50"
+                  >
+                    {isDeletingEvent ? "Deleting..." : "Delete Event"}
                   </button>
                 </div>
               </div>
