@@ -62,6 +62,7 @@ export default function EventDetailPage({
   const totalRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
 
   // Fetch event data from API
   useEffect(() => {
@@ -96,28 +97,37 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // When a sponsorship is selected, scroll to show total + payment
+  // Helper: scroll form container to the bottom
+  const scrollFormToBottom = (delay = 200) => {
+    setTimeout(() => {
+      if (formContainerRef.current) {
+        formContainerRef.current.scrollTo({
+          top: formContainerRef.current.scrollHeight,
+          behavior: "smooth",
+        });
+      }
+    }, delay);
+  };
+
+  // When a sponsorship is selected, scroll form to bottom to show total + payment
   useEffect(() => {
-    if (selectedSponsorship && submitRef.current) {
-      setTimeout(() => {
-        submitRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 200);
+    if (selectedSponsorship) {
+      scrollFormToBottom(200);
     }
   }, [selectedSponsorship]);
 
-  // When payment method changes, scroll to show fields + submit button
+  // When payment method changes, scroll form to bottom to show fields + submit
   useEffect(() => {
-    if (submitRef.current) {
-      setTimeout(() => {
-        submitRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 350);
-    }
+    scrollFormToBottom(350);
   }, [paymentMethod]);
 
-  // Scroll to error when it appears
+  // Scroll form to top when error appears so user sees it
   useEffect(() => {
-    if (error && errorRef.current) {
-      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    if (error && formContainerRef.current) {
+      formContainerRef.current.scrollTo({
+        top: 0,
+        behavior: "smooth",
+      });
     }
   }, [error]);
 
@@ -577,7 +587,7 @@ export default function EventDetailPage({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-8rem)]">
+                <div ref={formContainerRef} className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-8rem)]">
                   {/* Form Header */}
                   <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-6 text-white">
                     <h3 className="text-xl font-bold flex items-center gap-2">

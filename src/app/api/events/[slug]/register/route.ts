@@ -123,7 +123,7 @@ export async function POST(
       event_id: event.id,
       name,
       email,
-      phone: normalizedPhone,
+      ...(normalizedPhone ? { phone: normalizedPhone } : {}),
       adults: numAdults,
       kids: numKids,
       sponsorship_id: sponsorshipId || null,
