@@ -61,6 +61,7 @@ export default function EventDetailPage({
   const paymentRef = useRef<HTMLDivElement>(null);
   const totalRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
+  const errorRef = useRef<HTMLDivElement>(null);
 
   // Fetch event data from API
   useEffect(() => {
@@ -95,14 +96,30 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // When payment method changes, scroll to show card fields + submit button
+  // When a sponsorship is selected, scroll to show total + payment
+  useEffect(() => {
+    if (selectedSponsorship && submitRef.current) {
+      setTimeout(() => {
+        submitRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 200);
+    }
+  }, [selectedSponsorship]);
+
+  // When payment method changes, scroll to show fields + submit button
   useEffect(() => {
     if (submitRef.current) {
       setTimeout(() => {
         submitRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
-      }, 250);
+      }, 350);
     }
   }, [paymentMethod]);
+
+  // Scroll to error when it appears
+  useEffect(() => {
+    if (error && errorRef.current) {
+      errorRef.current.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  }, [error]);
 
   // Confetti on success
   useEffect(() => {
@@ -575,7 +592,7 @@ export default function EventDetailPage({
                   <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     {/* Error Message */}
                     {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      <div ref={errorRef} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
                         {error}
                       </div>
                     )}
@@ -730,44 +747,66 @@ export default function EventDetailPage({
                                     const ratio = s.price / maxPrice;
                                     const isTop = ratio > 0.8;
                                     const isHigh = ratio > 0.5;
-                                    const glowSpread = Math.round(ratio * 18);
-                                    const glowAlpha = (ratio * 0.35).toFixed(2);
                                     const isSelected = selectedSponsorship === s.id;
 
                                     return (
                                       <motion.button
                                         key={s.id}
                                         type="button"
-                                        initial={{ opacity: 0, y: 10 }}
-                                        animate={isSelected ? { opacity: 1, y: 0 } : {
+                                        initial={{ opacity: 0, x: -20 }}
+                                        animate={{
                                           opacity: 1,
-                                          y: 0,
-                                          boxShadow: isHigh ? [
-                                            `0 0 0px rgba(239, 128, 70, 0)`,
-                                            `0 0 ${glowSpread}px rgba(239, 128, 70, ${glowAlpha})`,
-                                            `0 0 0px rgba(239, 128, 70, 0)`,
-                                          ] : "0 0 0px rgba(239, 128, 70, 0)",
-                                        }}
-                                        transition={isSelected ? { delay: 0 } : isHigh ? {
-                                          opacity: { delay: i * 0.08, duration: 0.3 },
-                                          y: { delay: i * 0.08, duration: 0.3 },
-                                          boxShadow: { duration: 2.5, repeat: Infinity, repeatDelay: isTop ? 0.5 : 1.5, ease: "easeInOut" },
-                                        } : { delay: i * 0.08 }}
-                                        onClick={() => setSelectedSponsorship(isSelected ? null : s.id)}
-                                        className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${
-                                          isSelected
-                                            ? "border-[#EF8046] bg-[#EF8046]/5"
+                                          x: 0,
+                                          scale: isTop && !isSelected ? [1, 1.015, 1] : 1,
+                                          boxShadow: isSelected
+                                            ? "0 4px 20px rgba(239, 128, 70, 0.25)"
                                             : isTop
-                                              ? "border-[#EF8046]/30 bg-gradient-to-r from-[#EF8046]/[0.03] to-white hover:border-[#EF8046]/60"
-                                              : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
+                                              ? [
+                                                  "0 2px 8px rgba(239, 128, 70, 0.1)",
+                                                  "0 4px 24px rgba(239, 128, 70, 0.3)",
+                                                  "0 2px 8px rgba(239, 128, 70, 0.1)",
+                                                ]
+                                              : isHigh
+                                                ? [
+                                                    "0 1px 4px rgba(239, 128, 70, 0.05)",
+                                                    "0 2px 12px rgba(239, 128, 70, 0.15)",
+                                                    "0 1px 4px rgba(239, 128, 70, 0.05)",
+                                                  ]
+                                                : "0 1px 3px rgba(0,0,0,0.05)",
+                                        }}
+                                        transition={{
+                                          opacity: { delay: i * 0.08, duration: 0.3 },
+                                          x: { delay: i * 0.08, duration: 0.3, type: "spring", stiffness: 200 },
+                                          scale: isTop && !isSelected ? { duration: 3, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 },
+                                          boxShadow: (isTop || isHigh) && !isSelected
+                                            ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+                                            : { duration: 0.2 },
+                                        }}
+                                        onClick={() => setSelectedSponsorship(isSelected ? null : s.id)}
+                                        whileHover={{ y: -3, scale: 1.02 }}
+                                        whileTap={{ scale: 0.97 }}
+                                        className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${
+                                          isSelected
+                                            ? "border-[#EF8046] bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5"
+                                            : isTop
+                                              ? "border-[#EF8046]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
+                                              : isHigh
+                                                ? "border-[#EF8046]/20 bg-white hover:border-[#EF8046]/40"
+                                                : "border-gray-200 bg-white hover:border-gray-300"
                                         }`}
                                       >
-                                        {/* Shimmer for top-tier sponsorships */}
-                                        {isHigh && !isSelected && (
+                                        {/* Shine sweep for top/high tiers */}
+                                        {(isTop || isHigh) && !isSelected && (
                                           <motion.div
-                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-[#EF8046]/[0.07] to-transparent"
+                                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"
+                                            initial={{ x: "-100%" }}
                                             animate={{ x: ["-100%", "200%"] }}
-                                            transition={{ duration: 3, repeat: Infinity, repeatDelay: isTop ? 2 : 4, ease: "easeInOut" }}
+                                            transition={{
+                                              duration: 1.5,
+                                              repeat: Infinity,
+                                              repeatDelay: isTop ? 3 : 5,
+                                              ease: "easeInOut",
+                                            }}
                                           />
                                         )}
                                         <div className="relative flex items-center justify-between">
@@ -775,32 +814,37 @@ export default function EventDetailPage({
                                             <div className="flex items-center gap-2">
                                               {isTop ? (
                                                 <motion.div
-                                                  animate={{ rotate: [0, 10, -10, 0] }}
-                                                  transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                                                  animate={{ rotate: [0, 15, -15, 0] }}
+                                                  transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
                                                 >
                                                   <Star className="w-4 h-4 text-[#EF8046] fill-[#EF8046]" />
                                                 </motion.div>
                                               ) : (
-                                                <Award className={`w-4 h-4 transition-colors duration-300 ${
-                                                  isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/50" : "text-gray-300 group-hover:text-[#EF8046]/60"
+                                                <Award className={`w-4 h-4 transition-colors duration-200 ${
+                                                  isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/60" : "text-gray-300"
                                                 }`} />
                                               )}
                                               <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
+                                              {isTop && !isSelected && (
+                                                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#EF8046] text-white px-2 py-0.5 rounded-full">
+                                                  Popular
+                                                </span>
+                                              )}
                                             </div>
                                             {s.description && (
                                               <p className="text-xs text-gray-500 mt-1 ml-6">{s.description}</p>
                                             )}
                                           </div>
                                           <div className="flex items-center gap-3 ml-4">
-                                            <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${
-                                              isSelected ? "text-[#EF8046]" : isTop ? "text-[#EF8046]" : "text-gray-700"
+                                            <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${
+                                              isSelected || isTop ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/80" : "text-gray-700"
                                             }`}>
                                               ${s.price}
                                             </span>
-                                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
+                                            <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${
                                               isSelected
                                                 ? "border-[#EF8046] bg-[#EF8046]"
-                                                : "border-gray-300 group-hover:border-[#EF8046]/40"
+                                                : "border-gray-300"
                                             }`}>
                                               {isSelected && (
                                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>

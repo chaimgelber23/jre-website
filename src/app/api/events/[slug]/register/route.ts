@@ -18,10 +18,13 @@ export async function POST(
 
     if (!name || !email) {
       return NextResponse.json(
-        { success: false, error: "Name and email are required" },
+        { success: false, error: "Name and email are required." },
         { status: 400 }
       );
     }
+
+    // Phone is optional - normalize to empty string if not provided
+    const normalizedPhone = phone?.trim() || "";
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,7 +123,7 @@ export async function POST(
       event_id: event.id,
       name,
       email,
-      phone: phone || null,
+      phone: normalizedPhone,
       adults: numAdults,
       kids: numKids,
       sponsorship_id: sponsorshipId || null,
@@ -153,7 +156,7 @@ export async function POST(
       new Date().toLocaleString(),
       name,
       email,
-      phone || "",
+      normalizedPhone,
       "", // Spouse Name
       "", // Spouse Email
       "", // Spouse Phone
