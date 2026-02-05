@@ -17,6 +17,7 @@ import {
   Star,
   Ticket,
   Award,
+  Sparkles,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -671,7 +672,7 @@ export default function EventDetailPage({
                     {/* Sponsorship Toggle */}
                     {sponsorships.length > 0 && (
                       <div className="pt-4 border-t border-gray-100">
-                        <button
+                        <motion.button
                           type="button"
                           onClick={() => {
                             setShowSponsorship(!showSponsorship);
@@ -679,11 +680,37 @@ export default function EventDetailPage({
                               setSelectedSponsorship(null);
                             }
                           }}
-                          className="w-full py-2 text-[#EF8046] font-medium text-sm flex items-center justify-center gap-2 hover:bg-[#EF8046]/5 rounded-lg transition-colors"
+                          className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
+                            showSponsorship
+                              ? "bg-gray-50 text-gray-500 border border-gray-200"
+                              : "bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white shadow-lg shadow-[#EF8046]/25"
+                          }`}
+                          whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
+                          whileTap={{ scale: 0.98 }}
                         >
-                          <Plus className={`w-4 h-4 transition-transform duration-200 ${showSponsorship ? "rotate-45" : ""}`} />
-                          {showSponsorship ? "Remove Sponsorship" : "Add a Sponsorship"}
-                        </button>
+                          {!showSponsorship && (
+                            <motion.div
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
+                              animate={{ x: ["-100%", "200%"] }}
+                              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
+                            />
+                          )}
+                          <span className="relative flex items-center gap-2">
+                            {showSponsorship ? (
+                              <>
+                                <Plus className="w-4 h-4 rotate-45" />
+                                Remove Sponsorship
+                              </>
+                            ) : (
+                              <>
+                                <Sparkles className="w-4 h-4" />
+                                Become a Sponsor
+                                <Award className="w-4 h-4" />
+                              </>
+                            )}
+                          </span>
+                        </motion.button>
+
                         <AnimatePresence>
                           {showSponsorship && (
                             <motion.div
@@ -691,31 +718,74 @@ export default function EventDetailPage({
                               initial={{ opacity: 0, height: 0 }}
                               animate={{ opacity: 1, height: "auto" }}
                               exit={{ opacity: 0, height: 0 }}
-                              className="space-y-3 overflow-hidden pt-3"
+                              className="overflow-hidden"
                             >
-                              <select
-                                value={selectedSponsorship || ""}
-                                onChange={(e) => setSelectedSponsorship(e.target.value || null)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              >
-                                <option value="">Select a sponsorship</option>
-                                {sponsorships.map((s) => (
-                                  <option key={s.id} value={s.id}>
-                                    {s.name} - ${s.price}
-                                  </option>
+                              <div className="space-y-3 pt-4">
+                                <p className="text-xs text-gray-400 text-center font-medium tracking-wide uppercase">Select a sponsorship level</p>
+                                {sponsorships.map((s, i) => (
+                                  <motion.button
+                                    key={s.id}
+                                    type="button"
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: i * 0.08 }}
+                                    onClick={() => setSelectedSponsorship(selectedSponsorship === s.id ? null : s.id)}
+                                    className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${
+                                      selectedSponsorship === s.id
+                                        ? "border-[#EF8046] bg-[#EF8046]/5 shadow-md shadow-[#EF8046]/10"
+                                        : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
+                                    }`}
+                                  >
+                                    <div className="flex items-center justify-between">
+                                      <div className="flex-1">
+                                        <div className="flex items-center gap-2">
+                                          <Award className={`w-4 h-4 transition-colors duration-300 ${
+                                            selectedSponsorship === s.id ? "text-[#EF8046]" : "text-gray-300 group-hover:text-[#EF8046]/60"
+                                          }`} />
+                                          <p className="font-semibold text-gray-900 text-sm">{s.name}</p>
+                                        </div>
+                                        {s.description && (
+                                          <p className="text-xs text-gray-500 mt-1 ml-6">{s.description}</p>
+                                        )}
+                                      </div>
+                                      <div className="flex items-center gap-3 ml-4">
+                                        <span className={`text-lg font-bold transition-colors duration-300 ${
+                                          selectedSponsorship === s.id ? "text-[#EF8046]" : "text-gray-700"
+                                        }`}>
+                                          ${s.price}
+                                        </span>
+                                        <div className={`w-5 h-5 rounded-full border-2 flex items-center justify-center transition-all duration-300 ${
+                                          selectedSponsorship === s.id
+                                            ? "border-[#EF8046] bg-[#EF8046]"
+                                            : "border-gray-300 group-hover:border-[#EF8046]/40"
+                                        }`}>
+                                          {selectedSponsorship === s.id && (
+                                            <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
+                                              <Check className="w-3 h-3 text-white" />
+                                            </motion.div>
+                                          )}
+                                        </div>
+                                      </div>
+                                    </div>
+                                  </motion.button>
                                 ))}
-                              </select>
 
-                              {selectedSponsorship && (
-                                <textarea
-                                  name="message"
-                                  value={formState.message}
-                                  onChange={handleChange}
-                                  rows={2}
-                                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
-                                  placeholder="In honor of... (optional)"
-                                />
-                              )}
+                                {selectedSponsorship && (
+                                  <motion.div
+                                    initial={{ opacity: 0, y: -5 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                  >
+                                    <textarea
+                                      name="message"
+                                      value={formState.message}
+                                      onChange={handleChange}
+                                      rows={2}
+                                      className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                      placeholder="In honor of... (optional)"
+                                    />
+                                  </motion.div>
+                                )}
+                              </div>
                             </motion.div>
                           )}
                         </AnimatePresence>
