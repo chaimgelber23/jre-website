@@ -165,6 +165,26 @@ export default function PurimEventPage() {
     });
   };
 
+  // Auto-format expiry date: add "/" after entering 2 digits for month
+  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value.replace(/[^\d]/g, ""); // Remove non-digits
+
+    // Limit to 6 digits (MMYYYY)
+    if (value.length > 6) {
+      value = value.slice(0, 6);
+    }
+
+    // Auto-insert "/" after month (MM)
+    if (value.length >= 2) {
+      value = value.slice(0, 2) + "/" + value.slice(2);
+    }
+
+    setFormState({
+      ...formState,
+      cardExpiry: value,
+    });
+  };
+
   const addFamilyMember = (type: "adult" | "child") => {
     const newMember: FamilyMember = {
       id: `${type}_${Date.now()}`,
@@ -759,7 +779,8 @@ export default function PurimEventPage() {
                                 type="text"
                                 name="cardExpiry"
                                 value={formState.cardExpiry}
-                                onChange={handleChange}
+                                onChange={handleExpiryChange}
+                                maxLength={7}
                                 className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
                                 placeholder="MM/YYYY"
                               />
