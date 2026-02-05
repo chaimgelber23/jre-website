@@ -59,6 +59,8 @@ export default function EventDetailPage({
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
+  const totalRef = useRef<HTMLDivElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   // Fetch event data from API
   useEffect(() => {
@@ -93,12 +95,21 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // Scroll to payment section when changed
+  // When a sponsorship tier is selected, scroll down to total + payment
   useEffect(() => {
-    if (paymentRef.current) {
+    if (selectedSponsorship && totalRef.current) {
       setTimeout(() => {
-        paymentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
-      }, 200);
+        totalRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+      }, 150);
+    }
+  }, [selectedSponsorship]);
+
+  // When payment method changes, scroll to show card fields + submit button
+  useEffect(() => {
+    if (submitRef.current) {
+      setTimeout(() => {
+        submitRef.current?.scrollIntoView({ behavior: "smooth", block: "end" });
+      }, 250);
     }
   }, [paymentMethod]);
 
@@ -793,7 +804,7 @@ export default function EventDetailPage({
                     )}
 
                     {/* Total */}
-                    <div className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
+                    <div ref={totalRef} className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 font-medium">Total</span>
                         <motion.span
@@ -914,6 +925,7 @@ export default function EventDetailPage({
 
                     {/* Submit */}
                     <motion.button
+                      ref={submitRef}
                       type="submit"
                       disabled={isSubmitting}
                       whileHover={{ scale: 1.02 }}
