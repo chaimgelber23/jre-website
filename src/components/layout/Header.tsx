@@ -65,11 +65,22 @@ export default function Header() {
                       ? "h-12"
                       : "h-16 brightness-0 invert opacity-95"
                   )}
-                  style={!isScrolled ? {
-                    filter: 'brightness(0) invert(1) drop-shadow(0 0 3px #EF8046) drop-shadow(0 0 6px #EF8046)',
-                  } : undefined}
                   priority
                 />
+                {/* Torch/flame glow - only when not scrolled */}
+                {!isScrolled && (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      top: '2%',
+                      left: '3%',
+                      width: '24px',
+                      height: '28px',
+                      background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
+                      filter: 'blur(4px)',
+                    }}
+                  />
+                )}
               </motion.div>
             </Link>
 
