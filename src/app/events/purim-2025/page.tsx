@@ -337,23 +337,30 @@ export default function PurimEventPage() {
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
-        <div className="relative h-[50vh] min-h-[400px]">
+        {/* Event flyer/banner image - shows full image */}
+        <div className="relative h-[80vh] min-h-[500px] bg-[#1a202c]">
           <Image
             src={purimEvent.image}
             alt={purimEvent.title}
             fill
-            className="object-cover"
+            className="object-contain"
             priority
           />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/50 to-black/30" />
-          <div className="absolute bottom-0 left-0 right-0 container mx-auto px-6 pb-8">
+          {/* Back button overlay */}
+          <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white mb-4 transition-colors"
+              className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-black/30 backdrop-blur-sm px-4 py-2 rounded-lg"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
             </Link>
+          </div>
+        </div>
+
+        {/* Event title below image */}
+        <div className="bg-gradient-to-b from-[#1a202c] to-[#2d3748] py-8">
+          <div className="container mx-auto px-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
@@ -364,7 +371,7 @@ export default function PurimEventPage() {
               <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
                 {purimEvent.title}
               </h1>
-              <p className="text-xl text-white/90 max-w-2xl">
+              <p className="text-xl text-white/80 max-w-2xl">
                 {purimEvent.subtitle}
               </p>
             </motion.div>

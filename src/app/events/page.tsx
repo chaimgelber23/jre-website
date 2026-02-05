@@ -236,17 +236,6 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
               <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
             </div>
 
-            {/* Price badge */}
-            <motion.div
-              initial={{ scale: 0, rotate: -12 }}
-              whileInView={{ scale: 1, rotate: -12 }}
-              viewport={{ once: true }}
-              transition={{ type: "spring", delay: 0.4 }}
-              className="absolute -bottom-4 -right-4 bg-gradient-to-br from-[#EF8046] to-[#d96a2f] text-white p-6 rounded-2xl shadow-xl"
-            >
-              <p className="text-xs uppercase tracking-wider opacity-80">Starting at</p>
-              <p className="text-3xl font-bold">${event.price}</p>
-            </motion.div>
           </motion.div>
 
           {/* Content side */}
@@ -340,17 +329,17 @@ export default function EventsPage() {
 
       {/* Hero Section - Clean and Professional */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background gradient */}
-        <div className="absolute inset-0 bg-gradient-to-b from-[#2d3748] to-[#1a202c]" />
+        {/* Background gradient - warm orange */}
+        <div className="absolute inset-0 bg-gradient-to-br from-[#EF8046] via-[#e8733a] to-[#d96a2f]" />
 
         {/* Subtle decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
           <DecorativeShape
-            className="absolute -top-20 -right-20 w-96 h-96 bg-[#EF8046]/15 rounded-full blur-3xl"
+            className="absolute -top-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"
             delay={0}
           />
           <DecorativeShape
-            className="absolute -bottom-32 -left-32 w-[400px] h-[400px] bg-[#EF8046]/10 rounded-full blur-3xl"
+            className="absolute -bottom-32 -left-32 w-[400px] h-[400px] bg-white/5 rounded-full blur-3xl"
             delay={0.2}
           />
         </div>
@@ -360,7 +349,7 @@ export default function EventsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-[#EF8046] font-medium tracking-wider uppercase mb-4"
+            className="text-white/80 font-medium tracking-wider uppercase mb-4"
           >
             Join Us
           </motion.p>
@@ -378,7 +367,7 @@ export default function EventsPage() {
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-xl text-gray-300 max-w-2xl mx-auto"
+            className="text-xl text-white/90 max-w-2xl mx-auto"
           >
             Great people, great food, and meaningful Torah—we&apos;d love to see you!
           </motion.p>
