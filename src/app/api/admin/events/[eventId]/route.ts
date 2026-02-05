@@ -42,25 +42,25 @@ export async function GET(
 
     const registrations = (registrationsData || []) as EventRegistration[];
 
-    // Calculate stats
+    // Calculate stats - count ALL registrations regardless of payment status
     const successful = registrations.filter((r) => r.payment_status === "success");
     const failed = registrations.filter((r) => r.payment_status === "failed");
     const pending = registrations.filter((r) => r.payment_status === "pending");
 
     const stats = {
-      totalRegistrations: successful.length,
-      totalAttendees: successful.reduce((sum, r) => sum + r.adults + r.kids, 0),
-      totalAdults: successful.reduce((sum, r) => sum + r.adults, 0),
-      totalKids: successful.reduce((sum, r) => sum + r.kids, 0),
-      totalRevenue: successful.reduce((sum, r) => sum + Number(r.subtotal), 0),
-      sponsorshipsCount: successful.filter((r) => r.sponsorship_id).length,
-      sponsorshipRevenue: successful
+      totalRegistrations: registrations.length,
+      totalAttendees: registrations.reduce((sum, r) => sum + r.adults + r.kids, 0),
+      totalAdults: registrations.reduce((sum, r) => sum + r.adults, 0),
+      totalKids: registrations.reduce((sum, r) => sum + r.kids, 0),
+      totalRevenue: registrations.reduce((sum, r) => sum + Number(r.subtotal), 0),
+      sponsorshipsCount: registrations.filter((r) => r.sponsorship_id).length,
+      sponsorshipRevenue: registrations
         .filter((r) => r.sponsorship_id)
         .reduce((sum, r) => sum + Number(r.subtotal), 0),
       failedCount: failed.length,
       pendingCount: pending.length,
       paymentSuccessRate:
-        registrations && registrations.length > 0
+        registrations.length > 0
           ? Math.round((successful.length / registrations.length) * 100)
           : 0,
     };

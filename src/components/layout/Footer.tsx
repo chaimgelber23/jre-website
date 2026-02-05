@@ -21,7 +21,7 @@ export default function Footer() {
   return (
     <footer className="bg-[#2d3748] text-white">
       {/* Main Footer */}
-      <div className="container mx-auto px-6 pt-20 pb-16">
+      <div className="container mx-auto px-6 pt-28 pb-16">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
           {/* About Section */}
           <FadeUp className="lg:col-span-2">

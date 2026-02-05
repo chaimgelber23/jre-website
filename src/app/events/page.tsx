@@ -1,74 +1,67 @@
 "use client";
 
+import { useState, useEffect } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Calendar, MapPin, Clock, ArrowRight, Star } from "lucide-react";
+import {
+  Calendar,
+  MapPin,
+  Clock,
+  ArrowRight,
+  Star,
+  ChevronDown,
+  Loader2,
+} from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import {
-  FadeUp,
-  StaggerContainer,
-  StaggerItem,
-} from "@/components/ui/motion";
+import { FadeUp, StaggerContainer, StaggerItem } from "@/components/ui/motion";
+import type { Event } from "@/types/database";
 
-// Sample events data - this will come from Google Sheets later
-const events = [
-  {
-    id: "purim-2025",
-    title: "JRE's Next-Level Purim Experience",
-    date: "Sunday, March 2, 2025",
-    time: "6:00 PM",
-    location: "Life, The Place To Be - Ardsley, NY",
-    price: 40,
-    image: "/images/events/Purim25.jpg",
-    description:
-      "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $100.",
-    featured: true,
-  },
-  {
-    id: "chanukah-2025",
-    title: "Light It Up - Chanukah Celebration",
-    date: "December 16, 2025",
-    time: "6:00 PM - 8:00 PM",
-    location: "JRE - 1495 Weaver Street, Scarsdale",
-    price: 36,
-    image: "/images/events/Dinner.jpg",
-    description:
-      "Join us for an evening of light, latkes, and celebration as we kindle the Chanukah flames together.",
-  },
-  {
-    id: "scotch-steak",
-    title: "Scotch & Steak Night",
-    date: "January 15, 2026",
-    time: "7:30 PM - 10:00 PM",
-    location: "JRE - 1495 Weaver Street, Scarsdale",
-    price: 75,
-    image: "/images/events/ScotchNSteak.jpg",
-    description:
-      "An evening of fine scotch, premium steak, and thought-provoking Torah discussion for men.",
-  },
-];
+interface DisplayEvent {
+  id: string;
+  title: string;
+  date: string;
+  time: string;
+  location: string;
+  price: number;
+  image: string;
+  description: string;
+  featured: boolean;
+}
 
-const pastEvents = [
-  {
-    title: "High Holiday Services 2024",
-    date: "September 2024",
-    image: "/images/events/JREBensoussan.jpeg",
-  },
-  {
-    title: "Women's Retreat",
-    date: "August 2024",
-    image: "/images/events/women2.jpg",
-  },
-  {
-    title: "Summer BBQ",
-    date: "July 2024",
-    image: "/images/events/Dinner.jpg",
-  },
-];
+function formatEventDate(dateStr: string): string {
+  const date = new Date(dateStr + "T00:00:00");
+  return date.toLocaleDateString("en-US", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+}
 
-// Subtle decorative shape component (professional, minimal movement)
+function formatEventTime(startTime: string | null, endTime: string | null): string {
+  if (!startTime) return "See event details";
+  const start = startTime;
+  if (endTime) return `${start} - ${endTime}`;
+  return start;
+}
+
+function eventToDisplay(event: Event, isFeatured: boolean): DisplayEvent {
+  return {
+    id: event.slug,
+    title: event.title,
+    date: formatEventDate(event.date),
+    time: formatEventTime(event.start_time, event.end_time),
+    location: event.location || "See event details",
+    price: event.price_per_adult,
+    image: event.image_url || "/images/events/Dinner.jpg",
+    description: event.description || "",
+    featured: isFeatured,
+  };
+}
+
+// Subtle decorative shape component
 function DecorativeShape({
   className,
   delay = 0,
@@ -87,7 +80,13 @@ function DecorativeShape({
 }
 
 // Event Card Component with enhanced animations
-function EventCard({ event, index }: { event: typeof events[0]; index: number }) {
+function EventCard({
+  event,
+  index,
+}: {
+  event: DisplayEvent;
+  index: number;
+}) {
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -171,7 +170,7 @@ function EventCard({ event, index }: { event: typeof events[0]; index: number })
 }
 
 // Featured Event Spotlight Component
-function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
+function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   return (
     <section className="relative py-20 overflow-hidden">
       {/* Background */}
@@ -204,7 +203,9 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
             className="inline-flex items-center gap-2 bg-[#EF8046]/20 text-[#EF8046] px-4 py-2 rounded-full mb-4"
           >
             <Star className="w-4 h-4 fill-current" />
-            <span className="font-semibold text-sm uppercase tracking-wider">Don&apos;t Miss Out</span>
+            <span className="font-semibold text-sm uppercase tracking-wider">
+              Don&apos;t Miss Out
+            </span>
             <Star className="w-4 h-4 fill-current" />
           </motion.div>
           <h2 className="text-4xl md:text-5xl font-bold text-white">
@@ -235,7 +236,6 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
               <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
               <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
             </div>
-
           </motion.div>
 
           {/* Content side */}
@@ -256,7 +256,10 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
             <div className="space-y-4 mb-8">
               <motion.div
                 className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.15)" }}
+                whileHover={{
+                  x: 10,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                }}
                 transition={{ duration: 0.2 }}
               >
                 <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
@@ -270,7 +273,10 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
 
               <motion.div
                 className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.15)" }}
+                whileHover={{
+                  x: 10,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                }}
                 transition={{ duration: 0.2 }}
               >
                 <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
@@ -284,7 +290,10 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
 
               <motion.div
                 className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.15)" }}
+                whileHover={{
+                  x: 10,
+                  backgroundColor: "rgba(255,255,255,0.15)",
+                }}
                 transition={{ duration: 0.2 }}
               >
                 <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
@@ -320,8 +329,60 @@ function FeaturedEventSpotlight({ event }: { event: typeof events[0] }) {
 }
 
 export default function EventsPage() {
-  const featuredEvent = events.find((e) => e.featured);
-  const otherEvents = events.filter((e) => !e.featured);
+  const [upcomingEvents, setUpcomingEvents] = useState<DisplayEvent[]>([]);
+  const [pastEvents, setPastEvents] = useState<DisplayEvent[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  useEffect(() => {
+    async function fetchEvents() {
+      try {
+        const res = await fetch("/api/events");
+        const data = await res.json();
+
+        if (data.success) {
+          const upcoming: Event[] = data.upcoming || [];
+          const past: Event[] = data.past || [];
+
+          // First upcoming event is featured
+          const displayUpcoming = upcoming.map((e, i) =>
+            eventToDisplay(e, i === 0)
+          );
+          const displayPast = past.map((e) => eventToDisplay(e, false));
+
+          setUpcomingEvents(displayUpcoming);
+          setPastEvents(displayPast);
+        }
+      } catch (err) {
+        console.error("Failed to fetch events:", err);
+      } finally {
+        setIsLoading(false);
+      }
+    }
+
+    fetchEvents();
+  }, []);
+
+  const featuredEvent = upcomingEvents.find((e) => e.featured);
+  const otherEvents = upcomingEvents.filter((e) => !e.featured);
+
+  if (isLoading) {
+    return (
+      <main className="min-h-screen">
+        <Header />
+        <div className="flex items-center justify-center min-h-[60vh]">
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            className="flex flex-col items-center gap-4"
+          >
+            <Loader2 className="w-10 h-10 text-[#EF8046] animate-spin" />
+            <p className="text-gray-500">Loading events...</p>
+          </motion.div>
+        </div>
+        <Footer />
+      </main>
+    );
+  }
 
   return (
     <main className="min-h-screen">
@@ -369,8 +430,32 @@ export default function EventsPage() {
             transition={{ delay: 0.2, duration: 0.5 }}
             className="text-xl text-white/90 max-w-2xl mx-auto"
           >
-            Great people, great food, and meaningful Torah—we&apos;d love to see you!
+            Great people, great food, and meaningful Torah—we&apos;d love to see
+            you!
           </motion.p>
+
+          {/* Scroll indicator */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-12"
+          >
+            <motion.div
+              animate={{ y: [0, 10, 0] }}
+              transition={{
+                duration: 2,
+                repeat: Infinity,
+                ease: "easeInOut",
+              }}
+              className="inline-flex flex-col items-center gap-1 text-white/60"
+            >
+              <span className="text-xs uppercase tracking-widest">
+                See What&apos;s Coming
+              </span>
+              <ChevronDown className="w-6 h-6" />
+            </motion.div>
+          </motion.div>
         </div>
       </section>
 
@@ -378,82 +463,115 @@ export default function EventsPage() {
       {featuredEvent && <FeaturedEventSpotlight event={featuredEvent} />}
 
       {/* Other Upcoming Events */}
-      <section className="py-20 bg-white relative overflow-hidden">
-        {/* Background decoration */}
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#EF8046]/5 rounded-full blur-3xl" />
+      {otherEvents.length > 0 && (
+        <section className="py-20 bg-white relative overflow-hidden">
+          {/* Background decoration */}
+          <div className="absolute top-0 right-0 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
+          <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#EF8046]/5 rounded-full blur-3xl" />
 
-        <div className="container mx-auto px-6 relative z-10">
-          <FadeUp className="text-center mb-12">
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-              Mark Your Calendar
-            </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              More Events
-            </h2>
-          </FadeUp>
+          <div className="container mx-auto px-6 relative z-10">
+            <FadeUp className="text-center mb-12">
+              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
+                Mark Your Calendar
+              </p>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                More Events
+              </h2>
+            </FadeUp>
 
-          <div className="flex flex-wrap justify-center gap-8">
-            {otherEvents.map((event, index) => (
-              <EventCard key={event.id} event={event} index={index} />
-            ))}
+            <div className="flex flex-wrap justify-center gap-8">
+              {otherEvents.map((event, index) => (
+                <EventCard key={event.id} event={event} index={index} />
+              ))}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
+
+      {/* No events message */}
+      {upcomingEvents.length === 0 && !isLoading && (
+        <section className="py-20 bg-white">
+          <div className="container mx-auto px-6 text-center">
+            <FadeUp>
+              <div className="max-w-lg mx-auto">
+                <Calendar className="w-16 h-16 text-[#EF8046]/40 mx-auto mb-6" />
+                <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                  Stay Tuned!
+                </h2>
+                <p className="text-gray-600 text-lg">
+                  We&apos;re planning exciting new events. Join our mailing list
+                  to be the first to know!
+                </p>
+                <Link href="/contact">
+                  <motion.button
+                    whileHover={{ scale: 1.03 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="mt-8 bg-[#EF8046] text-white px-8 py-4 rounded font-medium hover:bg-[#d96a2f]"
+                  >
+                    Get in Touch
+                  </motion.button>
+                </Link>
+              </div>
+            </FadeUp>
+          </div>
+        </section>
+      )}
 
       {/* Past Events */}
-      <section className="py-20 bg-[#FBFBFB] relative overflow-hidden">
-        {/* Decorative line */}
-        <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#EF8046]/30 to-transparent" />
+      {pastEvents.length > 0 && (
+        <section className="py-20 bg-[#FBFBFB] relative overflow-hidden">
+          {/* Decorative line */}
+          <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#EF8046]/30 to-transparent" />
 
-        <div className="container mx-auto px-6">
-          <FadeUp className="text-center mb-12">
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-              Memories
-            </p>
-            <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-              Past Events
-            </h2>
-          </FadeUp>
+          <div className="container mx-auto px-6">
+            <FadeUp className="text-center mb-12">
+              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
+                Memories
+              </p>
+              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                Past Events
+              </h2>
+            </FadeUp>
 
-          <StaggerContainer className="flex flex-wrap justify-center gap-6">
-            {pastEvents.map((event, index) => (
-              <StaggerItem key={index}>
-                <motion.div
-                  whileHover={{ y: -10, scale: 1.02 }}
-                  transition={{ type: "spring", stiffness: 300 }}
-                  className="relative h-72 w-[350px] rounded-2xl overflow-hidden group cursor-pointer"
-                >
-                  <Image
-                    src={event.image}
-                    alt={event.title}
-                    fill
-                    className="object-cover transition-transform duration-700 group-hover:scale-110"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+            <StaggerContainer className="flex flex-wrap justify-center gap-6">
+              {pastEvents.map((event, index) => (
+                <StaggerItem key={event.id}>
+                  <motion.div
+                    whileHover={{ y: -10, scale: 1.02 }}
+                    transition={{ type: "spring", stiffness: 300 }}
+                    className="relative h-72 w-[350px] rounded-2xl overflow-hidden group cursor-pointer"
+                  >
+                    <Image
+                      src={event.image}
+                      alt={event.title}
+                      fill
+                      className="object-cover transition-transform duration-700 group-hover:scale-110"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                  {/* Hover overlay */}
-                  <div className="absolute inset-0 bg-[#EF8046]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+                    {/* Hover overlay */}
+                    <div className="absolute inset-0 bg-[#EF8046]/20 opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
 
-                  <div className="absolute bottom-0 left-0 right-0 p-6">
-                    <motion.p
-                      className="text-[#EF8046] text-sm font-semibold mb-2"
-                      initial={{ y: 10, opacity: 0 }}
-                      whileInView={{ y: 0, opacity: 1 }}
-                      transition={{ delay: index * 0.1 }}
-                    >
-                      {event.date}
-                    </motion.p>
-                    <h3 className="text-xl font-bold text-white group-hover:text-[#EF8046] transition-colors">
-                      {event.title}
-                    </h3>
-                  </div>
-                </motion.div>
-              </StaggerItem>
-            ))}
-          </StaggerContainer>
-        </div>
-      </section>
+                    <div className="absolute bottom-0 left-0 right-0 p-6">
+                      <motion.p
+                        className="text-[#EF8046] text-sm font-semibold mb-2"
+                        initial={{ y: 10, opacity: 0 }}
+                        whileInView={{ y: 0, opacity: 1 }}
+                        transition={{ delay: index * 0.1 }}
+                      >
+                        {event.date}
+                      </motion.p>
+                      <h3 className="text-xl font-bold text-white group-hover:text-[#EF8046] transition-colors">
+                        {event.title}
+                      </h3>
+                    </div>
+                  </motion.div>
+                </StaggerItem>
+              ))}
+            </StaggerContainer>
+          </div>
+        </section>
+      )}
 
       {/* CTA Section */}
       <section className="py-20 bg-[#EF8046] relative overflow-hidden">

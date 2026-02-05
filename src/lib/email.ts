@@ -234,27 +234,15 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
               <td align="center" style="padding: 40px 20px;">
                 <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%;">
 
-                  <!-- Logo Section -->
-                  <tr>
-                    <td align="center" style="padding-bottom: 30px;">
-                      <table role="presentation" cellspacing="0" cellpadding="0">
-                        <tr>
-                          <td style="background: linear-gradient(135deg, #EF8046, #f59e0b); padding: 15px 30px; border-radius: 50px;">
-                            <span style="color: #ffffff; font-size: 28px; font-weight: bold; letter-spacing: 2px;">THE JRE</span>
-                          </td>
-                        </tr>
-                      </table>
-                    </td>
-                  </tr>
-
                   <!-- Main Card -->
                   <tr>
                     <td>
                       <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #ffffff; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);">
 
-                        <!-- Header Banner -->
+                        <!-- Header Banner with Logo -->
                         <tr>
-                          <td style="background: linear-gradient(135deg, #10b981 0%, #059669 100%); padding: 50px 30px; text-align: center;">
+                          <td style="background: linear-gradient(135deg, #EF8046 0%, #d96a2f 100%); padding: 40px 30px; text-align: center;">
+                            <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="180" style="display: block; margin: 0 auto 20px; max-width: 180px; height: auto;" />
                             <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.1);">You're Registered!</h1>
                           </td>
                         </tr>

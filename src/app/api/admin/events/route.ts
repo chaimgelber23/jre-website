@@ -50,15 +50,14 @@ export async function GET(request: NextRequest) {
           .eq("event_id", event.id);
 
         const registrations = (registrationsData || []) as RegistrationStats[];
-        const successful = registrations.filter((r) => r.payment_status === "success");
 
         return {
           ...event,
           stats: {
-            totalRegistrations: successful.length,
-            totalAttendees: successful.reduce((sum, r) => sum + r.adults + r.kids, 0),
-            totalRevenue: successful.reduce((sum, r) => sum + Number(r.subtotal), 0),
-            sponsorshipsCount: successful.filter((r) => r.sponsorship_id).length,
+            totalRegistrations: registrations.length,
+            totalAttendees: registrations.reduce((sum, r) => sum + r.adults + r.kids, 0),
+            totalRevenue: registrations.reduce((sum, r) => sum + Number(r.subtotal), 0),
+            sponsorshipsCount: registrations.filter((r) => r.sponsorship_id).length,
           },
         };
       })

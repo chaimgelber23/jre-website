@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 import Link from "next/link";
@@ -14,9 +14,6 @@ import {
   Plus,
   Check,
   CreditCard,
-  Trash2,
-  UserPlus,
-  ChevronUp,
   PartyPopper,
   Music,
   Wine,
@@ -57,43 +54,32 @@ $40 per adult, $10 per child. Family max $100!`,
   ],
 };
 
-interface FamilyMember {
-  id: string;
-  name: string;
-  email: string;
-  phone: string;
-  type: "adult" | "child";
-}
-
 export default function PurimEventPage() {
-  const [showFamilyDetails, setShowFamilyDetails] = useState(false);
+  const [numAdults, setNumAdults] = useState(1);
+  const [numKids, setNumKids] = useState(0);
   const [selectedSponsorship, setSelectedSponsorship] = useState<string | null>(null);
+  const [showSponsorship, setShowSponsorship] = useState(false);
   const [customAmount, setCustomAmount] = useState<number>(0);
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "check">("online");
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>(null);
 
   const [formState, setFormState] = useState({
     name: "",
     email: "",
     phone: "",
-    // Spouse details
-    spouseName: "",
-    spouseEmail: "",
-    spousePhone: "",
-    // Payment
     cardName: "",
     cardNumber: "",
     cardExpiry: "",
     cardCvv: "",
-    // Message
     message: "",
   });
-
-  const [additionalAdults, setAdditionalAdults] = useState<FamilyMember[]>([]);
-  const [children, setChildren] = useState<FamilyMember[]>([]);
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Refs for auto-scroll
+  const sponsorshipRef = useRef<HTMLDivElement>(null);
+  const paymentRef = useRef<HTMLDivElement>(null);
 
   // Elegant confetti celebration when registration is successful
   useEffect(() => {
@@ -137,24 +123,34 @@ export default function PurimEventPage() {
   }, [isSubmitted]);
 
   // Calculate totals
-  const baseAdults = 1 + (showFamilyDetails && formState.spouseName ? 1 : 0);
-  const totalAdults = baseAdults + additionalAdults.length;
-  const totalKids = children.length;
-
   const getSponsorshipPrice = () => {
     if (!selectedSponsorship) return 0;
     const sponsorship = purimEvent.sponsorships.find((s) => s.name === selectedSponsorship);
-    if (sponsorship?.price === 0) return customAmount; // Custom amount sponsorship
+    if (sponsorship?.price === 0) return customAmount;
     return sponsorship?.price || 0;
   };
 
   const sponsorshipPrice = getSponsorshipPrice();
-
-  // Calculate base total with family max cap
-  const calculatedTotal = totalAdults * purimEvent.pricePerAdult + totalKids * purimEvent.kidsPrice;
+  const calculatedTotal = numAdults * purimEvent.pricePerAdult + numKids * purimEvent.kidsPrice;
   const baseTotal = Math.min(calculatedTotal, purimEvent.familyMax);
-
   const total = sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal;
+
+  // Auto-scroll when expanding sections
+  useEffect(() => {
+    if (showSponsorship && sponsorshipRef.current) {
+      setTimeout(() => {
+        sponsorshipRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 150);
+    }
+  }, [showSponsorship]);
+
+  useEffect(() => {
+    if (paymentMethod && paymentRef.current) {
+      setTimeout(() => {
+        paymentRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      }, 150);
+    }
+  }, [paymentMethod]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -165,64 +161,11 @@ export default function PurimEventPage() {
     });
   };
 
-  // Auto-format expiry date: add "/" after entering 2 digits for month
   const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^\d]/g, ""); // Remove non-digits
-
-    // Limit to 6 digits (MMYYYY)
-    if (value.length > 6) {
-      value = value.slice(0, 6);
-    }
-
-    // Auto-insert "/" after month (MM)
-    if (value.length >= 2) {
-      value = value.slice(0, 2) + "/" + value.slice(2);
-    }
-
-    setFormState({
-      ...formState,
-      cardExpiry: value,
-    });
-  };
-
-  const addFamilyMember = (type: "adult" | "child") => {
-    const newMember: FamilyMember = {
-      id: `${type}_${Date.now()}`,
-      name: "",
-      email: "",
-      phone: "",
-      type,
-    };
-
-    if (type === "adult") {
-      setAdditionalAdults([...additionalAdults, newMember]);
-    } else {
-      setChildren([...children, newMember]);
-    }
-  };
-
-  const removeFamilyMember = (id: string, type: "adult" | "child") => {
-    if (type === "adult") {
-      setAdditionalAdults(additionalAdults.filter((m) => m.id !== id));
-    } else {
-      setChildren(children.filter((m) => m.id !== id));
-    }
-  };
-
-  const updateFamilyMember = (
-    id: string,
-    field: keyof FamilyMember,
-    value: string,
-    type: "adult" | "child"
-  ) => {
-    const updateList = (list: FamilyMember[]) =>
-      list.map((m) => (m.id === id ? { ...m, [field]: value } : m));
-
-    if (type === "adult") {
-      setAdditionalAdults(updateList(additionalAdults));
-    } else {
-      setChildren(updateList(children));
-    }
+    let value = e.target.value.replace(/[^\d]/g, "");
+    if (value.length > 6) value = value.slice(0, 6);
+    if (value.length >= 2) value = value.slice(0, 2) + "/" + value.slice(2);
+    setFormState({ ...formState, cardExpiry: value });
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -235,31 +178,19 @@ export default function PurimEventPage() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          // Primary registrant
           name: formState.name,
           email: formState.email,
           phone: formState.phone,
-          // Spouse
-          spouseName: formState.spouseName,
-          spouseEmail: formState.spouseEmail,
-          spousePhone: formState.spousePhone,
-          // Family members
-          additionalAdults,
-          children,
-          // Counts
-          totalAdults,
-          totalKids,
-          // Sponsorship
+          totalAdults: numAdults,
+          totalKids: numKids,
           sponsorship: selectedSponsorship,
           sponsorshipAmount: sponsorshipPrice,
-          // Payment
           paymentMethod,
           amount: total,
           cardName: paymentMethod === "online" ? formState.cardName : undefined,
           cardNumber: paymentMethod === "online" ? formState.cardNumber : undefined,
           cardExpiry: paymentMethod === "online" ? formState.cardExpiry : undefined,
           cardCvv: paymentMethod === "online" ? formState.cardCvv : undefined,
-          // Message
           message: formState.message,
         }),
       });
@@ -495,7 +426,7 @@ export default function PurimEventPage() {
                       </div>
                     )}
 
-                    {/* Primary Registrant */}
+                    {/* Your Details */}
                     <div>
                       <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
                         <Users className="w-4 h-4 text-[#EF8046]" />
@@ -525,246 +456,203 @@ export default function PurimEventPage() {
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          required
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                          placeholder="Phone Number *"
+                          placeholder="Phone (optional)"
                         />
                       </div>
                     </div>
 
-                    {/* Add Family Details Toggle */}
-                    <button
-                      type="button"
-                      onClick={() => setShowFamilyDetails(!showFamilyDetails)}
-                      className="w-full py-2 text-[#EF8046] font-medium text-sm flex items-center justify-center gap-2 hover:bg-[#EF8046]/5 rounded-lg transition-colors"
-                    >
-                      {showFamilyDetails ? (
-                        <>
-                          <ChevronUp className="w-4 h-4" />
-                          Hide Family Details
-                        </>
-                      ) : (
-                        <>
-                          <UserPlus className="w-4 h-4" />
-                          Add Family Details
-                        </>
-                      )}
-                    </button>
-
-                    {/* Family Details Section */}
-                    <AnimatePresence>
-                      {showFamilyDetails && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="space-y-5 overflow-hidden"
-                        >
-                          {/* Spouse Details */}
-                          <div className="pt-4 border-t border-gray-100">
-                            <h4 className="font-semibold text-gray-900 mb-3">Spouse Details</h4>
-                            <div className="space-y-3">
-                              <input
-                                type="text"
-                                name="spouseName"
-                                value={formState.spouseName}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="Spouse Full Name"
-                              />
-                              <input
-                                type="email"
-                                name="spouseEmail"
-                                value={formState.spouseEmail}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="Spouse Email"
-                              />
-                              <input
-                                type="tel"
-                                name="spousePhone"
-                                value={formState.spousePhone}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="Spouse Phone"
-                              />
-                            </div>
-                          </div>
-
-                          {/* Additional Adults */}
-                          <div className="pt-4 border-t border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-semibold text-gray-900">Additional Adults</h4>
-                              <button
-                                type="button"
-                                onClick={() => addFamilyMember("adult")}
-                                className="text-[#EF8046] text-sm font-medium flex items-center gap-1 hover:underline"
-                              >
-                                <Plus className="w-4 h-4" /> Add Adult
-                              </button>
-                            </div>
-                            {additionalAdults.map((adult) => (
-                              <div key={adult.id} className="bg-gray-50 rounded-lg p-3 mb-3">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs text-gray-500">Adult Guest</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFamilyMember(adult.id, "adult")}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={adult.name}
-                                  onChange={(e) => updateFamilyMember(adult.id, "name", e.target.value, "adult")}
-                                  className="w-full px-3 py-2 rounded border border-gray-200 text-sm mb-2"
-                                  placeholder="Full Name"
-                                />
-                              </div>
-                            ))}
-                          </div>
-
-                          {/* Children */}
-                          <div className="pt-4 border-t border-gray-100">
-                            <div className="flex justify-between items-center mb-3">
-                              <h4 className="font-semibold text-gray-900">
-                                Children <span className="text-gray-500 text-sm">(${purimEvent.kidsPrice} each)</span>
-                              </h4>
-                              <button
-                                type="button"
-                                onClick={() => addFamilyMember("child")}
-                                className="text-[#EF8046] text-sm font-medium flex items-center gap-1 hover:underline"
-                              >
-                                <Plus className="w-4 h-4" /> Add Child
-                              </button>
-                            </div>
-                            {children.map((child) => (
-                              <div key={child.id} className="bg-[#EF8046]/5 rounded-lg p-3 mb-3">
-                                <div className="flex justify-between items-center mb-2">
-                                  <span className="text-xs text-[#EF8046]">Child (${purimEvent.kidsPrice})</span>
-                                  <button
-                                    type="button"
-                                    onClick={() => removeFamilyMember(child.id, "child")}
-                                    className="text-red-500 hover:text-red-700"
-                                  >
-                                    <Trash2 className="w-4 h-4" />
-                                  </button>
-                                </div>
-                                <input
-                                  type="text"
-                                  value={child.name}
-                                  onChange={(e) => updateFamilyMember(child.id, "name", e.target.value, "child")}
-                                  className="w-full px-3 py-2 rounded border border-gray-200 text-sm"
-                                  placeholder="Child's Name"
-                                />
-                              </div>
-                            ))}
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
-
-                    {/* Sponsorship */}
+                    {/* Attendees */}
                     <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-3">Sponsorship (Optional)</h4>
-                      <select
-                        value={selectedSponsorship || ""}
-                        onChange={(e) => setSelectedSponsorship(e.target.value || null)}
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                      >
-                        <option value="">No sponsorship</option>
-                        {purimEvent.sponsorships.map((s) => (
-                          <option key={s.name} value={s.name}>
-                            {s.name} {s.price > 0 ? `- $${s.price}` : ""}
-                          </option>
-                        ))}
-                      </select>
-
-                      {/* Custom Amount for "Because I'm Happy" */}
-                      {selectedSponsorship === "\"Because I'm Happy\" Sponsorship - Any Amount" && (
-                        <div className="mt-3">
-                          <label className="text-xs text-gray-500 mb-1 block">Enter your amount:</label>
-                          <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                            <span className="px-3 py-2 bg-gray-50 text-gray-500 border-r">$</span>
-                            <input
-                              type="number"
-                              value={customAmount || ""}
-                              onChange={(e) => setCustomAmount(Number(e.target.value))}
-                              className="w-full px-3 py-2 outline-none text-sm"
-                              placeholder="0"
-                              min="1"
-                            />
+                      <h4 className="font-semibold text-gray-900 mb-4">Attendees</h4>
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-gray-700 text-sm">Adults</span>
+                            <span className="text-gray-400 text-xs ml-1">(${purimEvent.pricePerAdult}/person)</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setNumAdults(Math.max(1, numAdults - 1))}
+                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                            >
+                              &minus;
+                            </button>
+                            <span className="w-6 text-center font-bold text-gray-900">{numAdults}</span>
+                            <button
+                              type="button"
+                              onClick={() => setNumAdults(numAdults + 1)}
+                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                            >
+                              +
+                            </button>
                           </div>
                         </div>
-                      )}
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <span className="text-gray-700 text-sm">Children</span>
+                            <span className="text-gray-400 text-xs ml-1">(${purimEvent.kidsPrice}/child)</span>
+                          </div>
+                          <div className="flex items-center gap-3">
+                            <button
+                              type="button"
+                              onClick={() => setNumKids(Math.max(0, numKids - 1))}
+                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                            >
+                              &minus;
+                            </button>
+                            <span className="w-6 text-center font-bold text-gray-900">{numKids}</span>
+                            <button
+                              type="button"
+                              onClick={() => setNumKids(numKids + 1)}
+                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                            >
+                              +
+                            </button>
+                          </div>
+                        </div>
+                        {calculatedTotal > purimEvent.familyMax && (
+                          <p className="text-sm text-[#EF8046] font-medium">
+                            Family max ${purimEvent.familyMax} applied!
+                          </p>
+                        )}
+                      </div>
                     </div>
 
-                    {/* Donation Amount (if no sponsorship) */}
-                    {!selectedSponsorship && (
-                      <div className="pt-4 border-t border-gray-100">
-                        <h4 className="font-semibold text-gray-900 mb-3">Amount</h4>
-                        <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
-                          <span className="px-3 py-2 bg-[#EF8046] text-white font-medium">$</span>
-                          <input
-                            type="number"
-                            value={total || ""}
-                            readOnly
-                            className="w-full px-3 py-2 outline-none text-sm bg-gray-50"
-                          />
-                        </div>
-                        <p className="text-xs text-gray-500 mt-2">
-                          {totalAdults} adult{totalAdults > 1 ? "s" : ""} @ ${purimEvent.pricePerAdult}
-                          {totalKids > 0 && ` + ${totalKids} kid${totalKids > 1 ? "s" : ""} @ $${purimEvent.kidsPrice}`}
-                          {calculatedTotal > purimEvent.familyMax && (
-                            <span className="text-[#EF8046] font-medium"> (Family max ${purimEvent.familyMax} applied!)</span>
-                          )}
-                        </p>
+                    {/* Sponsorship Toggle */}
+                    <div className="pt-4 border-t border-gray-100">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setShowSponsorship(!showSponsorship);
+                          if (showSponsorship) {
+                            setSelectedSponsorship(null);
+                            setCustomAmount(0);
+                          }
+                        }}
+                        className="w-full py-2 text-[#EF8046] font-medium text-sm flex items-center justify-center gap-2 hover:bg-[#EF8046]/5 rounded-lg transition-colors"
+                      >
+                        <Plus className={`w-4 h-4 transition-transform duration-200 ${showSponsorship ? "rotate-45" : ""}`} />
+                        {showSponsorship ? "Remove Sponsorship" : "Add a Sponsorship"}
+                      </button>
+                      <AnimatePresence>
+                        {showSponsorship && (
+                          <motion.div
+                            ref={sponsorshipRef}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="space-y-3 overflow-hidden pt-3"
+                          >
+                            <select
+                              value={selectedSponsorship || ""}
+                              onChange={(e) => setSelectedSponsorship(e.target.value || null)}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                            >
+                              <option value="">Select a sponsorship</option>
+                              {purimEvent.sponsorships.map((s) => (
+                                <option key={s.name} value={s.name}>
+                                  {s.name} {s.price > 0 ? `- $${s.price}` : ""}
+                                </option>
+                              ))}
+                            </select>
+
+                            {selectedSponsorship === "\"Because I'm Happy\" Sponsorship - Any Amount" && (
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block">Enter your amount:</label>
+                                <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden">
+                                  <span className="px-3 py-2 bg-gray-50 text-gray-500 border-r">$</span>
+                                  <input
+                                    type="number"
+                                    value={customAmount || ""}
+                                    onChange={(e) => setCustomAmount(Number(e.target.value))}
+                                    className="w-full px-3 py-2 outline-none text-sm"
+                                    placeholder="0"
+                                    min="1"
+                                  />
+                                </div>
+                              </div>
+                            )}
+
+                            {selectedSponsorship && (
+                              <textarea
+                                name="message"
+                                value={formState.message}
+                                onChange={handleChange}
+                                rows={2}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                placeholder="In honor of... (optional)"
+                              />
+                            )}
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Total */}
+                    <div className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
+                      <div className="flex justify-between items-center">
+                        <span className="text-gray-700 font-medium">Total</span>
+                        <motion.span
+                          key={total}
+                          initial={{ scale: 1.2, color: "#EF8046" }}
+                          animate={{ scale: 1, color: "#EF8046" }}
+                          className="text-3xl font-bold"
+                        >
+                          ${total}
+                        </motion.span>
                       </div>
-                    )}
+                      {!selectedSponsorship && (
+                        <p className="text-xs text-gray-500 mt-1">
+                          {numAdults} adult{numAdults > 1 ? "s" : ""} &times; ${purimEvent.pricePerAdult}
+                          {numKids > 0 && ` + ${numKids} kid${numKids > 1 ? "s" : ""} \u00D7 $${purimEvent.kidsPrice}`}
+                        </p>
+                      )}
+                      {selectedSponsorship && (
+                        <p className="text-xs text-gray-500 mt-1">{selectedSponsorship}</p>
+                      )}
+                    </div>
 
                     {/* Payment Method */}
                     <div className="pt-4 border-t border-gray-100">
                       <h4 className="font-semibold text-gray-900 mb-3">Payment Method</h4>
-                      <div className="flex gap-4">
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            checked={paymentMethod === "online"}
-                            onChange={() => setPaymentMethod("online")}
-                            className="w-4 h-4 text-[#EF8046]"
-                          />
-                          <span className="text-sm">Online Payment</span>
-                        </label>
-                        <label className="flex items-center gap-2 cursor-pointer">
-                          <input
-                            type="radio"
-                            name="paymentMethod"
-                            checked={paymentMethod === "check"}
-                            onChange={() => setPaymentMethod("check")}
-                            className="w-4 h-4 text-[#EF8046]"
-                          />
-                          <span className="text-sm">I&apos;ll send a Check</span>
-                        </label>
-                      </div>
-                    </div>
-
-                    {/* Credit Card Details */}
-                    <AnimatePresence>
-                      {paymentMethod === "online" && (
-                        <motion.div
-                          initial={{ opacity: 0, height: 0 }}
-                          animate={{ opacity: 1, height: "auto" }}
-                          exit={{ opacity: 0, height: 0 }}
-                          className="pt-4 border-t border-gray-100 overflow-hidden"
+                      <div className="grid grid-cols-2 gap-3">
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("online")}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            paymentMethod === "online"
+                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
+                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          }`}
                         >
-                          <div className="flex items-center gap-2 mb-3">
-                            <CreditCard className="w-5 h-5 text-[#EF8046]" />
-                            <h4 className="font-semibold text-gray-900">Credit Card Details</h4>
-                          </div>
-                          <div className="space-y-3">
+                          <CreditCard className="w-5 h-5 mx-auto mb-1" />
+                          <span className="text-sm font-medium">Credit Card</span>
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => setPaymentMethod("check")}
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${
+                            paymentMethod === "check"
+                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
+                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          }`}
+                        >
+                          <span className="text-lg block mb-1">&#9993;</span>
+                          <span className="text-sm font-medium">Send a Check</span>
+                        </button>
+                      </div>
+
+                      <AnimatePresence>
+                        {paymentMethod === "online" && (
+                          <motion.div
+                            ref={paymentRef}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-4 space-y-3 overflow-hidden"
+                          >
                             <input
                               type="text"
                               name="cardName"
@@ -800,38 +688,26 @@ export default function PurimEventPage() {
                                 placeholder="CVV"
                               />
                             </div>
-                          </div>
-                        </motion.div>
-                      )}
-                    </AnimatePresence>
+                          </motion.div>
+                        )}
 
-                    {/* Message */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-2">Message (Optional)</h4>
-                      <p className="text-xs text-gray-500 mb-3">
-                        If you would like your sponsorship in honor of a friend, leave a message below or email us at office@thejre.org
-                      </p>
-                      <textarea
-                        name="message"
-                        value={formState.message}
-                        onChange={handleChange}
-                        rows={3}
-                        className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
-                        placeholder="Enter your message..."
-                      />
-                    </div>
-
-                    {/* Total */}
-                    <div className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
-                      <div className="flex justify-between items-center">
-                        <span className="text-gray-700 font-medium">Total</span>
-                        <span className="text-3xl font-bold text-[#EF8046]">${total}</span>
-                      </div>
-                      {selectedSponsorship && (
-                        <p className="text-xs text-gray-500 mt-1">
-                          {selectedSponsorship}
-                        </p>
-                      )}
+                        {paymentMethod === "check" && (
+                          <motion.div
+                            ref={paymentRef}
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-4 overflow-hidden"
+                          >
+                            <div className="bg-[#FBFBFB] rounded-lg p-4 text-sm text-gray-600 space-y-2">
+                              <p className="font-medium text-gray-900">Check Instructions:</p>
+                              <p>Make check payable to: <strong>The JRE</strong></p>
+                              <p>Please bring your check to the event or mail to:</p>
+                              <p className="font-medium text-gray-900">1495 Weaver Street, Scarsdale, NY 10583</p>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
                     </div>
 
                     {/* Submit */}
@@ -858,7 +734,7 @@ export default function PurimEventPage() {
                       ) : (
                         <>
                           <PartyPopper className="w-5 h-5" />
-                          Register for Purim
+                          Confirm Registration
                         </>
                       )}
                     </motion.button>

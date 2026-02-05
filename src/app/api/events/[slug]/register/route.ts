@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { syncRegistrationToSheets } from "@/lib/google-sheets/sync";
+import { appendEventRegistration, slugToSheetName } from "@/lib/google-sheets/event-sheets";
 import { processPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
@@ -65,6 +65,7 @@ export async function POST(
 
     // If sponsorship is selected, get sponsorship price
     let sponsorshipName: string | null = null;
+    let sponsorshipPrice = 0;
     if (sponsorshipId) {
       const { data: sponsorshipData } = await supabase
         .from("event_sponsorships")
@@ -74,6 +75,7 @@ export async function POST(
 
       if (sponsorshipData) {
         const sponsorship = sponsorshipData as EventSponsorship;
+        sponsorshipPrice = sponsorship.price;
         subtotal = sponsorship.price; // Sponsorship replaces base price
         sponsorshipName = sponsorship.name;
       }
@@ -144,8 +146,29 @@ export async function POST(
 
     const registration = registrationData as EventRegistration;
 
-    // Sync to Google Sheets (async, non-blocking)
-    syncRegistrationToSheets(registration, event).catch(console.error);
+    // Sync to Google Sheets - each event gets its own tab (e.g., "Chanukah25", "ScotchSteak26")
+    const sheetName = slugToSheetName(slug);
+    const rowData = [
+      registration.id,
+      new Date().toLocaleString(),
+      name,
+      email,
+      phone || "",
+      "", // Spouse Name
+      "", // Spouse Email
+      "", // Spouse Phone
+      numAdults,
+      numKids,
+      `${name}${numAdults > 1 ? ` + ${numAdults - 1} adults` : ""}${numKids > 0 ? ` + ${numKids} kids` : ""}`,
+      sponsorshipName || "None",
+      sponsorshipPrice > 0 ? sponsorshipPrice : 0,
+      subtotal,
+      body.paymentMethod || "online",
+      paymentStatus,
+      paymentReference,
+      message || "",
+    ];
+    appendEventRegistration(sheetName, rowData).catch(console.error);
 
     // Send confirmation email (async, non-blocking)
     sendRegistrationConfirmation({
