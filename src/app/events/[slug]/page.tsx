@@ -108,21 +108,16 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // When a sponsorship is selected, scroll form container to show honor fields + total + payment + submit
+  // When a sponsorship is selected, scroll page to show honor fields + total + payment + submit
   useEffect(() => {
     if (selectedSponsorship) {
       // Wait for the conditional content to render
       setTimeout(() => {
-        // Scroll the form container to show the checkout section
-        if (formContainerRef.current && totalRef.current) {
-          const container = formContainerRef.current;
-          const totalElement = totalRef.current;
-          // Calculate scroll position to show from honor fields down to submit
-          // Scroll so the total box is roughly in the upper portion of visible area
-          const scrollTarget = totalElement.offsetTop - 150; // 150px above total for honor fields
-          container.scrollTo({
-            top: Math.max(0, scrollTarget),
-            behavior: "smooth"
+        // Scroll the page to bring total/payment/submit into view
+        if (totalRef.current) {
+          totalRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
           });
         }
       }, 400);
