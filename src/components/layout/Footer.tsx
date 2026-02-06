@@ -19,10 +19,10 @@ export default function Footer() {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-[#2d3748] text-white">
+    <footer className="bg-[#2d3748] text-white mt-8">
       {/* Main Footer */}
-      <div className="container mx-auto px-6 pt-16 pb-12">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 items-start">
+      <div className="container mx-auto px-6 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* About Section */}
           <FadeUp className="lg:col-span-2">
             <Link href="/" className="inline-block mb-6">
