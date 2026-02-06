@@ -12,7 +12,9 @@ const getSquareClient = () => {
   }
 
   // Use sandbox for development, production for live
-  const environment = accessToken.startsWith("EAAA")
+  // Detect by application ID prefix: sandbox-sq0idb- = sandbox, sq0idp- = production
+  const appId = process.env.SQUARE_APPLICATION_ID || "";
+  const environment = appId.startsWith("sandbox")
     ? SquareEnvironment.Sandbox
     : SquareEnvironment.Production;
 
