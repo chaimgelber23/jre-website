@@ -82,8 +82,22 @@ export default function CollectJsPayment({
     // Check if script already exists
     const existingScript = document.querySelector('script[src*="collect.js"]');
     if (existingScript) {
-      existingScript.addEventListener("load", () => setIsLoaded(true));
-      return;
+      // Script exists - check if it's already loaded by polling for CollectJS
+      const checkLoaded = setInterval(() => {
+        if (window.CollectJS) {
+          clearInterval(checkLoaded);
+          setIsLoaded(true);
+        }
+      }, 100);
+
+      // Also listen for load event in case it hasn't loaded yet
+      existingScript.addEventListener("load", () => {
+        clearInterval(checkLoaded);
+        setIsLoaded(true);
+      });
+
+      // Cleanup interval on unmount
+      return () => clearInterval(checkLoaded);
     }
 
     // Load the script
@@ -111,85 +125,105 @@ export default function CollectJsPayment({
   useEffect(() => {
     if (!isLoaded || !window.CollectJS || configuredRef.current || disabled) return;
 
-    configuredRef.current = true;
+    // Wait for DOM elements to be fully rendered
+    const timeoutId = setTimeout(() => {
+      // Verify the container elements exist before configuring
+      const ccnumberEl = document.getElementById("ccnumber");
+      const ccexpEl = document.getElementById("ccexp");
+      const cvvEl = document.getElementById("cvv");
 
-    window.CollectJS.configure({
-      variant: "inline",
-      tokenizationKey: tokenizationKey,
-      callback: (response) => {
-        setIsProcessing(false);
-        if (response.token) {
-          const cardInfo = response.card
-            ? {
-              last4: response.card.number?.slice(-4),
-              type: response.card.type,
-            }
-            : undefined;
-          onTokenReceived(response.token, cardInfo);
-        } else {
-          onError("Failed to process card. Please check your details and try again.");
-        }
-      },
-      validationCallback: (field, valid, message) => {
-        setFieldValidation((prev) => {
-          const updated = { ...prev, [field]: valid };
-          // Check if all fields are valid
-          const allValid = updated.ccnumber && updated.ccexp && updated.cvv;
-          onValidationChange?.(allValid);
-          return updated;
-        });
-        if (!valid && message) {
-          console.log(`Field ${field} validation: ${message}`);
-        }
-      },
-      fieldsAvailableCallback: () => {
-        console.log("Collect.js fields available");
-      },
-      timeoutCallback: () => {
-        setIsProcessing(false);
-        onError("Payment request timed out. Please try again.");
-      },
-      timeoutDuration: 30000,
-      customCss: {
-        "": {
-          "font-family": "Inter, system-ui, sans-serif",
-          "font-size": "14px",
-          color: "#1f2937",
-          padding: "10px 16px",
-          height: "42px",
-          "border-radius": "8px",
-          border: "1px solid #e5e7eb",
-          "background-color": "#ffffff",
-          width: "100%",
-          "box-sizing": "border-box",
+      if (!ccnumberEl || !ccexpEl || !cvvEl) {
+        console.error("Collect.js: Container elements not found");
+        return;
+      }
+
+      // Clear any existing iframes to ensure fresh configuration
+      ccnumberEl.innerHTML = "";
+      ccexpEl.innerHTML = "";
+      cvvEl.innerHTML = "";
+
+      configuredRef.current = true;
+
+      window.CollectJS?.configure({
+        variant: "inline",
+        tokenizationKey: tokenizationKey,
+        callback: (response) => {
+          setIsProcessing(false);
+          if (response.token) {
+            const cardInfo = response.card
+              ? {
+                  last4: response.card.number?.slice(-4),
+                  type: response.card.type,
+                }
+              : undefined;
+            onTokenReceived(response.token, cardInfo);
+          } else {
+            onError("Failed to process card. Please check your details and try again.");
+          }
         },
-        ":focus": {
-          "border-color": "#EF8046",
-          "box-shadow": "0 0 0 2px rgba(239, 128, 70, 0.2)",
-          outline: "none",
+        validationCallback: (field, valid, message) => {
+          setFieldValidation((prev) => {
+            const updated = { ...prev, [field]: valid };
+            // Check if all fields are valid
+            const allValid = updated.ccnumber && updated.ccexp && updated.cvv;
+            onValidationChange?.(allValid);
+            return updated;
+          });
+          if (!valid && message) {
+            console.log(`Field ${field} validation: ${message}`);
+          }
         },
-        "::placeholder": {
-          color: "#9ca3af",
+        fieldsAvailableCallback: () => {
+          console.log("Collect.js fields available");
         },
-      },
-      fields: {
-        ccnumber: {
-          selector: "#ccnumber",
-          title: "Card Number",
-          placeholder: "Card Number",
+        timeoutCallback: () => {
+          setIsProcessing(false);
+          onError("Payment request timed out. Please try again.");
         },
-        ccexp: {
-          selector: "#ccexp",
-          title: "Expiration",
-          placeholder: "MM / YY",
+        timeoutDuration: 30000,
+        customCss: {
+          "": {
+            "font-family": "Inter, system-ui, sans-serif",
+            "font-size": "14px",
+            color: "#1f2937",
+            padding: "10px 16px",
+            height: "42px",
+            "border-radius": "8px",
+            border: "1px solid #e5e7eb",
+            "background-color": "#ffffff",
+            width: "100%",
+            "box-sizing": "border-box",
+          },
+          ":focus": {
+            "border-color": "#EF8046",
+            "box-shadow": "0 0 0 2px rgba(239, 128, 70, 0.2)",
+            outline: "none",
+          },
+          "::placeholder": {
+            color: "#9ca3af",
+          },
         },
-        cvv: {
-          selector: "#cvv",
-          title: "CVV",
-          placeholder: "CVV",
+        fields: {
+          ccnumber: {
+            selector: "#ccnumber",
+            title: "Card Number",
+            placeholder: "Card Number",
+          },
+          ccexp: {
+            selector: "#ccexp",
+            title: "Expiration",
+            placeholder: "MM / YY",
+          },
+          cvv: {
+            selector: "#cvv",
+            title: "CVV",
+            placeholder: "CVV",
+          },
         },
-      },
-    });
+      });
+    }, 100); // Small delay to ensure DOM is ready
+
+    return () => clearTimeout(timeoutId);
   }, [isLoaded, disabled, tokenizationKey, onTokenReceived, onError, onValidationChange]);
 
   const requestToken = useCallback(() => {
@@ -225,7 +259,7 @@ export default function CollectJsPayment({
         </label>
         <div
           id="ccnumber"
-          className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
+          className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
         />
       </div>
 
@@ -235,14 +269,14 @@ export default function CollectJsPayment({
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiration</label>
           <div
             id="ccexp"
-            className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
+            className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">CVV</label>
           <div
             id="cvv"
-            className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
+            className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
           />
         </div>
       </div>
