@@ -259,9 +259,10 @@ export default function CollectJsPayment({
   }, [requestToken]);
 
   if (!tokenizationKey) {
+    console.error("[CollectJS] Missing NEXT_PUBLIC_BANQUEST_TOKENIZATION_KEY");
     return (
       <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
-        Payment system not configured. Please contact support.
+        Payment system not configured. Missing tokenization key. Please check .env.local and restart the server.
       </div>
     );
   }
@@ -276,7 +277,7 @@ export default function CollectJsPayment({
         </label>
         <div
           id="ccnumber"
-          className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+          className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
         />
       </div>
 
@@ -286,14 +287,14 @@ export default function CollectJsPayment({
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiration</label>
           <div
             id="ccexp"
-            className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+            className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">CVV</label>
           <div
             id="cvv"
-            className="w-full h-[42px] rounded-lg overflow-hidden [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
+            className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
           />
         </div>
       </div>

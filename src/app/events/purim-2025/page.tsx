@@ -88,6 +88,12 @@ export default function PurimEventPage() {
   const paymentRef = useRef<HTMLDivElement>(null);
   const totalRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
+  const registrationRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to registration form
+  const scrollToRegistration = () => {
+    registrationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Elegant confetti celebration when registration is successful
   useEffect(() => {
@@ -309,19 +315,34 @@ export default function PurimEventPage() {
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
         {/* Event flyer/banner image - shows full image */}
-        <div className="relative h-[80vh] min-h-[500px] bg-[#1a202c]">
+        <div
+          className="relative h-[80vh] min-h-[500px] bg-[#1a202c] cursor-pointer group"
+          onClick={scrollToRegistration}
+        >
           <Image
             src={purimEvent.image}
             alt={purimEvent.title}
             fill
-            className="object-contain"
+            className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             priority
           />
+          {/* Scroll hint */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+            <span className="text-white/80 text-sm font-medium">Click to Register</span>
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </motion.div>
+          </div>
           {/* Back button overlay */}
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white hover:text-white transition-colors bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-lg shadow-lg"
+              className="inline-flex items-center gap-2 text-gray-800 hover:text-[#EF8046] transition-colors bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border border-white/20"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
@@ -330,19 +351,19 @@ export default function PurimEventPage() {
         </div>
 
         {/* Event title below image */}
-        <div className="bg-gradient-to-b from-[#1a202c] to-[#2d3748] py-8">
+        <div className="bg-gradient-to-b from-[#1a202c] to-[#2d3748] py-6">
           <div className="container mx-auto px-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-2">
+              <p className="text-[#EF8046] font-medium tracking-wider uppercase text-sm mb-1">
                 We&apos;re thrilled you&apos;ll be joining us!
               </p>
-              <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
                 {purimEvent.title}
               </h1>
-              <p className="text-xl text-white/80 max-w-2xl">
+              <p className="text-lg text-white/80 max-w-2xl">
                 {purimEvent.subtitle}
               </p>
             </motion.div>
@@ -448,7 +469,7 @@ export default function PurimEventPage() {
             </div>
 
             {/* Registration Form */}
-            <div className="lg:col-span-1">
+            <div ref={registrationRef} className="lg:col-span-1 scroll-mt-28">
               <SlideInRight>
                 <div className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28">
                   <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] rounded-t-2xl">

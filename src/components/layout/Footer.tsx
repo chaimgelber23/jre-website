@@ -21,17 +21,17 @@ export default function Footer() {
   return (
     <footer className="bg-[#2d3748] text-white">
       {/* Main Footer */}
-      <div className="container mx-auto px-6 !pt-32 pb-16">
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12">
+      <div className="container mx-auto px-6 pt-16 pb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-12 items-start">
           {/* About Section */}
           <FadeUp className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-6 mt-8">
+            <Link href="/" className="inline-block mb-6">
               <Image
                 src="/images/logo.png"
                 alt="The JRE"
                 width={140}
                 height={47}
-                className="brightness-0 invert mt-4"
+                className="brightness-0 invert"
               />
             </Link>
             <p className="text-gray-300 leading-relaxed mb-6">

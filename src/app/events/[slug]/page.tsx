@@ -49,6 +49,7 @@ export default function EventDetailPage({
     email: "",
     phone: "",
     message: "",
+    honoreeEmail: "",
     cardName: "",
   });
   const [paymentToken, setPaymentToken] = useState<string | null>(null);
@@ -66,6 +67,13 @@ export default function EventDetailPage({
   const submitRef = useRef<HTMLButtonElement>(null);
   const errorRef = useRef<HTMLDivElement>(null);
   const formContainerRef = useRef<HTMLDivElement>(null);
+  const registrationRef = useRef<HTMLDivElement>(null);
+  const checkoutSectionRef = useRef<HTMLDivElement>(null);
+
+  // Scroll to registration form
+  const scrollToRegistration = () => {
+    registrationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+  };
 
   // Fetch event data from API
   useEffect(() => {
@@ -100,16 +108,16 @@ export default function EventDetailPage({
     }
   }, [showSponsorship]);
 
-  // When a sponsorship is selected, scroll to show total + payment
+  // When a sponsorship is selected, scroll to show honor fields + total + payment + submit
   useEffect(() => {
-    if (selectedSponsorship && totalRef.current) {
+    if (selectedSponsorship && checkoutSectionRef.current) {
       setTimeout(() => {
-        totalRef.current?.scrollIntoView({
+        checkoutSectionRef.current?.scrollIntoView({
           behavior: "smooth",
-          block: "center",
+          block: "start",
           inline: "nearest"
         });
-      }, 500);
+      }, 300);
     }
   }, [selectedSponsorship]);
 
@@ -196,6 +204,7 @@ export default function EventDetailPage({
         phone: formState.phone,
         sponsorshipId: selectedSponsorship || null,
         message: formState.message || null,
+        honoreeEmail: formState.honoreeEmail || null,
         paymentMethod,
       };
 
@@ -435,12 +444,15 @@ export default function EventDetailPage({
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
-        <div className="relative h-[45vh] min-h-[350px]">
+        <div
+          className="relative h-[45vh] min-h-[350px] cursor-pointer group"
+          onClick={scrollToRegistration}
+        >
           <Image
             src={eventImage}
             alt={event.title}
             fill
-            className="object-cover"
+            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
             priority
           />
           <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
@@ -449,10 +461,23 @@ export default function EventDetailPage({
           <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-[#EF8046]/50 rounded-tl-3xl" />
           <div className="absolute bottom-4 right-4 w-20 h-20 border-b-4 border-r-4 border-[#EF8046]/50 rounded-br-3xl" />
 
+          {/* Scroll hint */}
+          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
+            <span className="text-white/90 text-sm font-medium">Click to Register</span>
+            <motion.div
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+            >
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
+            </motion.div>
+          </div>
+
           <div className="absolute bottom-0 left-0 right-0 container mx-auto px-6 pb-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-gray-800 hover:text-[#EF8046] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm border border-white/20"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
@@ -616,7 +641,7 @@ export default function EventDetailPage({
             </div>
 
             {/* Registration Form - Right Column */}
-            <div className="lg:col-span-1">
+            <div ref={registrationRef} className="lg:col-span-1 scroll-mt-28">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -901,8 +926,10 @@ export default function EventDetailPage({
 
                                 {selectedSponsorship && (
                                   <motion.div
+                                    ref={checkoutSectionRef}
                                     initial={{ opacity: 0, y: -5 }}
                                     animate={{ opacity: 1, y: 0 }}
+                                    className="space-y-3 scroll-mt-4"
                                   >
                                     <textarea
                                       name="message"
@@ -911,6 +938,14 @@ export default function EventDetailPage({
                                       rows={2}
                                       className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
                                       placeholder="In honor of... (optional)"
+                                    />
+                                    <input
+                                      type="email"
+                                      name="honoreeEmail"
+                                      value={formState.honoreeEmail}
+                                      onChange={handleChange}
+                                      className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                      placeholder="Honoree's email (optional - we'll notify them)"
                                     />
                                   </motion.div>
                                 )}
