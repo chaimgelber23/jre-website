@@ -1,7 +1,22 @@
 // Banquest Gateway Payment Processing - JSON API v2
 // Endpoint: https://api.banquestgateway.com/api/v2/
+// Auth: Basic Authentication (base64 of sourceKey:pin)
 
 const BANQUEST_API_URL = "https://api.banquestgateway.com/api/v2/transactions/charge";
+
+// Helper to create Basic Auth header
+function getAuthHeader(): string {
+  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
+  const pin = process.env.BANQUEST_PIN;
+
+  if (!sourceKey || !pin) {
+    throw new Error("Banquest credentials not configured");
+  }
+
+  // Basic Auth: base64 encode "sourceKey:pin"
+  const credentials = Buffer.from(`${sourceKey}:${pin}`).toString("base64");
+  return `Basic ${credentials}`;
+}
 
 // ============================================
 // TYPES
@@ -71,21 +86,16 @@ interface BanquestResponse {
  * This is the PREFERRED method - card data never touches our server
  */
 export async function processTokenizedPayment(data: TokenizedPaymentData): Promise<PaymentResult> {
-  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
-
-  if (!sourceKey) {
-    console.error("Banquest source key not configured");
-    return { success: false, error: "Payment system not configured" };
-  }
-
   if (!data.paymentToken) {
     return { success: false, error: "Payment token is required" };
   }
 
   try {
+    const authHeader = getAuthHeader();
+
     const requestBody = {
       amount: data.amount,
-      source: data.paymentToken, // Collect.js token
+      source: data.paymentToken, // Collect.js token or nonce
       customer: {
         email: data.email,
         send_receipt: false,
@@ -107,7 +117,8 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${sourceKey}`,
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
       },
       body: JSON.stringify(requestBody),
     });
@@ -131,6 +142,9 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
     }
   } catch (error) {
     console.error("Payment processing error:", error);
+    if (error instanceof Error && error.message.includes("credentials")) {
+      return { success: false, error: "Payment system not configured" };
+    }
     return {
       success: false,
       error: "Failed to process payment. Please try again.",
@@ -147,13 +161,6 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
  * NOTE: This sends card data through our server - use tokenized method when possible
  */
 export async function processDirectPayment(data: DirectPaymentData): Promise<PaymentResult> {
-  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
-
-  if (!sourceKey) {
-    console.error("Banquest source key not configured");
-    return { success: false, error: "Payment system not configured" };
-  }
-
   // Validate card expiry format
   if (!data.cardExpiry || !data.cardExpiry.includes("/")) {
     return { success: false, error: "Invalid expiry date format. Please use MM/YY or MM/YYYY" };
@@ -177,6 +184,8 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
   const lastName = nameParts.slice(1).join(" ") || "";
 
   try {
+    const authHeader = getAuthHeader();
+
     const requestBody = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
@@ -204,7 +213,8 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${sourceKey}`,
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
       },
       body: JSON.stringify(requestBody),
     });
@@ -288,13 +298,9 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
 // ============================================
 
 export async function addToCustomerVault(paymentToken: string): Promise<{ success: boolean; vaultId?: string; error?: string }> {
-  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
-
-  if (!sourceKey) {
-    return { success: false, error: "Vault not configured" };
-  }
-
   try {
+    const authHeader = getAuthHeader();
+
     // Use the charge endpoint with save_card: true to get a card_ref back
     const requestBody = {
       amount: 0, // Zero-dollar auth to validate and save
@@ -306,7 +312,8 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${sourceKey}`,
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
       },
       body: JSON.stringify(requestBody),
     });
@@ -343,18 +350,14 @@ interface CaptureOptions {
  * Optionally specify amount for partial capture
  */
 export async function captureTransaction(options: CaptureOptions | number): Promise<PaymentResult> {
-  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
-
-  if (!sourceKey) {
-    return { success: false, error: "Payment system not configured" };
-  }
-
   // Support both simple (just reference number) and detailed options
   const opts: CaptureOptions = typeof options === "number"
     ? { referenceNumber: options }
     : options;
 
   try {
+    const authHeader = getAuthHeader();
+
     const requestBody: Record<string, unknown> = {
       reference_number: opts.referenceNumber,
     };
@@ -374,7 +377,8 @@ export async function captureTransaction(options: CaptureOptions | number): Prom
       method: "POST",
       headers: {
         "Content-Type": "application/json",
-        "Authorization": `Bearer ${sourceKey}`,
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
       },
       body: JSON.stringify(requestBody),
     });
