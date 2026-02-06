@@ -1,19 +1,28 @@
-// Banquest Gateway Payment Processing (NMI-based)
-// Supports both Collect.js tokenized payments and direct card payments
+// Banquest Gateway Payment Processing - JSON API v2
+// Endpoint: https://api.banquestgateway.com/api/v2/
 
-// API URL - Banquest uses NMI infrastructure
-const BANQUEST_API_URL = "https://secure.networkmerchants.com/api/transact.php";
+const BANQUEST_API_URL = "https://api.banquestgateway.com/api/v2/transactions/charge";
 
 // ============================================
-// TOKENIZED PAYMENT (Collect.js) - PREFERRED
+// TYPES
 // ============================================
 
 interface TokenizedPaymentData {
-  paymentToken: string; // Token from Collect.js
+  paymentToken: string; // Token from Collect.js (passed as "source")
   amount: number;
   email: string;
   firstName?: string;
   lastName?: string;
+  description?: string;
+}
+
+interface DirectPaymentData {
+  amount: number;
+  cardNumber: string;
+  cardExpiry: string; // MM/YY or MM/YYYY format
+  cardCvv: string;
+  cardName: string;
+  email: string;
   description?: string;
 }
 
@@ -22,17 +31,50 @@ interface PaymentResult {
   transactionId?: string;
   error?: string;
   authCode?: string;
+  referenceNumber?: number;
 }
 
+// Banquest API Response Types
+interface BanquestResponse {
+  version?: string;
+  status: "Approved" | "Declined" | "Error" | string;
+  status_code: string; // "A" = Approved
+  error_message?: string;
+  error_code?: string;
+  error_details?: string;
+  auth_amount?: number;
+  auth_code?: string;
+  reference_number?: number;
+  transaction?: {
+    id: number;
+    created_at: string;
+    amount_details?: {
+      amount: number;
+    };
+    status_details?: {
+      error_code?: string;
+      error_message?: string;
+      status: string;
+    };
+  };
+  card_type?: string;
+  last_4?: string;
+  card_ref?: string;
+}
+
+// ============================================
+// TOKENIZED PAYMENT (Collect.js) - PREFERRED
+// ============================================
+
 /**
- * Process payment using a Collect.js payment_token
+ * Process payment using a Collect.js payment token (source)
  * This is the PREFERRED method - card data never touches our server
  */
 export async function processTokenizedPayment(data: TokenizedPaymentData): Promise<PaymentResult> {
-  const securityKey = process.env.BANQUEST_SOURCE_KEY;
+  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
 
-  if (!securityKey) {
-    console.error("Banquest security key not configured");
+  if (!sourceKey) {
+    console.error("Banquest source key not configured");
     return { success: false, error: "Payment system not configured" };
   }
 
@@ -41,54 +83,50 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
   }
 
   try {
-    const formData = new URLSearchParams({
-      security_key: securityKey,
-      type: "sale",
-      amount: data.amount.toFixed(2),
-      payment_token: data.paymentToken, // Token from Collect.js
-      email: data.email,
-      order_description: data.description || "JRE Payment",
-    });
-
-    // Add optional name fields if provided
-    if (data.firstName) {
-      formData.append("first_name", data.firstName);
-    }
-    if (data.lastName) {
-      formData.append("last_name", data.lastName);
-    }
+    const requestBody = {
+      amount: data.amount,
+      source: data.paymentToken, // Collect.js token
+      customer: {
+        email: data.email,
+        send_receipt: false,
+      },
+      billing_info: {
+        first_name: data.firstName || "",
+        last_name: data.lastName || "",
+      },
+      transaction_details: {
+        description: data.description || "JRE Payment",
+      },
+      capture: true, // Charge immediately (not just auth)
+      save_card: false,
+    };
 
     console.log("Processing tokenized payment for amount:", data.amount.toFixed(2));
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sourceKey}`,
       },
-      body: formData.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const responseText = await response.text();
-    console.log("Payment response:", responseText);
+    const result: BanquestResponse = await response.json();
+    console.log("Payment response:", JSON.stringify(result, null, 2));
 
-    // Parse the response (query string format: response=1&responsetext=SUCCESS&...)
-    const result = new URLSearchParams(responseText);
-    const responseCode = result.get("response");
-    const responseText2 = result.get("responsetext");
-    const transactionId = result.get("transactionid");
-    const authCode = result.get("authcode");
-
-    // Response code 1 = Approved, 2 = Declined, 3 = Error
-    if (responseCode === "1") {
+    // Check for approval - status_code "A" or status "Approved"
+    if (result.status_code === "A" || result.status === "Approved") {
       return {
         success: true,
-        transactionId: transactionId || `txn_${Date.now()}`,
-        authCode: authCode || undefined,
+        transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
+        authCode: result.auth_code,
+        referenceNumber: result.reference_number,
       };
     } else {
       return {
         success: false,
-        error: responseText2 || "Payment declined",
+        error: result.error_message || result.error_details || result.status || "Payment declined",
       };
     }
   } catch (error) {
@@ -104,25 +142,15 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
 // DIRECT CARD PAYMENT (Legacy) - BACKUP
 // ============================================
 
-interface DirectPaymentData {
-  amount: number;
-  cardNumber: string;
-  cardExpiry: string; // MM/YY or MM/YYYY format
-  cardCvv: string;
-  cardName: string;
-  email: string;
-  description?: string;
-}
-
 /**
  * Process payment with direct card details
  * NOTE: This sends card data through our server - use tokenized method when possible
  */
 export async function processDirectPayment(data: DirectPaymentData): Promise<PaymentResult> {
-  const securityKey = process.env.BANQUEST_SOURCE_KEY;
+  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
 
-  if (!securityKey) {
-    console.error("Banquest security key not configured");
+  if (!sourceKey) {
+    console.error("Banquest source key not configured");
     return { success: false, error: "Payment system not configured" };
   }
 
@@ -131,65 +159,70 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
     return { success: false, error: "Invalid expiry date format. Please use MM/YY or MM/YYYY" };
   }
 
-  // Parse expiry date - handle both MM/YY and MM/YYYY formats
+  // Parse expiry date
   const expiryParts = data.cardExpiry.split("/");
   if (expiryParts.length < 2 || !expiryParts[0] || !expiryParts[1]) {
     return { success: false, error: "Invalid expiry date format. Please use MM/YY or MM/YYYY" };
   }
-  const expMonth = expiryParts[0].padStart(2, "0");
-  let expYear = expiryParts[1];
-  // If 4-digit year, take last 2 digits
-  if (expYear.length === 4) {
-    expYear = expYear.slice(-2);
+  const expMonth = parseInt(expiryParts[0], 10);
+  let expYear = parseInt(expiryParts[1], 10);
+  // If 2-digit year, convert to 4-digit
+  if (expYear < 100) {
+    expYear += 2000;
   }
-  const ccexp = `${expMonth}${expYear}`; // MMYY format
+
+  // Parse name
+  const nameParts = data.cardName.trim().split(" ");
+  const firstName = nameParts[0] || data.cardName;
+  const lastName = nameParts.slice(1).join(" ") || "";
 
   try {
-    // Build form data - NMI uses application/x-www-form-urlencoded
-    const formData = new URLSearchParams({
-      security_key: securityKey,
-      type: "sale",
-      amount: data.amount.toFixed(2),
-      ccnumber: data.cardNumber.replace(/\s/g, ""),
-      ccexp: ccexp,
-      cvv: data.cardCvv,
-      first_name: data.cardName.split(" ")[0] || data.cardName,
-      last_name: data.cardName.split(" ").slice(1).join(" ") || "",
-      email: data.email,
-      order_description: data.description || "JRE Payment",
-    });
+    const requestBody = {
+      amount: data.amount,
+      card: data.cardNumber.replace(/\s/g, ""),
+      expiry_month: expMonth,
+      expiry_year: expYear,
+      cvv2: data.cardCvv,
+      customer: {
+        email: data.email,
+        send_receipt: false,
+      },
+      billing_info: {
+        first_name: firstName,
+        last_name: lastName,
+      },
+      transaction_details: {
+        description: data.description || "JRE Payment",
+      },
+      capture: true,
+      save_card: false,
+    };
 
     console.log("Processing direct payment for amount:", data.amount.toFixed(2));
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sourceKey}`,
       },
-      body: formData.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const responseText = await response.text();
-    console.log("Payment response:", responseText);
+    const result: BanquestResponse = await response.json();
+    console.log("Payment response:", JSON.stringify(result, null, 2));
 
-    // Parse the response (query string format: response=1&responsetext=SUCCESS&...)
-    const result = new URLSearchParams(responseText);
-    const responseCode = result.get("response");
-    const responseText2 = result.get("responsetext");
-    const transactionId = result.get("transactionid");
-    const authCode = result.get("authcode");
-
-    // Response code 1 = Approved, 2 = Declined, 3 = Error
-    if (responseCode === "1") {
+    if (result.status_code === "A" || result.status === "Approved") {
       return {
         success: true,
-        transactionId: transactionId || `txn_${Date.now()}`,
-        authCode: authCode || undefined,
+        transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
+        authCode: result.auth_code,
+        referenceNumber: result.reference_number,
       };
     } else {
       return {
         success: false,
-        error: responseText2 || "Payment declined",
+        error: result.error_message || result.error_details || result.status || "Payment declined",
       };
     }
   } catch (error) {
@@ -202,7 +235,7 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
 }
 
 // ============================================
-// LEGACY EXPORT (for backward compatibility)
+// UNIFIED PAYMENT FUNCTION
 // ============================================
 
 interface PaymentData {
@@ -211,7 +244,7 @@ interface PaymentData {
   cardExpiry?: string;
   cardCvv?: string;
   cardName?: string;
-  paymentToken?: string; // NEW: Accept token from Collect.js
+  paymentToken?: string; // Token from Collect.js
   email: string;
   description?: string;
 }
@@ -251,40 +284,39 @@ export async function processPayment(data: PaymentData): Promise<PaymentResult> 
 }
 
 // ============================================
-// CUSTOMER VAULT (for recurring payments)
+// CUSTOMER VAULT (for saving cards)
 // ============================================
 
 export async function addToCustomerVault(paymentToken: string): Promise<{ success: boolean; vaultId?: string; error?: string }> {
-  const securityKey = process.env.BANQUEST_SOURCE_KEY;
+  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
 
-  if (!securityKey) {
+  if (!sourceKey) {
     return { success: false, error: "Vault not configured" };
   }
 
   try {
-    const formData = new URLSearchParams({
-      security_key: securityKey,
-      customer_vault: "add_customer",
-      payment_token: paymentToken,
-    });
+    // Use the charge endpoint with save_card: true to get a card_ref back
+    const requestBody = {
+      amount: 0, // Zero-dollar auth to validate and save
+      source: paymentToken,
+      save_card: true,
+    };
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sourceKey}`,
       },
-      body: formData.toString(),
+      body: JSON.stringify(requestBody),
     });
 
-    const responseText = await response.text();
-    const result = new URLSearchParams(responseText);
-    const responseCode = result.get("response");
-    const customerId = result.get("customer_vault_id");
+    const result: BanquestResponse = await response.json();
 
-    if (responseCode === "1" && customerId) {
-      return { success: true, vaultId: customerId };
+    if ((result.status_code === "A" || result.status === "Approved") && result.card_ref) {
+      return { success: true, vaultId: result.card_ref };
     } else {
-      return { success: false, error: result.get("responsetext") || "Failed to save card" };
+      return { success: false, error: result.error_message || "Failed to save card" };
     }
   } catch (error) {
     console.error("Vault error:", error);
@@ -292,59 +324,90 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
   }
 }
 
+// ============================================
+// CAPTURE (for two-step auth/capture flow)
+// ============================================
+
+const BANQUEST_CAPTURE_URL = "https://api.banquestgateway.com/api/v2/transactions/capture";
+
+interface CaptureOptions {
+  referenceNumber: number;
+  amount?: number; // For partial capture (optional, defaults to full auth amount)
+  email?: string;
+  description?: string;
+}
+
+/**
+ * Capture a previously authorized transaction
+ * Use this when you charged with capture: false
+ * Optionally specify amount for partial capture
+ */
+export async function captureTransaction(options: CaptureOptions | number): Promise<PaymentResult> {
+  const sourceKey = process.env.BANQUEST_SOURCE_KEY;
+
+  if (!sourceKey) {
+    return { success: false, error: "Payment system not configured" };
+  }
+
+  // Support both simple (just reference number) and detailed options
+  const opts: CaptureOptions = typeof options === "number"
+    ? { referenceNumber: options }
+    : options;
+
+  try {
+    const requestBody: Record<string, unknown> = {
+      reference_number: opts.referenceNumber,
+    };
+
+    // Add optional fields if provided
+    if (opts.amount !== undefined) {
+      requestBody.amount = opts.amount;
+    }
+    if (opts.email) {
+      requestBody.customer = { email: opts.email, send_receipt: false };
+    }
+    if (opts.description) {
+      requestBody.transaction_details = { description: opts.description };
+    }
+
+    const response = await fetch(BANQUEST_CAPTURE_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": `Bearer ${sourceKey}`,
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result: BanquestResponse = await response.json();
+    console.log("Capture response:", JSON.stringify(result, null, 2));
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString(),
+        authCode: result.auth_code,
+        referenceNumber: result.reference_number,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error_message || result.error_details || "Capture failed",
+      };
+    }
+  } catch (error) {
+    console.error("Capture error:", error);
+    return { success: false, error: "Failed to capture transaction" };
+  }
+}
+
 // Legacy export for tokenizeCard (deprecated - use Collect.js instead)
-export async function tokenizeCard(cardData: {
+export async function tokenizeCard(_cardData: {
   cardNumber: string;
   cardExpiry: string;
   cardCvv: string;
   cardName: string;
 }): Promise<{ success: boolean; token?: string; error?: string }> {
   console.warn("tokenizeCard is deprecated - use Collect.js for secure tokenization");
-
-  const securityKey = process.env.BANQUEST_SOURCE_KEY;
-
-  if (!securityKey) {
-    return { success: false, error: "Tokenization not configured" };
-  }
-
-  try {
-    const expiryParts = cardData.cardExpiry.split("/");
-    const expMonth = expiryParts[0].padStart(2, "0");
-    let expYear = expiryParts[1];
-    if (expYear.length === 4) {
-      expYear = expYear.slice(-2);
-    }
-    const ccexp = `${expMonth}${expYear}`;
-
-    const formData = new URLSearchParams({
-      security_key: securityKey,
-      type: "validate",
-      ccnumber: cardData.cardNumber.replace(/\s/g, ""),
-      ccexp: ccexp,
-      cvv: cardData.cardCvv,
-      customer_vault: "add_customer",
-    });
-
-    const response = await fetch(BANQUEST_API_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: formData.toString(),
-    });
-
-    const responseText = await response.text();
-    const result = new URLSearchParams(responseText);
-    const responseCode = result.get("response");
-    const customerId = result.get("customer_vault_id");
-
-    if (responseCode === "1" && customerId) {
-      return { success: true, token: customerId };
-    } else {
-      return { success: false, error: result.get("responsetext") || "Failed to tokenize card" };
-    }
-  } catch (error) {
-    console.error("Tokenization error:", error);
-    return { success: false, error: "Failed to save card" };
-  }
+  return { success: false, error: "Use Collect.js for tokenization" };
 }
