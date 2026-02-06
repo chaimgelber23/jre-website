@@ -26,17 +26,7 @@ interface CardInputEvent {
 }
 
 interface Payments {
-  card: (options?: CardOptions) => Promise<Card>;
-}
-
-interface CardOptions {
-  style?: {
-    ".input-container"?: Record<string, string>;
-    input?: Record<string, string>;
-    "input::placeholder"?: Record<string, string>;
-    ".message-text"?: Record<string, string>;
-    ".message-icon"?: Record<string, string>;
-  };
+  card: () => Promise<Card>;
 }
 
 declare global {
@@ -145,32 +135,12 @@ export default function SquarePayment({
           return;
         }
 
-        // Clear container
-        containerRef.current.innerHTML = "";
+        console.log("[Square] Initializing with appId:", appId, "locationId:", locationId);
 
         const payments = await window.Square!.payments(appId, locationId);
+        console.log("[Square] Payments object created");
 
-        const card = await payments.card({
-          style: {
-            ".input-container": {
-              borderRadius: "8px",
-            },
-            input: {
-              fontFamily: "Inter, system-ui, sans-serif",
-              fontSize: "14px",
-              color: "#1f2937",
-            },
-            "input::placeholder": {
-              color: "#9ca3af",
-            },
-            ".message-text": {
-              color: "#ef4444",
-            },
-            ".message-icon": {
-              color: "#ef4444",
-            },
-          },
-        });
+        const card = await payments.card();
 
         await card.attach("#square-card-container");
 
@@ -261,7 +231,8 @@ export default function SquarePayment({
         <div
           id="square-card-container"
           ref={containerRef}
-          className="min-h-[50px] rounded-lg border border-gray-200 bg-white overflow-hidden"
+          className="min-h-[130px] rounded-lg border border-gray-200 bg-white overflow-hidden p-1"
+          style={{ minHeight: '130px' }}
         />
       </div>
 
