@@ -73,8 +73,11 @@ export default function CollectJsPayment({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
+    console.log("[CollectJS] Starting load, tokenizationKey:", tokenizationKey ? "present" : "MISSING");
+
     // Check if already loaded
     if (window.CollectJS) {
+      console.log("[CollectJS] Already loaded on window");
       setIsLoaded(true);
       return;
     }
