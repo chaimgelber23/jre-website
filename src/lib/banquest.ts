@@ -93,9 +93,14 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
   try {
     const authHeader = getAuthHeader();
 
+    // Add tkn- prefix if not already present
+    const tokenSource = data.paymentToken.startsWith("tkn-")
+      ? data.paymentToken
+      : `tkn-${data.paymentToken}`;
+
     const requestBody = {
       amount: data.amount,
-      source: data.paymentToken, // Collect.js token or nonce
+      source: tokenSource, // Token with tkn- prefix
       customer: {
         email: data.email,
         send_receipt: false,
@@ -301,10 +306,15 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
   try {
     const authHeader = getAuthHeader();
 
+    // Add tkn- prefix if not already present
+    const tokenSource = paymentToken.startsWith("tkn-")
+      ? paymentToken
+      : `tkn-${paymentToken}`;
+
     // Use the charge endpoint with save_card: true to get a card_ref back
     const requestBody = {
       amount: 0, // Zero-dollar auth to validate and save
-      source: paymentToken,
+      source: tokenSource,
       save_card: true,
     };
 
