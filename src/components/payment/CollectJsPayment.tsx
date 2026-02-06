@@ -73,7 +73,13 @@ export default function CollectJsPayment({
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    console.log("[CollectJS] Starting load, tokenizationKey:", tokenizationKey ? "present" : "MISSING");
+    // Don't load script without a valid tokenization key
+    if (!tokenizationKey) {
+      console.error("[CollectJS] No tokenization key available");
+      return;
+    }
+
+    console.log("[CollectJS] Starting load, tokenizationKey: present");
 
     // Check if already loaded
     if (window.CollectJS) {
@@ -82,10 +88,13 @@ export default function CollectJsPayment({
       return;
     }
 
-    // Check if script already exists
-    const existingScript = document.querySelector('script[src*="collect.js"]');
+    // Check if script already exists with the correct tokenization key
+    const existingScript = document.querySelector(
+      `script[src*="collect.js"][data-tokenization-key="${tokenizationKey}"]`
+    ) as HTMLScriptElement | null;
+
     if (existingScript) {
-      // Script exists - check if it's already loaded by polling for CollectJS
+      // Script exists with correct key - check if it's already loaded by polling for CollectJS
       const checkLoaded = setInterval(() => {
         if (window.CollectJS) {
           clearInterval(checkLoaded);
@@ -103,13 +112,18 @@ export default function CollectJsPayment({
       return () => clearInterval(checkLoaded);
     }
 
-    // Load the script
+    // Remove any existing scripts with wrong/missing tokenization key
+    const wrongScripts = document.querySelectorAll('script[src*="collect.js"]');
+    wrongScripts.forEach((s) => s.remove());
+
+    // Load the script with the tokenization key
     const script = document.createElement("script");
     script.src = "https://secure.networkmerchants.com/token/Collect.js";
-    script.dataset.tokenizationKey = tokenizationKey;
+    script.setAttribute("data-tokenization-key", tokenizationKey);
     script.async = true;
 
     script.onload = () => {
+      console.log("[CollectJS] Script loaded successfully");
       setIsLoaded(true);
     };
 
