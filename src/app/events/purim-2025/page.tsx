@@ -96,6 +96,14 @@ export default function PurimEventPage() {
     registrationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
+  // Scroll to top on page load (disable browser scroll restoration)
+  useEffect(() => {
+    window.scrollTo(0, 0);
+    if ('scrollRestoration' in history) {
+      history.scrollRestoration = 'manual';
+    }
+  }, []);
+
   // Elegant confetti celebration when registration is successful
   useEffect(() => {
     if (isSubmitted) {
