@@ -121,9 +121,9 @@ export default function CollectJsPayment({
         if (response.token) {
           const cardInfo = response.card
             ? {
-                last4: response.card.number?.slice(-4),
-                type: response.card.type,
-              }
+              last4: response.card.number?.slice(-4),
+              type: response.card.type,
+            }
             : undefined;
           onTokenReceived(response.token, cardInfo);
         } else {
@@ -174,17 +174,17 @@ export default function CollectJsPayment({
       },
       fields: {
         ccnumber: {
-          selector: "#collect-ccnumber",
+          selector: "#ccnumber",
           title: "Card Number",
           placeholder: "Card Number",
         },
         ccexp: {
-          selector: "#collect-ccexp",
+          selector: "#ccexp",
           title: "Expiration",
           placeholder: "MM / YY",
         },
         cvv: {
-          selector: "#collect-cvv",
+          selector: "#cvv",
           title: "CVV",
           placeholder: "CVV",
         },
@@ -224,7 +224,7 @@ export default function CollectJsPayment({
           Card Number
         </label>
         <div
-          id="collect-ccnumber"
+          id="ccnumber"
           className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
         />
       </div>
@@ -234,14 +234,14 @@ export default function CollectJsPayment({
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiration</label>
           <div
-            id="collect-ccexp"
+            id="ccexp"
             className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
           />
         </div>
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">CVV</label>
           <div
-            id="collect-cvv"
+            id="cvv"
             className="w-full h-[42px] rounded-lg border border-gray-200 bg-white"
           />
         </div>
