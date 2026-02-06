@@ -72,6 +72,7 @@ export default function PurimEventPage() {
     phone: "",
     cardName: "",
     message: "",
+    honoreeEmail: "",
   });
 
   const [paymentToken, setPaymentToken] = useState<string | null>(null);
@@ -158,6 +159,20 @@ export default function PurimEventPage() {
     }
   }, [showSponsorship]);
 
+  // When a sponsorship is selected, scroll to show honor fields + total + payment + submit
+  useEffect(() => {
+    if (selectedSponsorship) {
+      setTimeout(() => {
+        if (totalRef.current) {
+          totalRef.current.scrollIntoView({
+            behavior: "smooth",
+            block: "center"
+          });
+        }
+      }, 400);
+    }
+  }, [selectedSponsorship]);
+
   // When payment method changes, scroll to show card fields + submit button
   useEffect(() => {
     if (paymentMethod && submitRef.current) {
@@ -211,6 +226,7 @@ export default function PurimEventPage() {
           cardName: paymentMethod === "online" ? formState.cardName : undefined,
           paymentToken: token,
           message: formState.message,
+          honoreeEmail: formState.honoreeEmail || null,
         }),
       });
 
@@ -741,6 +757,7 @@ export default function PurimEventPage() {
                                 <motion.div
                                   initial={{ opacity: 0, y: -5 }}
                                   animate={{ opacity: 1, y: 0 }}
+                                  className="space-y-3"
                                 >
                                   <textarea
                                     name="message"
@@ -749,6 +766,14 @@ export default function PurimEventPage() {
                                     rows={2}
                                     className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
                                     placeholder="In honor of... (optional)"
+                                  />
+                                  <input
+                                    type="email"
+                                    name="honoreeEmail"
+                                    value={formState.honoreeEmail}
+                                    onChange={handleChange}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                    placeholder="Honoree's email (optional - we'll notify them)"
                                   />
                                 </motion.div>
                               )}
