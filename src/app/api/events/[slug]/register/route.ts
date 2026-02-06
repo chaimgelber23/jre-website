@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { appendEventRegistration, slugToSheetName } from "@/lib/google-sheets/event-sheets";
-import { processPayment } from "@/lib/banquest";
+import { processSquarePayment } from "@/lib/square";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
@@ -89,12 +89,12 @@ export async function POST(
     let paymentReference = "";
 
     if (subtotal > 0 && paymentMethod === "online" && paymentToken) {
-      // Process tokenized payment (secure - card data never touches our server)
-      const paymentResult = await processPayment({
+      // Process payment via Square (secure - card data tokenized on frontend)
+      const paymentResult = await processSquarePayment({
+        sourceId: paymentToken,
         amount: subtotal,
-        paymentToken,
-        cardName,
         email,
+        name: cardName || name,
         description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
       });
 
@@ -106,7 +106,7 @@ export async function POST(
       }
 
       paymentStatus = "success";
-      paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
+      paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
     } else if (subtotal === 0) {
       // Free event
       paymentStatus = "success";

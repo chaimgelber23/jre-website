@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
-import { processPayment } from "@/lib/banquest";
+import { processSquarePayment } from "@/lib/square";
 import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
 import type { Donation, DonationInsert } from "@/types/database";
 
@@ -54,12 +54,12 @@ export async function POST(request: NextRequest) {
     let paymentReference = "";
 
     if (paymentToken) {
-      // Process tokenized payment (secure - card data never touches our server)
-      const paymentResult = await processPayment({
+      // Process payment via Square (secure - card data tokenized on frontend)
+      const paymentResult = await processSquarePayment({
+        sourceId: paymentToken,
         amount: numericAmount,
-        paymentToken,
-        cardName,
         email,
+        name: cardName || name,
         description: sponsorship
           ? `JRE Donation - ${sponsorship}`
           : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
@@ -73,7 +73,7 @@ export async function POST(request: NextRequest) {
       }
 
       paymentStatus = "success";
-      paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
+      paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
     } else {
       // No payment token provided
       return NextResponse.json(

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { processPayment } from "@/lib/banquest";
+import { processSquarePayment } from "@/lib/square";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
@@ -72,12 +72,12 @@ export async function POST(request: NextRequest) {
 
     if (paymentMethod === "online" && totalAmount > 0) {
       if (paymentToken) {
-        // Process tokenized payment (secure - card data never touches our server)
-        const paymentResult = await processPayment({
+        // Process payment via Square (secure - card data tokenized on frontend)
+        const paymentResult = await processSquarePayment({
+          sourceId: paymentToken,
           amount: totalAmount,
-          paymentToken,
-          cardName,
           email,
+          name: cardName || name,
           description: `JRE Purim 2025 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
         });
 
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         }
 
         paymentStatus = "success";
-        paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
+        paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
       } else {
         // Payment token missing
         return NextResponse.json(

@@ -5,7 +5,7 @@ import { motion } from "framer-motion";
 import { Heart, Check, CreditCard } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { FadeUp } from "@/components/ui/motion";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
@@ -41,8 +41,8 @@ export default function DonatePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Collect.js hook for triggering tokenization
-  const { requestToken } = useCollectJs();
+  // Square hook for triggering tokenization
+  const { requestToken } = useSquarePayment();
 
   const handleAmountClick = (value: number) => {
     setAmount(value);
@@ -415,7 +415,7 @@ export default function DonatePage() {
                       />
                     </div>
 
-                    <CollectJsPayment
+                    <SquarePayment
                       onTokenReceived={handleTokenReceived}
                       onError={handlePaymentError}
                       onValidationChange={handleValidationChange}

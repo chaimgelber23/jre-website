@@ -21,7 +21,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import confetti from "canvas-confetti";
 import type { Event, EventSponsorship } from "@/types/database";
 
@@ -58,8 +58,8 @@ export default function EventDetailPage({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  // Collect.js hook for triggering tokenization
-  const { requestToken } = useCollectJs();
+  // Square hook for triggering tokenization
+  const { requestToken } = useSquarePayment();
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
@@ -1036,7 +1036,7 @@ export default function EventDetailPage({
                               className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
                               placeholder="Name on Card"
                             />
-                            <CollectJsPayment
+                            <SquarePayment
                               onTokenReceived={handleTokenReceived}
                               onError={handlePaymentError}
                               onValidationChange={handleValidationChange}

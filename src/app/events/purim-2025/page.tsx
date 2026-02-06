@@ -24,7 +24,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
@@ -81,8 +81,8 @@ export default function PurimEventPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Collect.js hook for triggering tokenization
-  const { requestToken } = useCollectJs();
+  // Square hook for triggering tokenization
+  const { requestToken } = useSquarePayment();
 
   // Refs for auto-scroll
   const sponsorshipRef = useRef<HTMLDivElement>(null);
@@ -860,7 +860,7 @@ export default function PurimEventPage() {
                               className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
                               placeholder="Name on Card"
                             />
-                            <CollectJsPayment
+                            <SquarePayment
                               onTokenReceived={handleTokenReceived}
                               onError={handlePaymentError}
                               onValidationChange={handleValidationChange}
