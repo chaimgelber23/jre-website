@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef, use } from "react";
+import { useState, useEffect, useRef, use, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
@@ -21,6 +21,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
 import confetti from "canvas-confetti";
 import type { Event, EventSponsorship } from "@/types/database";
 
@@ -49,13 +50,15 @@ export default function EventDetailPage({
     phone: "",
     message: "",
     cardName: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
   });
+  const [paymentToken, setPaymentToken] = useState<string | null>(null);
+  const [cardValid, setCardValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+
+  // Collect.js hook for triggering tokenization
+  const { requestToken } = useCollectJs();
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
@@ -166,19 +169,24 @@ export default function EventDetailPage({
     });
   };
 
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/\D/g, "");
-    if (value.length > 2) {
-      value = value.slice(0, 2) + "/" + value.slice(2, 6);
-    }
-    setFormState({ ...formState, cardExpiry: value });
-  };
+  // Handle token received from Collect.js
+  const handleTokenReceived = useCallback((token: string) => {
+    setPaymentToken(token);
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError("");
+  // Handle payment errors from Collect.js
+  const handlePaymentError = useCallback((errorMsg: string) => {
+    setError(errorMsg);
+    setIsSubmitting(false);
+  }, []);
 
+  // Handle card validation changes
+  const handleValidationChange = useCallback((isValid: boolean) => {
+    setCardValid(isValid);
+  }, []);
+
+  // Submit form with token
+  const doSubmit = useCallback(async (token: string | null) => {
     try {
       const payload: Record<string, unknown> = {
         adults,
@@ -191,12 +199,10 @@ export default function EventDetailPage({
         paymentMethod,
       };
 
-      // Include card details only for online payment
-      if (paymentMethod === "online") {
+      // Include payment token for online payment
+      if (paymentMethod === "online" && token) {
+        payload.paymentToken = token;
         payload.cardName = formState.cardName;
-        payload.cardNumber = formState.cardNumber;
-        payload.cardExpiry = formState.cardExpiry;
-        payload.cardCvv = formState.cardCvv;
       }
 
       const response = await fetch(`/api/events/${slug}/register`, {
@@ -217,6 +223,33 @@ export default function EventDetailPage({
       setError(err instanceof Error ? err.message : "Failed to complete registration. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  }, [adults, kids, formState, selectedSponsorship, paymentMethod, slug]);
+
+  // When token is received, submit the form
+  useEffect(() => {
+    if (paymentToken && isSubmitting) {
+      doSubmit(paymentToken);
+      setPaymentToken(null); // Reset for next submission
+    }
+  }, [paymentToken, isSubmitting, doSubmit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError("");
+    setIsSubmitting(true);
+
+    // For online payments, we need to tokenize first
+    if (paymentMethod === "online") {
+      const tokenStarted = requestToken();
+      if (!tokenStarted) {
+        setError("Payment system not ready. Please try again.");
+        setIsSubmitting(false);
+      }
+      // Token callback will trigger doSubmit
+    } else {
+      // For check payments, submit directly
+      doSubmit(null);
     }
   };
 
@@ -955,35 +988,14 @@ export default function EventDetailPage({
                               value={formState.cardName}
                               onChange={handleChange}
                               className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              placeholder="Cardholder Name"
+                              placeholder="Name on Card"
                             />
-                            <input
-                              type="text"
-                              name="cardNumber"
-                              value={formState.cardNumber}
-                              onChange={handleChange}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              placeholder="Card Number"
+                            <CollectJsPayment
+                              onTokenReceived={handleTokenReceived}
+                              onError={handlePaymentError}
+                              onValidationChange={handleValidationChange}
+                              disabled={isSubmitting}
                             />
-                            <div className="grid grid-cols-2 gap-3">
-                              <input
-                                type="text"
-                                name="cardExpiry"
-                                value={formState.cardExpiry}
-                                onChange={handleExpiryChange}
-                                maxLength={7}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="MM/YYYY"
-                              />
-                              <input
-                                type="text"
-                                name="cardCvv"
-                                value={formState.cardCvv}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="CVV"
-                              />
-                            </div>
                           </motion.div>
                         )}
 

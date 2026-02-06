@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import confetti from "canvas-confetti";
 import Image from "next/image";
 import Link from "next/link";
@@ -24,6 +24,7 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
 import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
@@ -70,15 +71,17 @@ export default function PurimEventPage() {
     email: "",
     phone: "",
     cardName: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
     message: "",
   });
 
+  const [paymentToken, setPaymentToken] = useState<string | null>(null);
+  const [cardValid, setCardValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  // Collect.js hook for triggering tokenization
+  const { requestToken } = useCollectJs();
 
   // Refs for auto-scroll
   const sponsorshipRef = useRef<HTMLDivElement>(null);
@@ -167,18 +170,24 @@ export default function PurimEventPage() {
     });
   };
 
-  const handleExpiryChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value.replace(/[^\d]/g, "");
-    if (value.length > 6) value = value.slice(0, 6);
-    if (value.length >= 2) value = value.slice(0, 2) + "/" + value.slice(2);
-    setFormState({ ...formState, cardExpiry: value });
-  };
+  // Handle token received from Collect.js
+  const handleTokenReceived = useCallback((token: string) => {
+    setPaymentToken(token);
+  }, []);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
-    setError(null);
+  // Handle payment errors from Collect.js
+  const handlePaymentError = useCallback((errorMsg: string) => {
+    setError(errorMsg);
+    setIsSubmitting(false);
+  }, []);
 
+  // Handle card validation changes
+  const handleValidationChange = useCallback((isValid: boolean) => {
+    setCardValid(isValid);
+  }, []);
+
+  // Submit form with token
+  const doSubmit = useCallback(async (token: string | null) => {
     try {
       const response = await fetch("/api/events/purim-2025/register", {
         method: "POST",
@@ -194,9 +203,7 @@ export default function PurimEventPage() {
           paymentMethod,
           amount: total,
           cardName: paymentMethod === "online" ? formState.cardName : undefined,
-          cardNumber: paymentMethod === "online" ? formState.cardNumber : undefined,
-          cardExpiry: paymentMethod === "online" ? formState.cardExpiry : undefined,
-          cardCvv: paymentMethod === "online" ? formState.cardCvv : undefined,
+          paymentToken: token,
           message: formState.message,
         }),
       });
@@ -213,6 +220,33 @@ export default function PurimEventPage() {
       setError(err instanceof Error ? err.message : "Failed to complete registration. Please try again.");
     } finally {
       setIsSubmitting(false);
+    }
+  }, [formState, numAdults, numKids, selectedSponsorship, sponsorshipPrice, paymentMethod, total]);
+
+  // When token is received, submit the form
+  useEffect(() => {
+    if (paymentToken && isSubmitting) {
+      doSubmit(paymentToken);
+      setPaymentToken(null); // Reset for next submission
+    }
+  }, [paymentToken, isSubmitting, doSubmit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    // For online payments, we need to tokenize first
+    if (paymentMethod === "online") {
+      const tokenStarted = requestToken();
+      if (!tokenStarted) {
+        setError("Payment system not ready. Please try again.");
+        setIsSubmitting(false);
+      }
+      // Token callback will trigger doSubmit
+    } else {
+      // For check payments, submit directly
+      doSubmit(null);
     }
   };
 
@@ -287,7 +321,7 @@ export default function PurimEventPage() {
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white transition-colors bg-black/30 backdrop-blur-sm px-4 py-2 rounded-lg"
+              className="inline-flex items-center gap-2 text-white hover:text-white transition-colors bg-gray-800 hover:bg-gray-900 px-4 py-2 rounded-lg shadow-lg"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
@@ -537,11 +571,10 @@ export default function PurimEventPage() {
                             setCustomAmount(0);
                           }
                         }}
-                        className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${
-                          showSponsorship
+                        className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
                             ? "bg-gray-50 text-gray-500 border border-gray-200"
                             : "bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white shadow-lg shadow-[#EF8046]/25"
-                        }`}
+                          }`}
                         whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
@@ -609,13 +642,12 @@ export default function PurimEventPage() {
                                         boxShadow: { duration: 2.5, repeat: Infinity, repeatDelay: isTop ? 0.5 : 1.5, ease: "easeInOut" },
                                       } : { delay: i * 0.06 }}
                                       onClick={() => setSelectedSponsorship(isSelected ? null : s.name)}
-                                      className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${
-                                        isSelected
+                                      className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${isSelected
                                           ? "border-[#EF8046] bg-[#EF8046]/5"
                                           : isTop
                                             ? "border-[#EF8046]/30 bg-gradient-to-r from-[#EF8046]/[0.03] to-white hover:border-[#EF8046]/60"
                                             : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
-                                      }`}
+                                        }`}
                                     >
                                       {/* Shimmer for top-tier sponsorships */}
                                       {isHigh && !isSelected && (
@@ -636,24 +668,21 @@ export default function PurimEventPage() {
                                                 <Star className="w-4 h-4 flex-shrink-0 text-[#EF8046] fill-[#EF8046]" />
                                               </motion.div>
                                             ) : (
-                                              <Award className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${
-                                                isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/50" : "text-gray-300 group-hover:text-[#EF8046]/60"
-                                              }`} />
+                                              <Award className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/50" : "text-gray-300 group-hover:text-[#EF8046]/60"
+                                                }`} />
                                             )}
                                             <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-3 ml-4">
-                                          <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${
-                                            isSelected ? "text-[#EF8046]" : isTop ? "text-[#EF8046]" : "text-gray-700"
-                                          }`}>
+                                          <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${isSelected ? "text-[#EF8046]" : isTop ? "text-[#EF8046]" : "text-gray-700"
+                                            }`}>
                                             {s.price > 0 ? `$${s.price}` : "Any $"}
                                           </span>
-                                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${
-                                            isSelected
+                                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${isSelected
                                               ? "border-[#EF8046] bg-[#EF8046]"
                                               : "border-gray-300 group-hover:border-[#EF8046]/40"
-                                          }`}>
+                                            }`}>
                                             {isSelected && (
                                               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
                                                 <Check className="w-3 h-3 text-white" />
@@ -739,11 +768,10 @@ export default function PurimEventPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("online")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            paymentMethod === "online"
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "online"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
-                          }`}
+                            }`}
                         >
                           <CreditCard className="w-5 h-5 mx-auto mb-1" />
                           <span className="text-sm font-medium">Credit Card</span>
@@ -751,11 +779,10 @@ export default function PurimEventPage() {
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("check")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${
-                            paymentMethod === "check"
+                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "check"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
-                          }`}
+                            }`}
                         >
                           <span className="text-lg block mb-1">&#9993;</span>
                           <span className="text-sm font-medium">Send a Check</span>
@@ -777,35 +804,14 @@ export default function PurimEventPage() {
                               value={formState.cardName}
                               onChange={handleChange}
                               className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              placeholder="Cardholder Name"
+                              placeholder="Name on Card"
                             />
-                            <input
-                              type="text"
-                              name="cardNumber"
-                              value={formState.cardNumber}
-                              onChange={handleChange}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              placeholder="Card Number"
+                            <CollectJsPayment
+                              onTokenReceived={handleTokenReceived}
+                              onError={handlePaymentError}
+                              onValidationChange={handleValidationChange}
+                              disabled={isSubmitting}
                             />
-                            <div className="grid grid-cols-2 gap-3">
-                              <input
-                                type="text"
-                                name="cardExpiry"
-                                value={formState.cardExpiry}
-                                onChange={handleExpiryChange}
-                                maxLength={7}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="MM/YYYY"
-                              />
-                              <input
-                                type="text"
-                                name="cardCvv"
-                                value={formState.cardCvv}
-                                onChange={handleChange}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                                placeholder="CVV"
-                              />
-                            </div>
                           </motion.div>
                         )}
 

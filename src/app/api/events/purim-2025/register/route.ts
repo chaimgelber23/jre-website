@@ -41,9 +41,7 @@ export async function POST(request: NextRequest) {
       paymentMethod,
       amount,
       cardName,
-      cardNumber,
-      cardExpiry,
-      cardCvv,
+      paymentToken,
       message,
     } = body;
 
@@ -73,12 +71,11 @@ export async function POST(request: NextRequest) {
     let paymentReference = "";
 
     if (paymentMethod === "online" && totalAmount > 0) {
-      if (cardNumber && cardExpiry && cardCvv && cardName) {
+      if (paymentToken) {
+        // Process tokenized payment (secure - card data never touches our server)
         const paymentResult = await processPayment({
           amount: totalAmount,
-          cardNumber,
-          cardExpiry,
-          cardCvv,
+          paymentToken,
           cardName,
           email,
           description: `JRE Purim 2025 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
@@ -94,9 +91,9 @@ export async function POST(request: NextRequest) {
         paymentStatus = "success";
         paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
       } else {
-        // Card info incomplete
+        // Payment token missing
         return NextResponse.json(
-          { success: false, error: "Credit card information is required for online payment" },
+          { success: false, error: "Payment information is required for online payment" },
           { status: 400 }
         );
       }

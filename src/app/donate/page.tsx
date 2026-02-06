@@ -1,10 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { motion } from "framer-motion";
 import { Heart, Check, CreditCard } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
 import { FadeUp } from "@/components/ui/motion";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
@@ -32,13 +33,16 @@ export default function DonatePage() {
     honorEmail: "",
     sponsorship: "",
     message: "",
-    cardNumber: "",
-    cardExpiry: "",
-    cardCvv: "",
     cardName: "",
   });
+  const [paymentToken, setPaymentToken] = useState<string | null>(null);
+  const [cardValid, setCardValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Collect.js hook for triggering tokenization
+  const { requestToken } = useCollectJs();
 
   const handleAmountClick = (value: number) => {
     setAmount(value);
@@ -60,10 +64,24 @@ export default function DonatePage() {
     });
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setIsSubmitting(true);
+  // Handle token received from Collect.js
+  const handleTokenReceived = useCallback((token: string) => {
+    setPaymentToken(token);
+  }, []);
 
+  // Handle payment errors from Collect.js
+  const handlePaymentError = useCallback((errorMsg: string) => {
+    setError(errorMsg);
+    setIsSubmitting(false);
+  }, []);
+
+  // Handle card validation changes
+  const handleValidationChange = useCallback((isValid: boolean) => {
+    setCardValid(isValid);
+  }, []);
+
+  // Submit form with token
+  const doSubmit = useCallback(async (token: string) => {
     try {
       const response = await fetch("/api/donate", {
         method: "POST",
@@ -78,6 +96,8 @@ export default function DonatePage() {
           honorEmail: formState.honorEmail,
           sponsorship: formState.sponsorship,
           message: formState.message,
+          cardName: formState.cardName,
+          paymentToken: token,
         }),
       });
 
@@ -88,12 +108,34 @@ export default function DonatePage() {
       }
 
       setIsSubmitted(true);
-    } catch (error) {
-      console.error("Donation error:", error);
-      alert("Failed to process donation. Please try again.");
+    } catch (err) {
+      console.error("Donation error:", err);
+      setError(err instanceof Error ? err.message : "Failed to process donation. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
+  }, [amount, isRecurring, formState]);
+
+  // When token is received, submit the form
+  useEffect(() => {
+    if (paymentToken && isSubmitting) {
+      doSubmit(paymentToken);
+      setPaymentToken(null); // Reset for next submission
+    }
+  }, [paymentToken, isSubmitting, doSubmit]);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError(null);
+    setIsSubmitting(true);
+
+    // Tokenize the card first
+    const tokenStarted = requestToken();
+    if (!tokenStarted) {
+      setError("Payment system not ready. Please try again.");
+      setIsSubmitting(false);
+    }
+    // Token callback will trigger doSubmit
   };
 
   if (isSubmitted) {
@@ -351,10 +393,16 @@ export default function DonatePage() {
                     </h3>
                   </div>
 
+                  {error && (
+                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-5">
+                      {error}
+                    </div>
+                  )}
+
                   <div className="space-y-5">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Cardholder Name *
+                        Name on Card *
                       </label>
                       <input
                         type="text"
@@ -367,51 +415,12 @@ export default function DonatePage() {
                       />
                     </div>
 
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Card Number *
-                      </label>
-                      <input
-                        type="text"
-                        name="cardNumber"
-                        value={formState.cardNumber}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="1234 5678 9012 3456"
-                      />
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-5">
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Expiration *
-                        </label>
-                        <input
-                          type="text"
-                          name="cardExpiry"
-                          value={formState.cardExpiry}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                          placeholder="MM/YYYY"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          CVV *
-                        </label>
-                        <input
-                          type="text"
-                          name="cardCvv"
-                          value={formState.cardCvv}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                          placeholder="123"
-                        />
-                      </div>
-                    </div>
+                    <CollectJsPayment
+                      onTokenReceived={handleTokenReceived}
+                      onError={handlePaymentError}
+                      onValidationChange={handleValidationChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
                 </div>
               </FadeUp>

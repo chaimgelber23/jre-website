@@ -20,9 +20,7 @@ export async function POST(request: NextRequest) {
       honorEmail,
       sponsorship,
       message,
-      cardNumber,
-      cardExpiry,
-      cardCvv,
+      paymentToken,
       cardName,
     } = body;
 
@@ -55,12 +53,11 @@ export async function POST(request: NextRequest) {
     let paymentStatus = "pending";
     let paymentReference = "";
 
-    if (cardNumber && cardExpiry && cardCvv && cardName) {
+    if (paymentToken) {
+      // Process tokenized payment (secure - card data never touches our server)
       const paymentResult = await processPayment({
         amount: numericAmount,
-        cardNumber,
-        cardExpiry,
-        cardCvv,
+        paymentToken,
         cardName,
         email,
         description: sponsorship
@@ -78,9 +75,11 @@ export async function POST(request: NextRequest) {
       paymentStatus = "success";
       paymentReference = paymentResult.transactionId || `txn_${Date.now()}`;
     } else {
-      // No card info provided - simulated payment for testing
-      paymentStatus = "success";
-      paymentReference = `sim_${Date.now()}`;
+      // No payment token provided
+      return NextResponse.json(
+        { success: false, error: "Payment information is required" },
+        { status: 400 }
+      );
     }
 
     const supabase = createServerClient();

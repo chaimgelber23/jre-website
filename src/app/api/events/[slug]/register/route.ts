@@ -14,7 +14,7 @@ export async function POST(
     const body = await request.json();
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message, cardNumber, cardExpiry, cardCvv, cardName } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, paymentToken, cardName, paymentMethod } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -88,12 +88,11 @@ export async function POST(
     let paymentStatus = "pending";
     let paymentReference = "";
 
-    if (subtotal > 0 && cardNumber && cardExpiry && cardCvv && cardName) {
+    if (subtotal > 0 && paymentMethod === "online" && paymentToken) {
+      // Process tokenized payment (secure - card data never touches our server)
       const paymentResult = await processPayment({
         amount: subtotal,
-        cardNumber,
-        cardExpiry,
-        cardCvv,
+        paymentToken,
         cardName,
         email,
         description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
@@ -112,10 +111,14 @@ export async function POST(
       // Free event
       paymentStatus = "success";
       paymentReference = `free_${Date.now()}`;
+    } else if (paymentMethod === "check") {
+      // Check payment - pending until check received
+      paymentStatus = "pending";
+      paymentReference = `check_${Date.now()}`;
     } else {
-      // No card info provided - simulated for testing
-      paymentStatus = "success";
-      paymentReference = `sim_${Date.now()}`;
+      // No payment info provided
+      paymentStatus = "pending";
+      paymentReference = `pending_${Date.now()}`;
     }
 
     // Insert registration into Supabase
