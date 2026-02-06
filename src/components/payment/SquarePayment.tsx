@@ -88,7 +88,7 @@ export default function SquarePayment({
 
     // Load the Square Web Payments SDK
     const script = document.createElement("script");
-    script.src = "https://sandbox.web.squarecdn.com/v1/square.js"; // Use sandbox for dev
+    script.src = "https://web.squarecdn.com/v1/square.js"; // Production
     script.async = true;
 
     script.onload = () => {

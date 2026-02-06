@@ -1,8 +1,14 @@
 // Banquest Gateway Payment Processing - JSON API v2
-// Endpoint: https://api.banquestgateway.com/api/v2/
+// Sandbox: https://api.sandbox.banquestgateway.com/api/v2/
+// Production: https://api.banquestgateway.com/api/v2/
 // Auth: Basic Authentication (base64 of sourceKey:pin)
 
-const BANQUEST_API_URL = "https://api.banquestgateway.com/api/v2/transactions/charge";
+// Use sandbox for now - switch to production when ready
+const USE_SANDBOX = true;
+
+const BANQUEST_API_URL = USE_SANDBOX
+  ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/charge"
+  : "https://api.banquestgateway.com/api/v2/transactions/charge";
 
 // Helper to create Basic Auth header
 function getAuthHeader(): string {
@@ -23,7 +29,7 @@ function getAuthHeader(): string {
 // ============================================
 
 interface TokenizedPaymentData {
-  paymentToken: string; // Token from Collect.js (passed as "source")
+  paymentToken: string; // Nonce token from Hosted Tokenization
   amount: number;
   email: string;
   firstName?: string;
@@ -47,6 +53,7 @@ interface PaymentResult {
   error?: string;
   authCode?: string;
   referenceNumber?: number;
+  responseText?: string;
 }
 
 // Banquest API Response Types
@@ -78,11 +85,11 @@ interface BanquestResponse {
 }
 
 // ============================================
-// TOKENIZED PAYMENT (Collect.js) - PREFERRED
+// TOKENIZED PAYMENT (Hosted Tokenization) - PREFERRED
 // ============================================
 
 /**
- * Process payment using a Collect.js payment token (source)
+ * Process payment using a nonce token from Hosted Tokenization
  * This is the PREFERRED method - card data never touches our server
  */
 export async function processTokenizedPayment(data: TokenizedPaymentData): Promise<PaymentResult> {
@@ -93,14 +100,11 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
   try {
     const authHeader = getAuthHeader();
 
-    // Add tkn- prefix if not already present
-    const tokenSource = data.paymentToken.startsWith("tkn-")
-      ? data.paymentToken
-      : `tkn-${data.paymentToken}`;
-
+    // The nonce token is passed as the "source" field
+    // Nonce tokens should work directly - no prefix needed
     const requestBody = {
       amount: data.amount,
-      source: tokenSource, // Token with tkn- prefix
+      source: data.paymentToken, // Nonce token from Hosted Tokenization
       customer: {
         email: data.email,
         send_receipt: false,
@@ -117,6 +121,7 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
     };
 
     console.log("Processing tokenized payment for amount:", data.amount.toFixed(2));
+    console.log("Using API URL:", BANQUEST_API_URL);
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
@@ -138,6 +143,7 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
         transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
         authCode: result.auth_code,
         referenceNumber: result.reference_number,
+        responseText: result.status,
       };
     } else {
       return {
@@ -233,6 +239,7 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
         transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
         authCode: result.auth_code,
         referenceNumber: result.reference_number,
+        responseText: result.status,
       };
     } else {
       return {
@@ -259,7 +266,7 @@ interface PaymentData {
   cardExpiry?: string;
   cardCvv?: string;
   cardName?: string;
-  paymentToken?: string; // Token from Collect.js
+  paymentToken?: string; // Nonce token from Hosted Tokenization
   email: string;
   description?: string;
 }
@@ -306,15 +313,9 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
   try {
     const authHeader = getAuthHeader();
 
-    // Add tkn- prefix if not already present
-    const tokenSource = paymentToken.startsWith("tkn-")
-      ? paymentToken
-      : `tkn-${paymentToken}`;
-
-    // Use the charge endpoint with save_card: true to get a card_ref back
     const requestBody = {
       amount: 0, // Zero-dollar auth to validate and save
-      source: tokenSource,
+      source: paymentToken,
       save_card: true,
     };
 
@@ -345,11 +346,13 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
 // CAPTURE (for two-step auth/capture flow)
 // ============================================
 
-const BANQUEST_CAPTURE_URL = "https://api.banquestgateway.com/api/v2/transactions/capture";
+const BANQUEST_CAPTURE_URL = USE_SANDBOX
+  ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/capture"
+  : "https://api.banquestgateway.com/api/v2/transactions/capture";
 
-interface CaptureOptions {
+export interface CaptureOptions {
   referenceNumber: number;
-  amount?: number; // For partial capture (optional, defaults to full auth amount)
+  amount?: number;
   email?: string;
   description?: string;
 }
@@ -357,10 +360,8 @@ interface CaptureOptions {
 /**
  * Capture a previously authorized transaction
  * Use this when you charged with capture: false
- * Optionally specify amount for partial capture
  */
 export async function captureTransaction(options: CaptureOptions | number): Promise<PaymentResult> {
-  // Support both simple (just reference number) and detailed options
   const opts: CaptureOptions = typeof options === "number"
     ? { referenceNumber: options }
     : options;
@@ -372,7 +373,6 @@ export async function captureTransaction(options: CaptureOptions | number): Prom
       reference_number: opts.referenceNumber,
     };
 
-    // Add optional fields if provided
     if (opts.amount !== undefined) {
       requestBody.amount = opts.amount;
     }
@@ -402,6 +402,7 @@ export async function captureTransaction(options: CaptureOptions | number): Prom
         transactionId: result.transaction?.id?.toString(),
         authCode: result.auth_code,
         referenceNumber: result.reference_number,
+        responseText: result.status,
       };
     } else {
       return {
@@ -415,13 +416,111 @@ export async function captureTransaction(options: CaptureOptions | number): Prom
   }
 }
 
-// Legacy export for tokenizeCard (deprecated - use Collect.js instead)
+// ============================================
+// REFUND
+// ============================================
+
+const BANQUEST_REFUND_URL = USE_SANDBOX
+  ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/refund"
+  : "https://api.banquestgateway.com/api/v2/transactions/refund";
+
+export async function refundTransaction(referenceNumber: number, amount?: number): Promise<PaymentResult> {
+  try {
+    const authHeader = getAuthHeader();
+
+    const requestBody: Record<string, unknown> = {
+      reference_number: referenceNumber,
+    };
+
+    if (amount !== undefined) {
+      requestBody.amount = amount;
+    }
+
+    const response = await fetch(BANQUEST_REFUND_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result: BanquestResponse = await response.json();
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString(),
+        referenceNumber: result.reference_number,
+        responseText: result.status,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error_message || "Refund failed",
+      };
+    }
+  } catch (error) {
+    console.error("Refund error:", error);
+    return { success: false, error: "Failed to process refund" };
+  }
+}
+
+// ============================================
+// VOID
+// ============================================
+
+const BANQUEST_VOID_URL = USE_SANDBOX
+  ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/void"
+  : "https://api.banquestgateway.com/api/v2/transactions/void";
+
+export async function voidTransaction(referenceNumber: number): Promise<PaymentResult> {
+  try {
+    const authHeader = getAuthHeader();
+
+    const requestBody = {
+      reference_number: referenceNumber,
+    };
+
+    const response = await fetch(BANQUEST_VOID_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const result: BanquestResponse = await response.json();
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString(),
+        referenceNumber: result.reference_number,
+        responseText: result.status,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error_message || "Void failed",
+      };
+    }
+  } catch (error) {
+    console.error("Void error:", error);
+    return { success: false, error: "Failed to void transaction" };
+  }
+}
+
+// Legacy export for tokenizeCard (deprecated - use Hosted Tokenization instead)
 export async function tokenizeCard(_cardData: {
   cardNumber: string;
   cardExpiry: string;
   cardCvv: string;
   cardName: string;
 }): Promise<{ success: boolean; token?: string; error?: string }> {
-  console.warn("tokenizeCard is deprecated - use Collect.js for secure tokenization");
-  return { success: false, error: "Use Collect.js for tokenization" };
+  console.warn("tokenizeCard is deprecated - use Hosted Tokenization for secure tokenization");
+  return { success: false, error: "Use Hosted Tokenization for tokenization" };
 }

@@ -50,7 +50,7 @@ export async function POST(request: Request) {
         success: true,
         transactionId: result.transactionId,
         authCode: result.authCode,
-        referenceNumber: result.referenceNumber,
+        responseText: result.responseText,
         message: "Payment processed successfully",
       });
     } else {

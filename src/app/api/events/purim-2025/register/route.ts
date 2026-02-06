@@ -46,12 +46,15 @@ export async function POST(request: NextRequest) {
     } = body;
 
     // Validate required fields
-    if (!name || !email || !phone) {
+    if (!name || !email) {
       return NextResponse.json(
-        { success: false, error: "Name, email, and phone are required" },
+        { success: false, error: "Name and email are required" },
         { status: 400 }
       );
     }
+
+    // Phone is optional - normalize to empty string if not provided
+    const normalizedPhone = phone?.trim() || "";
 
     // Validate email format
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -129,7 +132,7 @@ export async function POST(request: NextRequest) {
         new Date().toLocaleString(),
         name,
         email,
-        phone,
+        normalizedPhone,
         spouseName || "",
         spouseEmail || "",
         spousePhone || "",
@@ -167,7 +170,7 @@ export async function POST(request: NextRequest) {
           id: registrationId,
           name,
           email,
-          phone,
+          phone: normalizedPhone || null,
           spouse_name: spouseName || null,
           spouse_email: spouseEmail || null,
           spouse_phone: spousePhone || null,

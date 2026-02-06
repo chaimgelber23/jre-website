@@ -1,47 +1,46 @@
 "use client";
 
 import { useEffect, useRef, useState, useCallback } from "react";
-import { CreditCard, Lock } from "lucide-react";
+import { Lock } from "lucide-react";
 
-// Extend window to include CollectJS
+// Extend window to include Banquest HostedTokenization
 declare global {
   interface Window {
-    CollectJS?: {
-      configure: (config: CollectJSConfig) => void;
-      startPaymentRequest: () => void;
-    };
+    HostedTokenization?: new (
+      sourceKey: string,
+      options?: HostedTokenizationOptions
+    ) => HostedTokenizationInstance;
   }
 }
 
-interface CollectJSConfig {
-  variant: "inline" | "lightbox";
-  callback: (response: CollectJSResponse) => void;
-  validationCallback?: (field: string, valid: boolean, message: string) => void;
-  fieldsAvailableCallback?: () => void;
-  timeoutCallback?: () => void;
-  timeoutDuration?: number;
-  tokenizationKey?: string;
-  customCss?: Record<string, Record<string, string>>;
-  fields?: {
-    ccnumber?: FieldConfig;
-    ccexp?: FieldConfig;
-    cvv?: FieldConfig;
-  };
+interface HostedTokenizationOptions {
+  target?: string | HTMLElement;
+  showZip?: boolean;
+  requireCvv2?: boolean;
+  styles?: Record<string, unknown>;
+  threeDS?: Record<string, unknown>;
 }
 
-interface FieldConfig {
-  selector?: string;
-  title?: string;
-  placeholder?: string;
+interface HostedTokenizationInstance {
+  getNonceToken: () => Promise<NonceTokenResponse>;
+  getData: () => Promise<unknown>;
+  getSurcharge: () => Promise<unknown>;
+  setOptions: (options: HostedTokenizationOptions) => void;
+  setStyles: (styles: Record<string, unknown>) => void;
+  resetForm: () => void;
+  destroy: () => void;
+  on: (event: string, callback: (data?: unknown) => void) => void;
 }
 
-interface CollectJSResponse {
+interface NonceTokenResponse {
+  nonce?: string;
   token?: string;
+  error?: string;
+  message?: string;
   card?: {
-    number?: string;
-    bin?: string;
-    exp?: string;
+    last4?: string;
     type?: string;
+    expiry?: string;
   };
 }
 
@@ -50,6 +49,7 @@ interface CollectJsPaymentProps {
   onError: (error: string) => void;
   onValidationChange?: (isValid: boolean) => void;
   disabled?: boolean;
+  useSandbox?: boolean;
 }
 
 export default function CollectJsPayment({
@@ -57,73 +57,67 @@ export default function CollectJsPayment({
   onError,
   onValidationChange,
   disabled = false,
+  useSandbox = true,
 }: CollectJsPaymentProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
-  const [fieldValidation, setFieldValidation] = useState({
-    ccnumber: false,
-    ccexp: false,
-    cvv: false,
-  });
+  const [isReady, setIsReady] = useState(false);
+  const tokenizerRef = useRef<HostedTokenizationInstance | null>(null);
   const configuredRef = useRef(false);
 
   const tokenizationKey = process.env.NEXT_PUBLIC_BANQUEST_TOKENIZATION_KEY;
 
-  // Load Collect.js script
+  // Determine script URL based on environment
+  const scriptUrl = useSandbox
+    ? "https://tokenization.sandbox.banquestgateway.com/tokenization/v0.3"
+    : "https://tokenization.banquestgateway.com/tokenization/v0.3";
+
+  // Load Banquest tokenization script
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    // Don't load script without a valid tokenization key
     if (!tokenizationKey) {
-      console.error("[CollectJS] No tokenization key available");
+      console.error("[Banquest] No tokenization key available");
       return;
     }
 
-    console.log("[CollectJS] Starting load, tokenizationKey: present");
+    console.log("[Banquest] Starting load, tokenizationKey: present, sandbox:", useSandbox);
 
     // Check if already loaded
-    if (window.CollectJS) {
-      console.log("[CollectJS] Already loaded on window");
+    if (window.HostedTokenization) {
+      console.log("[Banquest] Already loaded on window");
       setIsLoaded(true);
       return;
     }
 
-    // Check if script already exists with the correct tokenization key
+    // Check if script already exists
     const existingScript = document.querySelector(
-      `script[src*="collect.js"][data-tokenization-key="${tokenizationKey}"]`
+      `script[src="${scriptUrl}"]`
     ) as HTMLScriptElement | null;
 
     if (existingScript) {
-      // Script exists with correct key - check if it's already loaded by polling for CollectJS
       const checkLoaded = setInterval(() => {
-        if (window.CollectJS) {
+        if (window.HostedTokenization) {
           clearInterval(checkLoaded);
           setIsLoaded(true);
         }
       }, 100);
 
-      // Also listen for load event in case it hasn't loaded yet
       existingScript.addEventListener("load", () => {
         clearInterval(checkLoaded);
         setIsLoaded(true);
       });
 
-      // Cleanup interval on unmount
       return () => clearInterval(checkLoaded);
     }
 
-    // Remove any existing scripts with wrong/missing tokenization key
-    const wrongScripts = document.querySelectorAll('script[src*="collect.js"]');
-    wrongScripts.forEach((s) => s.remove());
-
-    // Load the script with the tokenization key
+    // Load the script
     const script = document.createElement("script");
-    script.src = "https://secure.networkmerchants.com/token/Collect.js";
-    script.setAttribute("data-tokenization-key", tokenizationKey);
+    script.src = scriptUrl;
     script.async = true;
 
     script.onload = () => {
-      console.log("[CollectJS] Script loaded successfully");
+      console.log("[Banquest] Script loaded successfully");
       setIsLoaded(true);
     };
 
@@ -134,124 +128,112 @@ export default function CollectJsPayment({
     document.head.appendChild(script);
 
     return () => {
-      // Don't remove script on cleanup - it may be used by other components
+      // Don't remove script on cleanup
     };
-  }, [tokenizationKey, onError]);
+  }, [tokenizationKey, scriptUrl, useSandbox, onError]);
 
-  // Configure Collect.js when loaded
+  // Initialize Banquest when loaded - run only once
   useEffect(() => {
-    if (!isLoaded || !window.CollectJS || configuredRef.current || disabled) return;
+    if (!isLoaded || !window.HostedTokenization || configuredRef.current || disabled) return;
 
     // Wait for DOM elements to be fully rendered
     const timeoutId = setTimeout(() => {
-      // Verify the container elements exist before configuring
-      const ccnumberEl = document.getElementById("ccnumber");
-      const ccexpEl = document.getElementById("ccexp");
-      const cvvEl = document.getElementById("cvv");
+      const container = document.getElementById("card-form-container");
 
-      if (!ccnumberEl || !ccexpEl || !cvvEl) {
-        console.error("Collect.js: Container elements not found");
+      if (!container) {
+        console.error("[Banquest] Container element not found");
         return;
       }
 
-      // Clear any existing iframes to ensure fresh configuration
-      ccnumberEl.innerHTML = "";
-      ccexpEl.innerHTML = "";
-      cvvEl.innerHTML = "";
-
+      // Mark as configured immediately to prevent re-runs
       configuredRef.current = true;
 
-      window.CollectJS?.configure({
-        variant: "inline",
-        tokenizationKey: tokenizationKey,
-        callback: (response) => {
-          setIsProcessing(false);
-          if (response.token) {
-            const cardInfo = response.card
-              ? {
-                  last4: response.card.number?.slice(-4),
-                  type: response.card.type,
-                }
-              : undefined;
-            onTokenReceived(response.token, cardInfo);
-          } else {
-            onError("Failed to process card. Please check your details and try again.");
-          }
-        },
-        validationCallback: (field, valid, message) => {
-          setFieldValidation((prev) => {
-            const updated = { ...prev, [field]: valid };
-            // Check if all fields are valid
-            const allValid = updated.ccnumber && updated.ccexp && updated.cvv;
-            onValidationChange?.(allValid);
-            return updated;
-          });
-          if (!valid && message) {
-            console.log(`Field ${field} validation: ${message}`);
-          }
-        },
-        fieldsAvailableCallback: () => {
-          console.log("Collect.js fields available");
-        },
-        timeoutCallback: () => {
-          setIsProcessing(false);
-          onError("Payment request timed out. Please try again.");
-        },
-        timeoutDuration: 30000,
-        customCss: {
-          "": {
-            "font-family": "Inter, system-ui, sans-serif",
-            "font-size": "14px",
-            color: "#1f2937",
-            padding: "10px 16px",
-            height: "42px",
-            "border-radius": "8px",
-            border: "1px solid #e5e7eb",
-            "background-color": "#ffffff",
-            width: "100%",
-            "box-sizing": "border-box",
-          },
-          ":focus": {
-            "border-color": "#EF8046",
-            "box-shadow": "0 0 0 2px rgba(239, 128, 70, 0.2)",
-            outline: "none",
-          },
-          "::placeholder": {
-            color: "#9ca3af",
-          },
-        },
-        fields: {
-          ccnumber: {
-            selector: "#ccnumber",
-            title: "Card Number",
-            placeholder: "Card Number",
-          },
-          ccexp: {
-            selector: "#ccexp",
-            title: "Expiration",
-            placeholder: "MM / YY",
-          },
-          cvv: {
-            selector: "#cvv",
-            title: "CVV",
-            placeholder: "CVV",
-          },
-        },
-      });
-    }, 100); // Small delay to ensure DOM is ready
+      try {
+        console.log("[Banquest] Initializing with container element...");
 
-    return () => clearTimeout(timeoutId);
-  }, [isLoaded, disabled, tokenizationKey, onTokenReceived, onError, onValidationChange]);
+        // Initialize HostedTokenization with the actual DOM element
+        const tokenizer = new window.HostedTokenization!(tokenizationKey!, {
+          target: container, // Pass DOM element directly
+          showZip: false,
+          requireCvv2: true,
+        });
 
-  const requestToken = useCallback(() => {
-    if (!window.CollectJS || isProcessing || disabled) return;
+        // Listen for ready event
+        tokenizer.on("ready", () => {
+          console.log("[Banquest] Card form ready");
+          setIsReady(true);
+        });
+
+        // Listen for input changes
+        tokenizer.on("change", (data) => {
+          console.log("[Banquest] Form changed:", data);
+        });
+
+        // Store reference for later use
+        tokenizerRef.current = tokenizer;
+
+        console.log("[Banquest] Tokenizer initialized successfully");
+
+        // Set ready after a short delay if ready event doesn't fire
+        setTimeout(() => {
+          setIsReady(true);
+        }, 2000);
+
+      } catch (error) {
+        console.error("[Banquest] Failed to initialize:", error);
+        onError("Failed to initialize payment form. Please refresh and try again.");
+      }
+    }, 200);
+
+    return () => {
+      clearTimeout(timeoutId);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded, disabled, tokenizationKey]);
+
+  const requestToken = useCallback(async () => {
+    if (!tokenizerRef.current || isProcessing || disabled) return;
+
     setIsProcessing(true);
-    window.CollectJS.startPaymentRequest();
-  }, [isProcessing, disabled]);
+
+    try {
+      console.log("[Banquest] Requesting nonce token...");
+      const response = await tokenizerRef.current.getNonceToken();
+
+      console.log("[Banquest] Token response:", response);
+
+      if (response.error || response.message) {
+        console.error("[Banquest] Token error:", response.error || response.message);
+        onError(response.error || response.message || "Failed to get token");
+        setIsProcessing(false);
+        return;
+      }
+
+      // The token might be in 'nonce' or 'token' field
+      const token = response.nonce || response.token;
+
+      if (token) {
+        console.log("[Banquest] Token received successfully");
+        const cardInfo = response.card
+          ? {
+              last4: response.card.last4,
+              type: response.card.type,
+            }
+          : undefined;
+        onTokenReceived(token, cardInfo);
+      } else {
+        onError("Failed to get payment token. Please check your card details.");
+      }
+    } catch (error) {
+      console.error("[Banquest] getNonceToken error:", error);
+      onError("Failed to process card. Please try again.");
+    } finally {
+      setIsProcessing(false);
+    }
+  }, [isProcessing, disabled, onTokenReceived, onError]);
 
   // Expose requestToken method to parent
   useEffect(() => {
-    // Store reference on window for parent component access
     (window as unknown as { requestPaymentToken?: () => void }).requestPaymentToken = requestToken;
     return () => {
       delete (window as unknown as { requestPaymentToken?: () => void }).requestPaymentToken;
@@ -259,7 +241,7 @@ export default function CollectJsPayment({
   }, [requestToken]);
 
   if (!tokenizationKey) {
-    console.error("[CollectJS] Missing NEXT_PUBLIC_BANQUEST_TOKENIZATION_KEY");
+    console.error("[Banquest] Missing NEXT_PUBLIC_BANQUEST_TOKENIZATION_KEY");
     return (
       <div className="p-4 bg-red-50 text-red-600 rounded-lg text-sm">
         Payment system not configured. Missing tokenization key. Please check .env.local and restart the server.
@@ -269,35 +251,12 @@ export default function CollectJsPayment({
 
   return (
     <div className={`space-y-4 ${disabled ? "opacity-50 pointer-events-none" : ""}`}>
-      {/* Card Number */}
-      <div>
-        <label className="block text-sm font-medium text-gray-700 mb-1.5">
-          <CreditCard className="w-4 h-4 inline mr-1.5" />
-          Card Number
-        </label>
-        <div
-          id="ccnumber"
-          className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
-        />
-      </div>
-
-      {/* Expiry and CVV */}
-      <div className="grid grid-cols-2 gap-3">
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Expiration</label>
-          <div
-            id="ccexp"
-            className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
-          />
-        </div>
-        <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">CVV</label>
-          <div
-            id="cvv"
-            className="w-full h-[42px] rounded-lg overflow-hidden border border-gray-200 bg-white [&>iframe]:w-full [&>iframe]:h-full [&>iframe]:border-0"
-          />
-        </div>
-      </div>
+      {/* Card Form Container - Banquest iframe will be mounted here */}
+      <div
+        id="card-form-container"
+        className="w-full min-h-[200px] rounded-lg overflow-hidden border border-gray-200 bg-white"
+        style={{ minHeight: "200px" }}
+      />
 
       {/* Security Badge */}
       <div className="flex items-center gap-1.5 text-xs text-gray-500">
@@ -310,6 +269,14 @@ export default function CollectJsPayment({
         <div className="flex items-center justify-center py-2">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#EF8046]" />
           <span className="ml-2 text-sm text-gray-500">Loading secure payment...</span>
+        </div>
+      )}
+
+      {/* Ready indicator */}
+      {isLoaded && !isReady && (
+        <div className="flex items-center justify-center py-2">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#EF8046]" />
+          <span className="ml-2 text-sm text-gray-500">Initializing payment form...</span>
         </div>
       )}
     </div>
