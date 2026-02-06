@@ -843,32 +843,25 @@ export default function PurimEventPage() {
                         </button>
                       </div>
 
-                      <AnimatePresence>
-                        {paymentMethod === "online" && (
-                          <motion.div
-                            ref={paymentRef}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mt-4 space-y-3 overflow-hidden"
-                          >
-                            <input
-                              type="text"
-                              name="cardName"
-                              value={formState.cardName}
-                              onChange={handleChange}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                              placeholder="Name on Card"
-                            />
-                            <SquarePayment
-                              onTokenReceived={handleTokenReceived}
-                              onError={handlePaymentError}
-                              onValidationChange={handleValidationChange}
-                              disabled={isSubmitting}
-                            />
-                          </motion.div>
-                        )}
+                      {/* Pre-load Square card form (hidden until Credit Card selected) */}
+                      <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>
+                        <input
+                          type="text"
+                          name="cardName"
+                          value={formState.cardName}
+                          onChange={handleChange}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          placeholder="Name on Card"
+                        />
+                        <SquarePayment
+                          onTokenReceived={handleTokenReceived}
+                          onError={handlePaymentError}
+                          onValidationChange={handleValidationChange}
+                          disabled={isSubmitting}
+                        />
+                      </div>
 
+                      <AnimatePresence>
                         {paymentMethod === "check" && (
                           <motion.div
                             ref={paymentRef}

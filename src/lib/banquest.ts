@@ -3,7 +3,7 @@
 // Production: https://api.banquestgateway.com/api/v2/
 // Auth: Basic Authentication (base64 of sourceKey:pin)
 
-// Use sandbox for now - switch to production when ready
+// Use sandbox - production tokenization returning 403
 const USE_SANDBOX = true;
 
 const BANQUEST_API_URL = USE_SANDBOX
@@ -100,11 +100,17 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
   try {
     const authHeader = getAuthHeader();
 
-    // The nonce token is passed as the "source" field
-    // Nonce tokens should work directly - no prefix needed
+    // The nonce token needs a prefix if it doesn't have one
+    // Valid prefixes: nonce-, tkn-, ref-, pm-
+    let source = data.paymentToken;
+    if (!source.match(/^(nonce|tkn|ref|pm)-/)) {
+      source = `nonce-${source}`;
+      console.log("Added nonce- prefix to token");
+    }
+
     const requestBody = {
       amount: data.amount,
-      source: data.paymentToken, // Nonce token from Hosted Tokenization
+      source, // Nonce token with proper prefix
       customer: {
         email: data.email,
         send_receipt: false,
@@ -122,6 +128,8 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
 
     console.log("Processing tokenized payment for amount:", data.amount.toFixed(2));
     console.log("Using API URL:", BANQUEST_API_URL);
+    console.log("Token (first 50 chars):", data.paymentToken.substring(0, 50));
+    console.log("Request body:", JSON.stringify(requestBody, null, 2));
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
@@ -133,8 +141,19 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
       body: JSON.stringify(requestBody),
     });
 
-    const result: BanquestResponse = await response.json();
-    console.log("Payment response:", JSON.stringify(result, null, 2));
+    const responseText = await response.text();
+    console.log("Raw response:", responseText);
+    console.log("Response status:", response.status);
+
+    let result: BanquestResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Failed to parse response as JSON:", responseText);
+      return { success: false, error: `Invalid response from payment server: ${responseText.substring(0, 200)}` };
+    }
+
+    console.log("Parsed response:", JSON.stringify(result, null, 2));
 
     // Check for approval - status_code "A" or status "Approved"
     if (result.status_code === "A" || result.status === "Approved") {
@@ -146,9 +165,21 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
         responseText: result.status,
       };
     } else {
+      // Include all available error info for debugging
+      const errorParts = [
+        result.error_message,
+        result.error_details,
+        result.error_code ? `Code: ${result.error_code}` : null,
+        result.transaction?.status_details?.error_message,
+        result.status !== "Approved" && result.status !== "Declined" ? result.status : null,
+      ].filter(Boolean);
+
+      const errorMsg = errorParts.length > 0 ? errorParts.join(" | ") : "Payment declined";
+      console.error("Payment error details:", { errorMsg, result });
+
       return {
         success: false,
-        error: result.error_message || result.error_details || result.status || "Payment declined",
+        error: errorMsg,
       };
     }
   } catch (error) {

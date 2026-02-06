@@ -198,30 +198,14 @@ export default function BanquestSetupPage() {
           </div>
         </div>
 
-        {/* Sandbox Test Card Info */}
+        {/* Sandbox Test Cards */}
         <div className="mt-4 p-4 bg-blue-50 rounded-lg">
           <h3 className="font-medium text-blue-800 mb-2">Sandbox Test Cards</h3>
           <div className="text-xs space-y-1 text-blue-700">
             <p><strong>Visa:</strong> 4761 5300 0111 1118</p>
             <p><strong>MasterCard:</strong> 5137 2211 1111 6668</p>
-            <p><strong>Discover:</strong> 6011 2087 0111 7775</p>
-            <p><strong>Amex:</strong> 3710 300 8911 1338</p>
-            <p><strong>Diners Club:</strong> 3618 590 001 1112</p>
-            <p><strong>JCB:</strong> 3566 0023 4543 2153</p>
-            <p className="mt-2"><strong>Expiry:</strong> Any future date (e.g., 12/27)</p>
-            <p><strong>CVV:</strong> Any 3 digits (4 for Amex)</p>
-          </div>
-        </div>
-
-        {/* Amount Testing Info */}
-        <div className="mt-4 p-4 bg-purple-50 rounded-lg">
-          <h3 className="font-medium text-purple-800 mb-2">Amount Testing</h3>
-          <div className="text-xs space-y-1 text-purple-700">
-            <p><strong>$45.67</strong> = Timeout simulation</p>
-            <p><strong>Under $100</strong> = Approved</p>
-            <p><strong>Over $100</strong> = Decline (last 3 digits = response code)</p>
-            <p><strong>$101.06</strong> = Decline code 106</p>
-            <p><strong>$109.02</strong> = Error response</p>
+            <p><strong>Expiry:</strong> Any future date (e.g., 12/27)</p>
+            <p><strong>CVV:</strong> Any 3 digits</p>
           </div>
         </div>
       </div>

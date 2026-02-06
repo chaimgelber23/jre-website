@@ -162,6 +162,7 @@ export default function CollectJsPayment({
         tokenizer.on("ready", () => {
           console.log("[Banquest] Card form ready");
           setIsReady(true);
+          onValidationChange?.(true);
         });
 
         // Listen for input changes
@@ -177,6 +178,7 @@ export default function CollectJsPayment({
         // Set ready after a short delay if ready event doesn't fire
         setTimeout(() => {
           setIsReady(true);
+          onValidationChange?.(true);
         }, 2000);
 
       } catch (error) {
@@ -254,8 +256,7 @@ export default function CollectJsPayment({
       {/* Card Form Container - Banquest iframe will be mounted here */}
       <div
         id="card-form-container"
-        className="w-full min-h-[200px] rounded-lg overflow-hidden border border-gray-200 bg-white"
-        style={{ minHeight: "200px" }}
+        className="w-full min-h-[80px] rounded-lg overflow-hidden border border-gray-200 bg-white"
       />
 
       {/* Security Badge */}
