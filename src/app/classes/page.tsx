@@ -110,7 +110,7 @@ const classes = [
     audience: "Men",
     description:
       "Prepare for Shabbat with meaningful Torah learning in a warm and welcoming environment.",
-    image: "/images/events/Israel3.jpg",
+    image: "/images/events/JREevent.jpg",
     isZoom: false,
   },
 ];
