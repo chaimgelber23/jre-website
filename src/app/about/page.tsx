@@ -220,7 +220,7 @@ export default function AboutPage() {
                 <div className="flex gap-8 mb-12 last:mb-0">
                   <div className="flex flex-col items-center">
                     <div className="w-16 h-16 bg-[#EF8046] rounded-full flex items-center justify-center text-white font-bold shrink-0">
-                      {item.year.slice(-2)}
+                      {item.year === "Today" ? "Now" : item.year.slice(-2)}
                     </div>
                     {index < timeline.length - 1 && (
                       <div className="w-0.5 h-full bg-gray-200 mt-4" />
