@@ -330,30 +330,40 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   );
 }
 
-// Past Events Carousel Component with horizontal scrolling
+// Past Events Carousel Component with horizontal scrolling (loops around)
 function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
   const carouselRef = useRef<HTMLDivElement>(null);
-  const [canScrollLeft, setCanScrollLeft] = useState(false);
-  const [canScrollRight, setCanScrollRight] = useState(true);
-  const [isDragging, setIsDragging] = useState(false);
+  const [isAtStart, setIsAtStart] = useState(true);
+  const [isAtEnd, setIsAtEnd] = useState(false);
 
-  const checkScrollability = () => {
+  const checkPosition = () => {
     if (carouselRef.current) {
       const { scrollLeft, scrollWidth, clientWidth } = carouselRef.current;
-      setCanScrollLeft(scrollLeft > 0);
-      setCanScrollRight(scrollLeft < scrollWidth - clientWidth - 10);
+      setIsAtStart(scrollLeft < 10);
+      setIsAtEnd(scrollLeft >= scrollWidth - clientWidth - 10);
     }
   };
 
   useEffect(() => {
-    checkScrollability();
-    window.addEventListener("resize", checkScrollability);
-    return () => window.removeEventListener("resize", checkScrollability);
+    checkPosition();
+    window.addEventListener("resize", checkPosition);
+    return () => window.removeEventListener("resize", checkPosition);
   }, [events]);
 
   const scroll = (direction: "left" | "right") => {
-    if (carouselRef.current) {
-      const scrollAmount = 380;
+    if (!carouselRef.current) return;
+
+    const { scrollWidth, clientWidth } = carouselRef.current;
+
+    if (direction === "right" && isAtEnd) {
+      // Loop to start
+      carouselRef.current.scrollTo({ left: 0, behavior: "smooth" });
+    } else if (direction === "left" && isAtStart) {
+      // Loop to end
+      carouselRef.current.scrollTo({ left: scrollWidth - clientWidth, behavior: "smooth" });
+    } else {
+      // Normal scroll
+      const scrollAmount = 400;
       carouselRef.current.scrollBy({
         left: direction === "left" ? -scrollAmount : scrollAmount,
         behavior: "smooth",
@@ -366,10 +376,6 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
       {/* Decorative line */}
       <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-transparent via-[#EF8046]/30 to-transparent" />
 
-      {/* Background decorations */}
-      <div className="absolute top-20 left-10 w-72 h-72 bg-[#EF8046]/5 rounded-full blur-3xl" />
-      <div className="absolute bottom-10 right-10 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
-
       <div className="container mx-auto px-6 relative z-10">
         <FadeUp className="text-center mb-12">
           <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
@@ -378,110 +384,69 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
             Past Events
           </h2>
-          <p className="text-gray-500 mt-4 text-sm">
-            Drag to explore or use the arrows
-          </p>
         </FadeUp>
 
         {/* Carousel Container */}
-        <div className="relative group">
-          {/* Left Arrow */}
-          <motion.button
-            initial={{ opacity: 0, x: 20 }}
-            animate={{ opacity: canScrollLeft ? 1 : 0, x: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+        <div className="relative">
+          {/* Left Arrow - always visible */}
+          <button
             onClick={() => scroll("left")}
-            disabled={!canScrollLeft}
-            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-14 h-14 bg-white/95 backdrop-blur-sm rounded-full shadow-xl flex items-center justify-center text-gray-800 hover:bg-[#EF8046] hover:text-white transition-all duration-300 disabled:opacity-0 disabled:pointer-events-none -ml-7 border border-gray-100"
+            className="absolute left-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-[#EF8046] hover:text-white transition-colors duration-200 -ml-6 border border-gray-200"
           >
-            <ChevronLeft className="w-7 h-7" />
-          </motion.button>
+            <ChevronLeft className="w-6 h-6" />
+          </button>
 
-          {/* Right Arrow */}
-          <motion.button
-            initial={{ opacity: 0, x: -20 }}
-            animate={{ opacity: canScrollRight ? 1 : 0, x: 0 }}
-            whileHover={{ scale: 1.1 }}
-            whileTap={{ scale: 0.9 }}
+          {/* Right Arrow - always visible */}
+          <button
             onClick={() => scroll("right")}
-            disabled={!canScrollRight}
-            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-14 h-14 bg-white/95 backdrop-blur-sm rounded-full shadow-xl flex items-center justify-center text-gray-800 hover:bg-[#EF8046] hover:text-white transition-all duration-300 disabled:opacity-0 disabled:pointer-events-none -mr-7 border border-gray-100"
+            className="absolute right-0 top-1/2 -translate-y-1/2 z-20 w-12 h-12 bg-white rounded-full shadow-lg flex items-center justify-center text-gray-700 hover:bg-[#EF8046] hover:text-white transition-colors duration-200 -mr-6 border border-gray-200"
           >
-            <ChevronRight className="w-7 h-7" />
-          </motion.button>
+            <ChevronRight className="w-6 h-6" />
+          </button>
 
           {/* Fade edges */}
-          <div className="absolute left-0 top-0 bottom-0 w-20 bg-gradient-to-r from-[#FBFBFB] to-transparent z-10 pointer-events-none" />
-          <div className="absolute right-0 top-0 bottom-0 w-20 bg-gradient-to-l from-[#FBFBFB] to-transparent z-10 pointer-events-none" />
+          <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-[#FBFBFB] to-transparent z-10 pointer-events-none" />
+          <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-[#FBFBFB] to-transparent z-10 pointer-events-none" />
 
           {/* Scrollable Carousel */}
-          <motion.div
+          <div
             ref={carouselRef}
-            className="flex gap-6 overflow-x-auto scrollbar-hide py-4 px-4 cursor-grab active:cursor-grabbing"
+            className="flex gap-6 overflow-x-auto scrollbar-hide py-4 px-4"
             style={{
               scrollbarWidth: "none",
               msOverflowStyle: "none",
-              WebkitOverflowScrolling: "touch",
             }}
-            onScroll={checkScrollability}
-            onMouseDown={() => setIsDragging(true)}
-            onMouseUp={() => setIsDragging(false)}
-            onMouseLeave={() => setIsDragging(false)}
+            onScroll={checkPosition}
           >
-            {events.map((event, index) => (
-              <motion.div
+            {events.map((event) => (
+              <div
                 key={event.id}
-                initial={{ opacity: 0, scale: 0.9 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ delay: index * 0.1, duration: 0.5 }}
-                whileHover={!isDragging ? { y: -12, scale: 1.03 } : {}}
-                className="relative h-80 min-w-[320px] md:min-w-[380px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-500"
+                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-xl transition-shadow duration-300"
               >
                 <Image
                   src={event.image}
                   alt={event.title}
                   fill
-                  className="object-cover transition-transform duration-700 group-hover:scale-110"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105"
                   draggable={false}
                 />
 
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent" />
-
-                {/* Animated border on hover */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-[#EF8046]/50 transition-colors duration-300" />
-
-                {/* Shine effect on hover */}
-                <div className="absolute inset-0 opacity-0 group-hover:opacity-100 transition-opacity duration-500">
-                  <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/10 to-transparent transform -translate-x-full group-hover:translate-x-full transition-transform duration-1000" />
-                </div>
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
                 {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-6">
-                  <motion.div
-                    initial={{ y: 20, opacity: 0 }}
-                    whileInView={{ y: 0, opacity: 1 }}
-                    viewport={{ once: true }}
-                    transition={{ delay: index * 0.1 + 0.2 }}
-                  >
-                    <span className="inline-block bg-[#EF8046]/90 backdrop-blur-sm text-white text-xs font-bold px-3 py-1 rounded-full mb-3 uppercase tracking-wider">
-                      {event.date}
-                    </span>
-                    <h3 className="text-xl md:text-2xl font-bold text-white group-hover:text-[#EF8046] transition-colors duration-300 leading-tight">
-                      {event.title}
-                    </h3>
-                  </motion.div>
+                <div className="absolute bottom-0 left-0 right-0 p-5">
+                  <span className="inline-block bg-[#EF8046] text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide">
+                    {event.date}
+                  </span>
+                  <h3 className="text-lg md:text-xl font-bold text-white leading-tight">
+                    {event.title}
+                  </h3>
                 </div>
-
-                {/* Corner accent */}
-                <div className="absolute top-4 right-4 w-8 h-8 border-t-2 border-r-2 border-white/30 group-hover:border-[#EF8046] rounded-tr-lg transition-colors duration-300" />
-              </motion.div>
+              </div>
             ))}
-          </motion.div>
+          </div>
         </div>
-
       </div>
     </section>
   );
