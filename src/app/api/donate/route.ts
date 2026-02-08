@@ -2,8 +2,16 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
 import { processSquarePayment } from "@/lib/square";
+import { processTokenizedPayment } from "@/lib/banquest";
 import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
 import type { Donation, DonationInsert } from "@/types/database";
+
+// Helper to calculate next charge date (1 month from now)
+function getNextChargeDate(): string {
+  const date = new Date();
+  date.setMonth(date.getMonth() + 1);
+  return date.toISOString().split("T")[0]; // YYYY-MM-DD format
+}
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +30,7 @@ export async function POST(request: NextRequest) {
       message,
       paymentToken,
       cardName,
+      paymentProcessor,
     } = body;
 
     if (!amount || !name || !email) {
@@ -49,12 +58,57 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process payment with Banquest
+    // Process payment
     let paymentStatus = "pending";
     let paymentReference = "";
+    let cardRef: string | null = null; // For recurring payments
 
-    if (paymentToken) {
-      // Process payment via Square (secure - card data tokenized on frontend)
+    // Determine which processor to use (default to banquest)
+    const processor = paymentProcessor || "banquest";
+
+    if (!paymentToken) {
+      return NextResponse.json(
+        { success: false, error: "Payment token is required" },
+        { status: 400 }
+      );
+    }
+
+    // Parse name for first/last
+    const nameParts = (cardName || name).trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    if (processor === "banquest") {
+      // Process payment via Banquest (tokenized - PCI compliant)
+      // For recurring donations, save the card for future charges
+      const paymentResult = await processTokenizedPayment({
+        paymentToken,
+        amount: numericAmount,
+        email,
+        firstName,
+        lastName,
+        description: sponsorship
+          ? `JRE Donation - ${sponsorship}`
+          : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
+        saveCard: Boolean(isRecurring), // Save card for recurring payments
+      });
+
+      if (!paymentResult.success) {
+        return NextResponse.json(
+          { success: false, error: paymentResult.error || "Payment failed" },
+          { status: 400 }
+        );
+      }
+
+      paymentStatus = "success";
+      paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
+      cardRef = paymentResult.cardRef || null; // Saved card for recurring charges
+
+      if (isRecurring && !cardRef) {
+        console.warn("Recurring payment processed but no card_ref returned - future charges may fail");
+      }
+    } else if (processor === "square") {
+      // Process payment via Square (backup - tokenized)
       const paymentResult = await processSquarePayment({
         sourceId: paymentToken,
         amount: numericAmount,
@@ -75,9 +129,8 @@ export async function POST(request: NextRequest) {
       paymentStatus = "success";
       paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
     } else {
-      // No payment token provided
       return NextResponse.json(
-        { success: false, error: "Payment information is required" },
+        { success: false, error: "Invalid payment processor" },
         { status: 400 }
       );
     }
@@ -99,6 +152,8 @@ export async function POST(request: NextRequest) {
       message: message || null,
       payment_status: paymentStatus,
       payment_reference: paymentReference,
+      card_ref: cardRef, // Saved card for recurring charges
+      next_charge_date: isRecurring ? getNextChargeDate() : null, // Next charge date
     };
 
     const { data: insertedData, error } = await supabase

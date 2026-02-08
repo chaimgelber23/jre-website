@@ -3,8 +3,8 @@
 // Production: https://api.banquestgateway.com/api/v2/
 // Auth: Basic Authentication (base64 of sourceKey:pin)
 
-// Use sandbox - production tokenization returning 403
-const USE_SANDBOX = true;
+// Production mode
+const USE_SANDBOX = false;
 
 const BANQUEST_API_URL = USE_SANDBOX
   ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/charge"
@@ -35,6 +35,7 @@ interface TokenizedPaymentData {
   firstName?: string;
   lastName?: string;
   description?: string;
+  saveCard?: boolean; // Set to true for recurring payments
 }
 
 interface DirectPaymentData {
@@ -54,6 +55,7 @@ interface PaymentResult {
   authCode?: string;
   referenceNumber?: number;
   responseText?: string;
+  cardRef?: string; // Saved card reference for recurring payments
 }
 
 // Banquest API Response Types
@@ -123,7 +125,7 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
         description: data.description || "JRE Payment",
       },
       capture: true, // Charge immediately (not just auth)
-      save_card: false,
+      save_card: data.saveCard || false, // Save card for recurring payments
     };
 
     console.log("Processing tokenized payment for amount:", data.amount.toFixed(2));
@@ -163,6 +165,7 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
         authCode: result.auth_code,
         referenceNumber: result.reference_number,
         responseText: result.status,
+        cardRef: result.card_ref, // Saved card reference for recurring payments
       };
     } else {
       // Include all available error info for debugging
@@ -545,6 +548,117 @@ export async function voidTransaction(referenceNumber: number): Promise<PaymentR
   }
 }
 
+// ============================================
+// DIRECT CARD PAYMENT WITH SEPARATE FIELDS
+// ============================================
+
+interface DirectCardPaymentData {
+  cardNumber: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cvv: string;
+  amount: number;
+  cardName?: string;
+  email: string;
+  description?: string;
+}
+
+/**
+ * Process payment with direct card details (separate month/year)
+ * Used as workaround when tokenization has issues
+ */
+export async function processDirectCardPayment(data: DirectCardPaymentData): Promise<PaymentResult> {
+  try {
+    const authHeader = getAuthHeader();
+
+    // Parse name
+    const nameParts = (data.cardName || "").trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // Ensure year is 4 digits
+    let expYear = data.expiryYear;
+    if (expYear < 100) {
+      expYear += 2000;
+    }
+
+    const requestBody = {
+      amount: data.amount,
+      card: data.cardNumber.replace(/\s/g, ""),
+      expiry_month: data.expiryMonth,
+      expiry_year: expYear,
+      cvv2: data.cvv,
+      customer: {
+        email: data.email,
+        send_receipt: false,
+      },
+      billing_info: {
+        first_name: firstName,
+        last_name: lastName,
+      },
+      transaction_details: {
+        description: data.description || "JRE Payment",
+      },
+      capture: true,
+      save_card: false,
+    };
+
+    console.log("Processing direct card payment for amount:", data.amount.toFixed(2));
+    console.log("Card:", data.cardNumber.substring(0, 6) + "***" + data.cardNumber.slice(-4));
+    console.log("Using API URL:", BANQUEST_API_URL);
+
+    const response = await fetch(BANQUEST_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    console.log("Raw response:", responseText);
+
+    let result: BanquestResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      console.error("Failed to parse response:", responseText);
+      return { success: false, error: `Invalid response: ${responseText.substring(0, 100)}` };
+    }
+
+    console.log("Payment response:", JSON.stringify(result, null, 2));
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
+        authCode: result.auth_code,
+        referenceNumber: result.reference_number,
+        responseText: result.status,
+      };
+    } else {
+      const errorParts = [
+        result.error_message,
+        result.error_details,
+        result.error_code ? `Code: ${result.error_code}` : null,
+      ].filter(Boolean);
+
+      return {
+        success: false,
+        error: errorParts.length > 0 ? errorParts.join(" | ") : "Payment declined",
+      };
+    }
+  } catch (error) {
+    console.error("Direct payment error:", error);
+    return {
+      success: false,
+      error: "Failed to process payment. Please try again.",
+    };
+  }
+}
+
 // Legacy export for tokenizeCard (deprecated - use Hosted Tokenization instead)
 export async function tokenizeCard(_cardData: {
   cardNumber: string;
@@ -554,4 +668,184 @@ export async function tokenizeCard(_cardData: {
 }): Promise<{ success: boolean; token?: string; error?: string }> {
   console.warn("tokenizeCard is deprecated - use Hosted Tokenization for secure tokenization");
   return { success: false, error: "Use Hosted Tokenization for tokenization" };
+}
+
+// ============================================
+// RECURRING PAYMENTS (Save card + charge later)
+// ============================================
+
+interface RecurringPaymentSetupData {
+  cardNumber: string;
+  expiryMonth: number;
+  expiryYear: number;
+  cvv: string;
+  amount: number;
+  cardName?: string;
+  email: string;
+  description?: string;
+}
+
+interface RecurringSetupResult {
+  success: boolean;
+  transactionId?: string;
+  cardRef?: string; // Saved card reference for future charges
+  error?: string;
+}
+
+/**
+ * Process initial payment AND save card for recurring charges
+ * Returns cardRef that can be used for future monthly charges
+ */
+export async function setupRecurringPayment(data: RecurringPaymentSetupData): Promise<RecurringSetupResult> {
+  try {
+    const authHeader = getAuthHeader();
+
+    // Parse name
+    const nameParts = (data.cardName || "").trim().split(" ");
+    const firstName = nameParts[0] || "";
+    const lastName = nameParts.slice(1).join(" ") || "";
+
+    // Ensure year is 4 digits
+    let expYear = data.expiryYear;
+    if (expYear < 100) {
+      expYear += 2000;
+    }
+
+    const requestBody = {
+      amount: data.amount,
+      card: data.cardNumber.replace(/\s/g, ""),
+      expiry_month: data.expiryMonth,
+      expiry_year: expYear,
+      cvv2: data.cvv,
+      customer: {
+        email: data.email,
+        send_receipt: false,
+      },
+      billing_info: {
+        first_name: firstName,
+        last_name: lastName,
+      },
+      transaction_details: {
+        description: data.description || "JRE Recurring Donation",
+      },
+      capture: true,
+      save_card: true, // Save card for recurring charges
+    };
+
+    console.log("Setting up recurring payment for amount:", data.amount.toFixed(2));
+
+    const response = await fetch(BANQUEST_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    let result: BanquestResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      return { success: false, error: `Invalid response: ${responseText.substring(0, 100)}` };
+    }
+
+    console.log("Recurring setup response:", JSON.stringify(result, null, 2));
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      if (!result.card_ref) {
+        console.warn("Payment approved but no card_ref returned - card may not be saved");
+      }
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
+        cardRef: result.card_ref, // This is the saved card token for future charges
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error_message || result.error_details || "Payment declined",
+      };
+    }
+  } catch (error) {
+    console.error("Recurring setup error:", error);
+    return {
+      success: false,
+      error: "Failed to set up recurring payment. Please try again.",
+    };
+  }
+}
+
+/**
+ * Charge a saved card (for monthly recurring payments)
+ * Uses the cardRef from setupRecurringPayment
+ */
+export async function chargeRecurringPayment(data: {
+  cardRef: string;
+  amount: number;
+  email: string;
+  description?: string;
+}): Promise<PaymentResult> {
+  try {
+    const authHeader = getAuthHeader();
+
+    const requestBody = {
+      amount: data.amount,
+      source: data.cardRef, // Use saved card reference
+      customer: {
+        email: data.email,
+        send_receipt: false,
+      },
+      transaction_details: {
+        description: data.description || "JRE Monthly Donation",
+      },
+      capture: true,
+    };
+
+    console.log("Charging recurring payment for amount:", data.amount.toFixed(2));
+    console.log("Using card_ref:", data.cardRef);
+
+    const response = await fetch(BANQUEST_API_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Authorization": authHeader,
+        "User-Agent": "JRE-Website/1.0",
+      },
+      body: JSON.stringify(requestBody),
+    });
+
+    const responseText = await response.text();
+    let result: BanquestResponse;
+    try {
+      result = JSON.parse(responseText);
+    } catch {
+      return { success: false, error: `Invalid response: ${responseText.substring(0, 100)}` };
+    }
+
+    console.log("Recurring charge response:", JSON.stringify(result, null, 2));
+
+    if (result.status_code === "A" || result.status === "Approved") {
+      return {
+        success: true,
+        transactionId: result.transaction?.id?.toString() || `txn_${Date.now()}`,
+        authCode: result.auth_code,
+        referenceNumber: result.reference_number,
+        responseText: result.status,
+      };
+    } else {
+      return {
+        success: false,
+        error: result.error_message || result.error_details || "Recurring charge declined",
+      };
+    }
+  } catch (error) {
+    console.error("Recurring charge error:", error);
+    return {
+      success: false,
+      error: "Failed to process recurring payment.",
+    };
+  }
 }

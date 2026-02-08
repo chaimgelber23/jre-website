@@ -24,7 +24,9 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+// Square kept for backup - uncomment to switch processors
+// import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
@@ -65,6 +67,8 @@ export default function PurimEventPage() {
   const [showSponsorship, setShowSponsorship] = useState(false);
   const [customAmount, setCustomAmount] = useState<number>(0);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>(null);
+  // Payment processor: "banquest" (primary) or "square" (backup)
+  const paymentProcessor = "banquest" as const;
 
   const [formState, setFormState] = useState({
     name: "",
@@ -81,8 +85,8 @@ export default function PurimEventPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Square hook for triggering tokenization
-  const { requestToken } = useSquarePayment();
+  // Banquest tokenization hook
+  const { requestToken } = useCollectJs();
 
   // Refs for auto-scroll
   const sponsorshipRef = useRef<HTMLDivElement>(null);
@@ -218,24 +222,31 @@ export default function PurimEventPage() {
   // Submit form with token
   const doSubmit = useCallback(async (token: string | null) => {
     try {
+      const payload: Record<string, unknown> = {
+        name: formState.name,
+        email: formState.email,
+        phone: formState.phone,
+        totalAdults: numAdults,
+        totalKids: numKids,
+        sponsorship: selectedSponsorship,
+        sponsorshipAmount: sponsorshipPrice,
+        paymentMethod,
+        paymentProcessor: paymentMethod === "online" ? paymentProcessor : undefined,
+        amount: total,
+        cardName: paymentMethod === "online" ? formState.cardName : undefined,
+        message: formState.message,
+        honoreeEmail: formState.honoreeEmail || null,
+      };
+
+      // Include payment token for online payment
+      if (paymentMethod === "online" && token) {
+        payload.paymentToken = token;
+      }
+
       const response = await fetch("/api/events/purim-2025/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: formState.name,
-          email: formState.email,
-          phone: formState.phone,
-          totalAdults: numAdults,
-          totalKids: numKids,
-          sponsorship: selectedSponsorship,
-          sponsorshipAmount: sponsorshipPrice,
-          paymentMethod,
-          amount: total,
-          cardName: paymentMethod === "online" ? formState.cardName : undefined,
-          paymentToken: token,
-          message: formState.message,
-          honoreeEmail: formState.honoreeEmail || null,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -251,9 +262,9 @@ export default function PurimEventPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formState, numAdults, numKids, selectedSponsorship, sponsorshipPrice, paymentMethod, total]);
+  }, [formState, numAdults, numKids, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total]);
 
-  // When token is received, submit the form
+  // When payment token is received, submit the form
   useEffect(() => {
     if (paymentToken && isSubmitting) {
       doSubmit(paymentToken);
@@ -266,14 +277,14 @@ export default function PurimEventPage() {
     setError(null);
     setIsSubmitting(true);
 
-    // For online payments, we need to tokenize first
+    // For online payments, tokenize first then submit
     if (paymentMethod === "online") {
       const tokenStarted = requestToken();
       if (!tokenStarted) {
         setError("Payment system not ready. Please try again.");
         setIsSubmitting(false);
       }
-      // Token callback will trigger doSubmit
+      // Token callback will trigger doSubmit via useEffect
     } else {
       // For check payments, submit directly
       doSubmit(null);
@@ -843,7 +854,7 @@ export default function PurimEventPage() {
                         </button>
                       </div>
 
-                      {/* Pre-load Square card form (hidden until Credit Card selected) */}
+                      {/* Card form (hidden until Credit Card selected) */}
                       <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>
                         <input
                           type="text"
@@ -853,7 +864,9 @@ export default function PurimEventPage() {
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
                           placeholder="Name on Card"
                         />
-                        <SquarePayment
+
+                        {/* Banquest Tokenized Payment (PCI Compliant) */}
+                        <CollectJsPayment
                           onTokenReceived={handleTokenReceived}
                           onError={handlePaymentError}
                           onValidationChange={handleValidationChange}

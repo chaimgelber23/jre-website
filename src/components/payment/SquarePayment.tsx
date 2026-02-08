@@ -42,6 +42,7 @@ interface SquarePaymentProps {
   onError: (error: string) => void;
   onValidationChange?: (isValid: boolean) => void;
   disabled?: boolean;
+  isActive?: boolean; // Whether this is the active payment processor
 }
 
 export default function SquarePayment({
@@ -49,12 +50,16 @@ export default function SquarePayment({
   onError,
   onValidationChange,
   disabled = false,
+  isActive = true, // Default to true for backwards compatibility
 }: SquarePaymentProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [initError, setInitError] = useState<string | null>(null);
   const cardRef = useRef<Card | null>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const initializingRef = useRef(false);
+  const retryCountRef = useRef(0);
+  const maxRetries = 3;
 
   const appId = process.env.NEXT_PUBLIC_SQUARE_APPLICATION_ID;
   const locationId = process.env.NEXT_PUBLIC_SQUARE_LOCATION_ID;
@@ -107,14 +112,19 @@ export default function SquarePayment({
     };
   }, [appId, locationId, onError]);
 
-  // Initialize card payment form
+  // Initialize card payment form - only when active
   useEffect(() => {
     if (!isLoaded || !window.Square || !appId || !locationId || disabled) return;
     if (!containerRef.current) return;
     if (initializingRef.current) return;
+    // Only initialize when this processor is active
+    if (!isActive) return;
+    // Don't re-initialize if already initialized
+    if (cardRef.current) return;
 
-    const initializeCard = async () => {
+    const initializeCard = async (retryAttempt = 0) => {
       initializingRef.current = true;
+      setInitError(null);
 
       try {
         // Destroy existing card if any
@@ -127,15 +137,16 @@ export default function SquarePayment({
           cardRef.current = null;
         }
 
-        // Wait for container to be ready
-        await new Promise(resolve => setTimeout(resolve, 100));
+        // Wait for container to be ready - longer wait on retries
+        const waitTime = 200 + (retryAttempt * 300);
+        await new Promise(resolve => setTimeout(resolve, waitTime));
 
         if (!containerRef.current) {
           initializingRef.current = false;
           return;
         }
 
-        console.log("[Square] Initializing with appId:", appId, "locationId:", locationId);
+        console.log("[Square] Initializing with appId:", appId, "locationId:", locationId, retryAttempt > 0 ? `(retry ${retryAttempt})` : "");
 
         const payments = await window.Square!.payments(appId, locationId);
         console.log("[Square] Payments object created");
@@ -155,16 +166,26 @@ export default function SquarePayment({
         });
 
         cardRef.current = card;
-        console.log("[Square] Card form initialized");
+        retryCountRef.current = 0;
+        console.log("[Square] Card form initialized successfully");
       } catch (error) {
         console.error("[Square] Failed to initialize card:", error);
-        onError("Failed to initialize payment form. Please refresh and try again.");
+
+        // Retry logic for transient failures
+        if (retryAttempt < maxRetries) {
+          console.log(`[Square] Retrying initialization (${retryAttempt + 1}/${maxRetries})...`);
+          initializingRef.current = false;
+          setTimeout(() => initializeCard(retryAttempt + 1), 500 * (retryAttempt + 1));
+          return;
+        }
+
+        setInitError("Payment form failed to load. Please refresh the page.");
       } finally {
         initializingRef.current = false;
       }
     };
 
-    initializeCard();
+    initializeCard(0);
 
     return () => {
       if (cardRef.current) {
@@ -177,7 +198,7 @@ export default function SquarePayment({
       }
       initializingRef.current = false;
     };
-  }, [isLoaded, disabled, appId, locationId, onError, onValidationChange]);
+  }, [isLoaded, disabled, isActive, appId, locationId, onValidationChange]);
 
   const requestToken = useCallback(async () => {
     if (!cardRef.current || isProcessing || disabled) return false;
@@ -247,6 +268,20 @@ export default function SquarePayment({
         <div className="flex items-center justify-center py-2">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-[#EF8046]" />
           <span className="ml-2 text-sm text-gray-500">Loading secure payment...</span>
+        </div>
+      )}
+
+      {/* Error with retry */}
+      {initError && (
+        <div className="bg-amber-50 border border-amber-200 text-amber-700 px-4 py-3 rounded-lg text-sm flex items-center justify-between">
+          <span>{initError}</span>
+          <button
+            type="button"
+            onClick={() => window.location.reload()}
+            className="ml-3 text-amber-800 underline hover:no-underline"
+          >
+            Refresh
+          </button>
         </div>
       )}
     </div>

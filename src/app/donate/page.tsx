@@ -1,11 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { motion } from "framer-motion";
-import { Heart, Check, CreditCard } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { Heart, Check, CreditCard, ChevronDown, Gift, MessageSquare } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+// Square kept for backup - uncomment to switch processors
+// import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { FadeUp } from "@/components/ui/motion";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
@@ -40,9 +42,14 @@ export default function DonatePage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // Collapsible optional sections
+  const [showHonorSection, setShowHonorSection] = useState(false);
+  const [showSponsorSection, setShowSponsorSection] = useState(false);
+  // Payment processor: "banquest" (primary) or "square" (backup)
+  const paymentProcessor = "banquest" as const;
 
-  // Square hook for triggering tokenization
-  const { requestToken } = useSquarePayment();
+  // Banquest tokenization hook
+  const { requestToken } = useCollectJs();
 
   const handleAmountClick = (value: number) => {
     setAmount(value);
@@ -81,24 +88,31 @@ export default function DonatePage() {
   }, []);
 
   // Submit form with token
-  const doSubmit = useCallback(async (token: string) => {
+  const doSubmit = useCallback(async (token: string | null) => {
     try {
+      const payload: Record<string, unknown> = {
+        amount,
+        isRecurring,
+        name: formState.name,
+        email: formState.email,
+        phone: formState.phone,
+        honorName: formState.honorName,
+        honorEmail: formState.honorEmail,
+        sponsorship: formState.sponsorship,
+        message: formState.message,
+        cardName: formState.cardName,
+        paymentProcessor,
+      };
+
+      // Include payment token
+      if (token) {
+        payload.paymentToken = token;
+      }
+
       const response = await fetch("/api/donate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          amount,
-          isRecurring,
-          name: formState.name,
-          email: formState.email,
-          phone: formState.phone,
-          honorName: formState.honorName,
-          honorEmail: formState.honorEmail,
-          sponsorship: formState.sponsorship,
-          message: formState.message,
-          cardName: formState.cardName,
-          paymentToken: token,
-        }),
+        body: JSON.stringify(payload),
       });
 
       const data = await response.json();
@@ -114,9 +128,9 @@ export default function DonatePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, isRecurring, formState]);
+  }, [amount, isRecurring, formState, paymentProcessor]);
 
-  // When token is received, submit the form
+  // When payment token is received, submit the form
   useEffect(() => {
     if (paymentToken && isSubmitting) {
       doSubmit(paymentToken);
@@ -129,13 +143,13 @@ export default function DonatePage() {
     setError(null);
     setIsSubmitting(true);
 
-    // Tokenize the card first
+    // Tokenize the card first, then submit
     const tokenStarted = requestToken();
     if (!tokenStarted) {
       setError("Payment system not ready. Please try again.");
       setIsSubmitting(false);
     }
-    // Token callback will trigger doSubmit
+    // Token callback will trigger doSubmit via useEffect
   };
 
   if (isSubmitted) {
@@ -205,261 +219,276 @@ export default function DonatePage() {
         </div>
       </section>
 
-      {/* Donation Form */}
-      <section className="section bg-white">
+      {/* Donation Form - Compact Single-Card Design */}
+      <section className="py-12 bg-white">
         <div className="container mx-auto px-6">
-          <div className="max-w-3xl mx-auto">
+          <div className="max-w-2xl mx-auto">
             <form onSubmit={handleSubmit}>
-              {/* Amount Selection */}
               <FadeUp>
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Donation Amount
-                  </h3>
-
-                  <div className="grid grid-cols-3 gap-3 mb-6">
-                    {presetAmounts.map((preset) => (
-                      <motion.button
-                        key={preset}
-                        type="button"
-                        onClick={() => handleAmountClick(preset)}
-                        whileHover={{ scale: 1.02 }}
-                        whileTap={{ scale: 0.98 }}
-                        className={`py-4 rounded-lg font-bold text-lg transition-all ${
-                          amount === preset
-                            ? "bg-[#EF8046] text-white shadow-lg"
-                            : "bg-white border-2 border-gray-200 text-gray-700 hover:border-[#EF8046]"
-                        }`}
-                      >
-                        ${preset}
-                      </motion.button>
-                    ))}
-                  </div>
-
-                  <div className="relative">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 text-lg font-medium">
-                      $
-                    </span>
-                    <input
-                      type="number"
-                      value={customAmount}
-                      onChange={handleCustomAmountChange}
-                      placeholder="Custom amount"
-                      className="w-full pl-8 pr-4 py-4 text-lg rounded-lg border-2 border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                    />
-                  </div>
-
-                  <label className="flex items-center gap-3 mt-6 cursor-pointer">
-                    <input
-                      type="checkbox"
-                      checked={isRecurring}
-                      onChange={(e) => setIsRecurring(e.target.checked)}
-                      className="w-5 h-5 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]"
-                    />
-                    <span className="text-gray-700">
-                      Make this a monthly recurring donation
-                    </span>
-                  </label>
-                </div>
-              </FadeUp>
-
-              {/* Donor Information */}
-              <FadeUp delay={0.1}>
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-6">
-                    Donor Information
-                  </h3>
-
-                  <div className="grid md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Full Name *
-                      </label>
-                      <input
-                        type="text"
-                        name="name"
-                        value={formState.name}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="Your name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Email *
-                      </label>
-                      <input
-                        type="email"
-                        name="email"
-                        value={formState.email}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="your@email.com"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </FadeUp>
-
-              {/* In Honor Of */}
-              <FadeUp delay={0.15}>
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    In Honor Of
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    Honoree will receive email notification of donation
-                  </p>
-
-                  <div className="grid md:grid-cols-2 gap-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Honoree Name
-                      </label>
-                      <input
-                        type="text"
-                        name="honorName"
-                        value={formState.honorName}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="Honoree's name"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Honoree Email
-                      </label>
-                      <input
-                        type="email"
-                        name="honorEmail"
-                        value={formState.honorEmail}
-                        onChange={handleChange}
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="honoree@email.com"
-                      />
-                    </div>
-                  </div>
-                </div>
-              </FadeUp>
-
-              {/* Sponsorship */}
-              <FadeUp delay={0.2}>
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-8">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-2">
-                    Sponsorship
-                  </h3>
-                  <p className="text-gray-500 mb-6">
-                    Dedicate your donation to a specific program
-                  </p>
-
-                  <select
-                    name="sponsorship"
-                    value={formState.sponsorship}
-                    onChange={handleChange}
-                    className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                  >
-                    {sponsorships.map((option) => (
-                      <option key={option.value} value={option.value}>
-                        {option.label}
-                      </option>
-                    ))}
-                  </select>
-
-                  <div className="mt-5">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">
-                      Message (optional)
-                    </label>
-                    <textarea
-                      name="message"
-                      value={formState.message}
-                      onChange={handleChange}
-                      rows={3}
-                      className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all resize-none"
-                      placeholder="Add a personal message..."
-                    />
-                  </div>
-                </div>
-              </FadeUp>
-
-              {/* Payment Details */}
-              <FadeUp delay={0.25}>
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-8">
-                  <div className="flex items-center gap-3 mb-6">
-                    <CreditCard className="w-6 h-6 text-[#EF8046]" />
-                    <h3 className="text-2xl font-bold text-gray-900">
-                      Payment Details
+                <div className="bg-[#FBFBFB] rounded-2xl p-6 md:p-8 shadow-sm">
+                  {/* Amount Selection */}
+                  <div className="mb-8">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      Select Amount
                     </h3>
-                  </div>
 
-                  {error && (
-                    <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-5">
-                      {error}
+                    <div className="grid grid-cols-3 gap-2 mb-4">
+                      {presetAmounts.map((preset) => (
+                        <motion.button
+                          key={preset}
+                          type="button"
+                          onClick={() => handleAmountClick(preset)}
+                          whileHover={{ scale: 1.02 }}
+                          whileTap={{ scale: 0.98 }}
+                          className={`py-3 rounded-lg font-bold transition-all ${
+                            amount === preset
+                              ? "bg-[#EF8046] text-white shadow-md"
+                              : "bg-white border border-gray-200 text-gray-700 hover:border-[#EF8046]"
+                          }`}
+                        >
+                          ${preset}
+                        </motion.button>
+                      ))}
                     </div>
-                  )}
 
-                  <div className="space-y-5">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700 mb-1">
-                        Name on Card *
-                      </label>
+                    <div className="relative">
+                      <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">
+                        $
+                      </span>
                       <input
-                        type="text"
-                        name="cardName"
-                        value={formState.cardName}
-                        onChange={handleChange}
-                        required
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
-                        placeholder="Name on card"
+                        type="number"
+                        value={customAmount}
+                        onChange={handleCustomAmountChange}
+                        placeholder="Other amount"
+                        className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none"
                       />
                     </div>
 
-                    <SquarePayment
-                      onTokenReceived={handleTokenReceived}
-                      onError={handlePaymentError}
-                      onValidationChange={handleValidationChange}
-                      disabled={isSubmitting}
-                    />
-                  </div>
-                </div>
-              </FadeUp>
-
-              {/* Submit Button */}
-              <FadeUp delay={0.3}>
-                <motion.button
-                  type="submit"
-                  disabled={!amount || isSubmitting}
-                  whileHover={{ scale: 1.02 }}
-                  whileTap={{ scale: 0.98 }}
-                  className="w-full bg-[#EF8046] text-white py-5 rounded-xl font-bold text-xl flex items-center justify-center gap-3 hover:bg-[#d96a2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-lg"
-                >
-                  {isSubmitting ? (
-                    <>
-                      <motion.div
-                        animate={{ rotate: 360 }}
-                        transition={{
-                          duration: 1,
-                          repeat: Infinity,
-                          ease: "linear",
-                        }}
-                        className="w-6 h-6 border-3 border-white border-t-transparent rounded-full"
+                    <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm">
+                      <input
+                        type="checkbox"
+                        checked={isRecurring}
+                        onChange={(e) => setIsRecurring(e.target.checked)}
+                        className="w-4 h-4 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]"
                       />
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <Heart className="w-6 h-6" />
-                      Donate {amount ? `$${amount}` : "Now"}
-                      {isRecurring && " Monthly"}
-                    </>
-                  )}
-                </motion.button>
+                      <span className="text-gray-600">Make this monthly</span>
+                    </label>
+                  </div>
 
-                <p className="text-center text-gray-500 text-sm mt-4">
-                  Your donation is tax-deductible. The JRE is a 501(c)(3)
-                  nonprofit organization.
-                </p>
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 my-6" />
+
+                  {/* Your Information */}
+                  <div className="mb-6">
+                    <h3 className="text-xl font-bold text-gray-900 mb-4">
+                      Your Information
+                    </h3>
+
+                    <div className="grid md:grid-cols-2 gap-4 mb-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Full Name *
+                        </label>
+                        <input
+                          type="text"
+                          name="name"
+                          value={formState.name}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          placeholder="Your name"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Email *
+                        </label>
+                        <input
+                          type="email"
+                          name="email"
+                          value={formState.email}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          placeholder="your@email.com"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Optional Sections - Collapsible */}
+                  <div className="space-y-3 mb-6">
+                    {/* In Honor Of - Collapsible */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowHonorSection(!showHonorSection)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <Gift className="w-4 h-4 text-[#EF8046]" />
+                          <span className="text-sm font-medium text-gray-700">Donate in honor of someone</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showHonorSection ? 'rotate-180' : ''}`} />
+                      </button>
+                      <AnimatePresence>
+                        {showHonorSection && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="px-4 pb-4 pt-2 bg-gray-50/50 grid md:grid-cols-2 gap-3">
+                              <input
+                                type="text"
+                                name="honorName"
+                                value={formState.honorName}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                placeholder="Honoree's name"
+                              />
+                              <input
+                                type="email"
+                                name="honorEmail"
+                                value={formState.honorEmail}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                placeholder="Honoree's email (optional)"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+
+                    {/* Sponsorship - Collapsible */}
+                    <div className="border border-gray-200 rounded-lg overflow-hidden">
+                      <button
+                        type="button"
+                        onClick={() => setShowSponsorSection(!showSponsorSection)}
+                        className="w-full flex items-center justify-between px-4 py-3 bg-white hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex items-center gap-2">
+                          <MessageSquare className="w-4 h-4 text-[#EF8046]" />
+                          <span className="text-sm font-medium text-gray-700">Add sponsorship or message</span>
+                        </div>
+                        <ChevronDown className={`w-4 h-4 text-gray-400 transition-transform ${showSponsorSection ? 'rotate-180' : ''}`} />
+                      </button>
+                      <AnimatePresence>
+                        {showSponsorSection && (
+                          <motion.div
+                            initial={{ height: 0, opacity: 0 }}
+                            animate={{ height: "auto", opacity: 1 }}
+                            exit={{ height: 0, opacity: 0 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            <div className="px-4 pb-4 pt-2 bg-gray-50/50 space-y-3">
+                              <select
+                                name="sponsorship"
+                                value={formState.sponsorship}
+                                onChange={handleChange}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                              >
+                                {sponsorships.map((option) => (
+                                  <option key={option.value} value={option.value}>
+                                    {option.label}
+                                  </option>
+                                ))}
+                              </select>
+                              <textarea
+                                name="message"
+                                value={formState.message}
+                                onChange={handleChange}
+                                rows={2}
+                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                placeholder="Add a personal message (optional)"
+                              />
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                    </div>
+                  </div>
+
+                  {/* Divider */}
+                  <div className="border-t border-gray-200 my-6" />
+
+                  {/* Payment Details */}
+                  <div className="mb-6">
+                    <div className="flex items-center gap-2 mb-4">
+                      <CreditCard className="w-5 h-5 text-[#EF8046]" />
+                      <h3 className="text-xl font-bold text-gray-900">
+                        Payment
+                      </h3>
+                    </div>
+
+                    {error && (
+                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
+                        {error}
+                      </div>
+                    )}
+
+                    <div className="space-y-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Name on Card *
+                        </label>
+                        <input
+                          type="text"
+                          name="cardName"
+                          value={formState.cardName}
+                          onChange={handleChange}
+                          required
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          placeholder="Name on card"
+                        />
+                      </div>
+
+                      {/* Banquest Tokenized Payment (PCI Compliant) */}
+                      <CollectJsPayment
+                        onTokenReceived={handleTokenReceived}
+                        onError={handlePaymentError}
+                        onValidationChange={handleValidationChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                  </div>
+
+                  {/* Submit Button */}
+                  <motion.button
+                    type="submit"
+                    disabled={!amount || isSubmitting}
+                    whileHover={{ scale: 1.01 }}
+                    whileTap={{ scale: 0.99 }}
+                    className="w-full bg-[#EF8046] text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <motion.div
+                          animate={{ rotate: 360 }}
+                          transition={{
+                            duration: 1,
+                            repeat: Infinity,
+                            ease: "linear",
+                          }}
+                          className="w-5 h-5 border-2 border-white border-t-transparent rounded-full"
+                        />
+                        Processing...
+                      </>
+                    ) : (
+                      <>
+                        <Heart className="w-5 h-5" />
+                        Donate {amount ? `$${amount}` : "Now"}
+                        {isRecurring && " Monthly"}
+                      </>
+                    )}
+                  </motion.button>
+
+                  <p className="text-center text-gray-500 text-xs mt-3">
+                    Tax-deductible. JRE is a 501(c)(3) nonprofit.
+                  </p>
+                </div>
               </FadeUp>
             </form>
           </div>

@@ -21,7 +21,9 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
+import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+// Square kept for backup - uncomment to switch processors
+// import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import confetti from "canvas-confetti";
 import type { Event, EventSponsorship } from "@/types/database";
 
@@ -44,6 +46,9 @@ export default function EventDetailPage({
   const [selectedSponsorship, setSelectedSponsorship] = useState<string | null>(null);
   const [showSponsorship, setShowSponsorship] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "check">("online");
+  // Payment processor: "banquest" (primary) or "square" (backup)
+  // To switch to Square: change to "square" and uncomment Square imports above
+  const paymentProcessor = "banquest" as const;
   const [formState, setFormState] = useState({
     name: "",
     email: "",
@@ -58,8 +63,8 @@ export default function EventDetailPage({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
 
-  // Square hook for triggering tokenization
-  const { requestToken } = useSquarePayment();
+  // Banquest tokenization hook
+  const { requestToken } = useCollectJs();
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
@@ -217,6 +222,7 @@ export default function EventDetailPage({
         message: formState.message || null,
         honoreeEmail: formState.honoreeEmail || null,
         paymentMethod,
+        paymentProcessor: paymentMethod === "online" ? paymentProcessor : undefined,
       };
 
       // Include payment token for online payment
@@ -244,9 +250,9 @@ export default function EventDetailPage({
     } finally {
       setIsSubmitting(false);
     }
-  }, [adults, kids, formState, selectedSponsorship, paymentMethod, slug]);
+  }, [adults, kids, formState, selectedSponsorship, paymentMethod, paymentProcessor, slug]);
 
-  // When token is received, submit the form
+  // When payment token is received, submit the form
   useEffect(() => {
     if (paymentToken && isSubmitting) {
       doSubmit(paymentToken);
@@ -259,14 +265,14 @@ export default function EventDetailPage({
     setError("");
     setIsSubmitting(true);
 
-    // For online payments, we need to tokenize first
+    // For online payments, tokenize first then submit
     if (paymentMethod === "online") {
       const tokenStarted = requestToken();
       if (!tokenStarted) {
         setError("Payment system not ready. Please try again.");
         setIsSubmitting(false);
       }
-      // Token callback will trigger doSubmit
+      // Token callback will trigger doSubmit via useEffect
     } else {
       // For check payments, submit directly
       doSubmit(null);
@@ -1019,7 +1025,7 @@ export default function EventDetailPage({
                         </button>
                       </div>
 
-                      {/* Pre-load Square card form (hidden until Credit Card selected) */}
+                      {/* Card form (hidden until Credit Card selected) */}
                       <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>
                         <input
                           type="text"
@@ -1029,7 +1035,9 @@ export default function EventDetailPage({
                           className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
                           placeholder="Name on Card"
                         />
-                        <SquarePayment
+
+                        {/* Banquest Tokenized Payment (PCI Compliant) */}
+                        <CollectJsPayment
                           onTokenReceived={handleTokenReceived}
                           onError={handlePaymentError}
                           onValidationChange={handleValidationChange}

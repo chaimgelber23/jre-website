@@ -58,6 +58,8 @@ export interface Database {
           payment_status: string;
           payment_reference: string | null;
           payment_error: string | null;
+          card_ref: string | null; // Saved card token for recurring charges
+          next_charge_date: string | null; // Next date to charge (ISO date)
           created_at: string;
           updated_at: string;
         };
@@ -77,6 +79,8 @@ export interface Database {
           payment_status?: string;
           payment_reference?: string | null;
           payment_error?: string | null;
+          card_ref?: string | null;
+          next_charge_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };
@@ -96,6 +100,8 @@ export interface Database {
           payment_status?: string;
           payment_reference?: string | null;
           payment_error?: string | null;
+          card_ref?: string | null;
+          next_charge_date?: string | null;
           created_at?: string;
           updated_at?: string;
         };

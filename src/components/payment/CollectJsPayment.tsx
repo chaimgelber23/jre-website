@@ -57,7 +57,7 @@ export default function CollectJsPayment({
   onError,
   onValidationChange,
   disabled = false,
-  useSandbox = true,
+  useSandbox = false, // Default to production
 }: CollectJsPaymentProps) {
   const [isLoaded, setIsLoaded] = useState(false);
   const [isProcessing, setIsProcessing] = useState(false);

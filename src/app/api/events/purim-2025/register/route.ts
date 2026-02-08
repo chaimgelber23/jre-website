@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { processSquarePayment } from "@/lib/square";
+import { processTokenizedPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
@@ -39,6 +40,7 @@ export async function POST(request: NextRequest) {
       sponsorship,
       sponsorshipAmount,
       paymentMethod,
+      paymentProcessor,
       amount,
       cardName,
       paymentToken,
@@ -74,8 +76,43 @@ export async function POST(request: NextRequest) {
     let paymentReference = "";
 
     if (paymentMethod === "online" && totalAmount > 0) {
-      if (paymentToken) {
-        // Process payment via Square (secure - card data tokenized on frontend)
+      // Determine which processor to use (default to Banquest - lower fees)
+      const processor = paymentProcessor || "banquest";
+
+      if (!paymentToken) {
+        return NextResponse.json(
+          { success: false, error: "Payment token is required" },
+          { status: 400 }
+        );
+      }
+
+      // Parse name for first/last
+      const nameParts = (cardName || name).trim().split(" ");
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      if (processor === "banquest") {
+        // Process payment via Banquest (tokenized - PCI compliant)
+        const paymentResult = await processTokenizedPayment({
+          paymentToken,
+          amount: totalAmount,
+          email,
+          firstName,
+          lastName,
+          description: `JRE Purim 2025 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
+        });
+
+        if (!paymentResult.success) {
+          return NextResponse.json(
+            { success: false, error: paymentResult.error || "Payment failed" },
+            { status: 400 }
+          );
+        }
+
+        paymentStatus = "success";
+        paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
+      } else if (processor === "square") {
+        // Process payment via Square (backup - tokenized)
         const paymentResult = await processSquarePayment({
           sourceId: paymentToken,
           amount: totalAmount,
@@ -94,9 +131,8 @@ export async function POST(request: NextRequest) {
         paymentStatus = "success";
         paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
       } else {
-        // Payment token missing
         return NextResponse.json(
-          { success: false, error: "Payment information is required for online payment" },
+          { success: false, error: "Invalid payment processor" },
           { status: 400 }
         );
       }

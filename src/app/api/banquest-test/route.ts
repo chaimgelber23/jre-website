@@ -1,24 +1,16 @@
 import { NextResponse } from "next/server";
-import { processPayment } from "@/lib/banquest";
+import { processPayment, processDirectCardPayment } from "@/lib/banquest";
 
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    const { paymentToken, amount, name, email } = body;
+    const { paymentToken, cardNumber, expiryMonth, expiryYear, cvv, amount, name, email } = body;
 
     console.log("=== BANQUEST TEST PAYMENT ===");
     console.log("Amount:", amount);
     console.log("Name:", name);
     console.log("Email:", email);
-    console.log("Token:", paymentToken ? paymentToken.substring(0, 20) + "..." : "MISSING");
-
-    // Validate required fields
-    if (!paymentToken) {
-      return NextResponse.json(
-        { success: false, error: "Payment token is required" },
-        { status: 400 }
-      );
-    }
+    console.log("Mode:", cardNumber ? "Direct Card" : "Tokenized");
 
     if (!amount || amount <= 0) {
       return NextResponse.json(
@@ -34,14 +26,42 @@ export async function POST(request: Request) {
       );
     }
 
-    // Process the payment using the new Banquest JSON API
-    const result = await processPayment({
-      paymentToken,
-      amount: parseFloat(amount),
-      cardName: name,
-      email,
-      description: "Banquest API Test Payment",
-    });
+    let result;
+
+    // Check if using direct card input or tokenized
+    if (cardNumber) {
+      // Direct card payment (bypasses tokenization)
+      console.log("Processing direct card payment...");
+      console.log("Card:", cardNumber.substring(0, 6) + "..." + cardNumber.slice(-4));
+
+      result = await processDirectCardPayment({
+        cardNumber,
+        expiryMonth,
+        expiryYear,
+        cvv,
+        amount: parseFloat(amount),
+        cardName: name,
+        email,
+        description: "Banquest API Test Payment (Direct)",
+      });
+    } else if (paymentToken) {
+      // Tokenized payment
+      console.log("Processing tokenized payment...");
+      console.log("Token:", paymentToken.substring(0, 20) + "...");
+
+      result = await processPayment({
+        paymentToken,
+        amount: parseFloat(amount),
+        cardName: name,
+        email,
+        description: "Banquest API Test Payment (Tokenized)",
+      });
+    } else {
+      return NextResponse.json(
+        { success: false, error: "Either payment token or card details are required" },
+        { status: 400 }
+      );
+    }
 
     console.log("Payment result:", result);
 
