@@ -25,13 +25,25 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* About Section */}
           <FadeUp className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-6">
+            <Link href="/" className="inline-block mb-6 relative">
               <Image
                 src="/images/logo.png"
                 alt="The JRE"
                 width={140}
                 height={47}
                 className="brightness-0 invert"
+              />
+              {/* Torch/flame glow effect */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  top: '2%',
+                  left: '3%',
+                  width: '20px',
+                  height: '24px',
+                  background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
+                  filter: 'blur(4px)',
+                }}
               />
             </Link>
             <p className="text-gray-300 leading-relaxed mb-6">
