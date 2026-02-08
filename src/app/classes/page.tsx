@@ -20,6 +20,7 @@ const classes = [
     description:
       "Start your week with inspiring Torah study exploring spiritual and ethical lessons from the book of Bereishis.",
     image: "/images/events/JREevent.jpg",
+    imagePosition: "left center",
     isZoom: false,
   },
   {
@@ -111,6 +112,7 @@ const classes = [
     description:
       "Prepare for Shabbat with meaningful Torah learning in a warm and welcoming environment.",
     image: "/images/events/JREevent.jpg",
+    imagePosition: "right center",
     isZoom: false,
   },
 ];
@@ -163,6 +165,7 @@ function ClassCard({
             alt={classItem.title}
             fill
             className="object-cover transition-transform duration-700 group-hover:scale-110"
+            style={classItem.imagePosition ? { objectPosition: classItem.imagePosition } : undefined}
           />
 
           {/* Overlay gradient */}
