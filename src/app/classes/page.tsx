@@ -140,30 +140,11 @@ export default function ClassesPage() {
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.3 }}
-            className="text-5xl md:text-6xl font-bold mb-6"
+            className="text-5xl md:text-6xl font-bold"
             style={{ color: '#ffffff' }}
           >
             Our Classes
           </motion.h1>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.4 }}
-            className="text-xl md:text-2xl max-w-3xl mx-auto italic"
-            style={{ color: '#e2e8f0' }}
-          >
-            Learning that is relevant and meaningful—it&apos;s wisdom for your life!
-          </motion.p>
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="text-lg max-w-2xl mx-auto mt-4"
-            style={{ color: '#a0aec0' }}
-          >
-            With a variety of topics, times, and styles, there&apos;s something for
-            everyone.
-          </motion.p>
         </div>
       </section>
 
