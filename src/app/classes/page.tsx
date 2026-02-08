@@ -33,7 +33,7 @@ const classes = [
     description:
       "A warm and engaging women's class exploring the weekly parsha with meaningful insights for daily life.",
     image: "/images/classes/WomensClass.png",
-    isZoom: true,
+    isZoom: false,
   },
   {
     id: "fire-mysticism",
