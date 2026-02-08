@@ -419,9 +419,11 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
             onScroll={checkPosition}
           >
             {events.map((event) => (
-              <div
+              <motion.div
                 key={event.id}
-                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-xl transition-shadow duration-300"
+                whileHover={{ y: -8 }}
+                transition={{ duration: 0.2 }}
+                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300"
               >
                 <Image
                   src={event.image}
@@ -434,16 +436,19 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
+                {/* Subtle border on hover */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-[#EF8046]/40 transition-colors duration-300" />
+
                 {/* Content */}
                 <div className="absolute bottom-0 left-0 right-0 p-5">
                   <span className="inline-block bg-[#EF8046] text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide">
                     {event.date}
                   </span>
-                  <h3 className="text-lg md:text-xl font-bold text-white leading-tight">
+                  <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-[#EF8046] transition-colors duration-300 leading-tight">
                     {event.title}
                   </h3>
                 </div>
-              </div>
+              </motion.div>
             ))}
           </div>
         </div>
