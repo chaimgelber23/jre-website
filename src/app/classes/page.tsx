@@ -72,7 +72,7 @@ const classes = [
     description:
       "Dive deep into the meaning and practice of the mitzvot with practical applications for modern life.",
     image: "/images/events/Israel.jpg",
-    isZoom: true,
+    isZoom: false,
   },
   {
     id: "triple-b",
