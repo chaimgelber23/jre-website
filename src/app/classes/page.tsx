@@ -14,7 +14,7 @@ const classes = [
     title: "Sunday Morning Class",
     subtitle: "Spiritual and Ethical Lessons on Bereishis",
     schedule: "Sundays, 10:55 AM - 11:30 AM",
-    instructor: "Rabbi Avi",
+    instructor: "Rabbi Hoffman",
     location: "The JRE",
     audience: "All levels welcome",
     description:
@@ -27,7 +27,7 @@ const classes = [
     title: "Tuesday Morning Parsha Class",
     subtitle: "Growing and Glowing",
     schedule: "Tuesdays, 10:00 AM",
-    instructor: "Elisheva, Shana & Yehudis",
+    instructor: "Elisheva, Shana, Yehudis & Avigail",
     location: "Zoom",
     audience: "Women",
     description:
@@ -36,11 +36,24 @@ const classes = [
     isZoom: false,
   },
   {
+    id: "mitzvot-unpacked",
+    title: "Mitzvot Unpacked",
+    subtitle: "Tuesday Afternoons",
+    schedule: "Tuesdays, 9:30 PM",
+    instructor: "Rabbi Oratz",
+    location: "Zoom",
+    audience: "All levels",
+    description:
+      "Dive deep into the meaning and practice of the mitzvot with practical applications for modern life.",
+    image: "/images/events/Israel.jpg",
+    isZoom: false,
+  },
+  {
     id: "fire-mysticism",
     title: "Fire & Mysticism",
     subtitle: "Tuesday Evening Chassidut",
     schedule: "Tuesdays, 9:30 PM",
-    instructor: "Rabbi Avi",
+    instructor: "Rabbi Hoffman",
     location: "Harrison",
     audience: "All levels",
     description:
@@ -62,24 +75,11 @@ const classes = [
     isZoom: false,
   },
   {
-    id: "mitzvot-unpacked",
-    title: "Mitzvot Unpacked",
-    subtitle: "Tuesday Afternoons",
-    schedule: "Tuesdays, 9:30 PM",
-    instructor: "Rabbi Yossi",
-    location: "Zoom",
-    audience: "All levels",
-    description:
-      "Dive deep into the meaning and practice of the mitzvot with practical applications for modern life.",
-    image: "/images/events/Israel.jpg",
-    isZoom: false,
-  },
-  {
     id: "triple-b",
     title: "Triple B Club",
     subtitle: "Interactive Parsha",
     schedule: "Wednesdays, 9:00 PM",
-    instructor: "Rabbi Avi",
+    instructor: "Rabbi Hoffman",
     location: "White Plains",
     audience: "All levels",
     description:
@@ -105,7 +105,7 @@ const classes = [
     title: "Friday Morning Torah",
     subtitle: "For Men",
     schedule: "Fridays, 9:45 AM - 10:45 AM",
-    instructor: "Rabbi Avi",
+    instructor: "Rabbi Hoffman",
     location: "Monsey",
     audience: "Men",
     description:
