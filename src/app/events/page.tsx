@@ -176,7 +176,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   return (
     <section className="relative py-20 overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-gradient-to-br from-[#2d3748] via-[#1a202c] to-[#2d3748]" />
+      <div className="absolute inset-0 bg-[#2d3748]" />
 
       {/* Subtle decorative elements */}
       <div className="absolute inset-0 overflow-hidden">
@@ -229,7 +229,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                 src={event.image}
                 alt={event.title}
                 fill
-                className="object-cover transition-transform duration-700 group-hover:scale-105"
+                className="object-cover object-left transition-transform duration-700 group-hover:scale-105"
               />
               {/* Animated border */}
               <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors" />
