@@ -15,11 +15,11 @@ const quickLinks = [
   { href: "/donate", label: "Donate" },
 ];
 
-export default function Footer() {
+export default function Footer({ bgColor }: { bgColor?: string }) {
   const currentYear = new Date().getFullYear();
 
   return (
-    <footer className="bg-black text-white pt-8">
+    <footer className={`${bgColor || "bg-[#2d3748]"} text-white pt-8`}>
       {/* Main Footer */}
       <div className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
