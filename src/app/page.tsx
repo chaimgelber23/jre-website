@@ -270,19 +270,19 @@ export default function Home() {
 
           <StaggerContainer className="grid grid-cols-2 md:grid-cols-3 gap-4">
             {[
-              "/images/events/JREBensoussan.jpeg",
-              "/images/events/ScotchNSteak.jpg",
-              "/images/events/women2.jpg",
-              "/images/events/JREevent.jpg",
-              "/images/events/Dinner.jpg",
-              "/images/classes/WomensClass.png",
-            ].map((src, index) => (
+              { src: "/images/events/JREBensoussan.jpeg", alt: "JRE community gathering in Westchester County" },
+              { src: "/images/events/ScotchNSteak.jpg", alt: "Scotch and Steak Torah learning event in Scarsdale" },
+              { src: "/images/events/women2.jpg", alt: "Women's Torah class at The JRE" },
+              { src: "/images/events/JREevent.jpg", alt: "Jewish community event hosted by The JRE" },
+              { src: "/images/events/Dinner.jpg", alt: "JRE dinner event bringing together Jewish families in Westchester" },
+              { src: "/images/classes/WomensClass.png", alt: "Weekly women's Jewish education class" },
+            ].map((img, index) => (
               <StaggerItem key={index}>
                 <ScaleOnHover scale={1.03}>
                   <div className="relative aspect-square rounded-lg overflow-hidden shadow-md">
                     <Image
-                      src={src}
-                      alt={`JRE Community ${index + 1}`}
+                      src={img.src}
+                      alt={img.alt}
                       fill
                       className="object-cover"
                     />
@@ -315,6 +315,28 @@ export default function Home() {
               </FadeUp>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Serving Westchester */}
+      <section className="py-16 bg-[#FBFBFB]">
+        <div className="container mx-auto px-6 text-center max-w-3xl">
+          <FadeUp>
+            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-2">
+              Our Reach
+            </p>
+            <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
+              Proudly Serving Westchester County
+            </h2>
+            <p className="text-gray-600 leading-relaxed">
+              Based in Scarsdale, The JRE brings Jewish education, community events,
+              and meaningful Torah experiences to families across Westchester County.
+              From White Plains to Harrison, New Rochelle to Yonkers, Mamaroneck to
+              Larchmont, Rye to Bronxville, Eastchester to Pelham, Tarrytown to
+              Ardsley, and Dobbs Ferry to Port Chester &mdash; our classes, events,
+              and programs are open to Jews of all backgrounds throughout the region.
+            </p>
+          </FadeUp>
         </div>
       </section>
 

@@ -153,9 +153,38 @@ export default function CollectJsPayment({
 
         // Initialize HostedTokenization with the actual DOM element
         const tokenizer = new window.HostedTokenization!(tokenizationKey!, {
-          target: container, // Pass DOM element directly
+          target: container,
           showZip: false,
           requireCvv2: true,
+          styles: {
+            input: {
+              'font-size': '15px',
+              'font-family': '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+              'color': '#1a202c',
+              'border': '1.5px solid #e2e8f0',
+              'border-radius': '0.5rem',
+              'padding': '10px 14px',
+              'height': '44px',
+              'background-color': '#ffffff',
+              'box-sizing': 'border-box',
+              'transition': 'border-color 0.2s ease, box-shadow 0.2s ease',
+            },
+            'input:focus': {
+              'border-color': '#EF8046',
+              'box-shadow': '0 0 0 3px rgba(239, 128, 70, 0.15)',
+              'outline': 'none',
+            },
+            'input:hover': {
+              'border-color': '#cbd5e0',
+            },
+            'input::placeholder': {
+              'color': '#a0aec0',
+              'font-weight': '400',
+            },
+            '.invalid': {
+              'border-color': '#e53e3e',
+            },
+          },
         });
 
         // Listen for ready event
@@ -256,12 +285,12 @@ export default function CollectJsPayment({
       {/* Card Form Container - Banquest iframe will be mounted here */}
       <div
         id="card-form-container"
-        className="w-full min-h-[80px] rounded-lg overflow-hidden border border-gray-200 bg-white"
+        className="w-full min-h-[100px] rounded-xl overflow-hidden bg-white p-4"
       />
 
       {/* Security Badge */}
-      <div className="flex items-center gap-1.5 text-xs text-gray-500">
-        <Lock className="w-3 h-3" />
+      <div className="flex items-center gap-2 text-xs text-gray-400 bg-gray-50 rounded-lg px-3 py-2">
+        <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
         <span>Secured by Banquest. Your card details are encrypted.</span>
       </div>
 

@@ -446,12 +446,17 @@ export default function DonatePage() {
                       </div>
 
                       {/* Banquest Tokenized Payment (PCI Compliant) */}
-                      <CollectJsPayment
-                        onTokenReceived={handleTokenReceived}
-                        onError={handlePaymentError}
-                        onValidationChange={handleValidationChange}
-                        disabled={isSubmitting}
-                      />
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">
+                          Card Details *
+                        </label>
+                        <CollectJsPayment
+                          onTokenReceived={handleTokenReceived}
+                          onError={handlePaymentError}
+                          onValidationChange={handleValidationChange}
+                          disabled={isSubmitting}
+                        />
+                      </div>
                     </div>
                   </div>
 

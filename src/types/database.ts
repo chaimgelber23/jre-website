@@ -241,6 +241,41 @@ export interface Database {
           updated_at?: string;
         };
       };
+      parsha_content: {
+        Row: {
+          id: string;
+          slug: string;
+          parsha: string;
+          title: string;
+          summary: string | null;
+          content: string;
+          status: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          slug: string;
+          parsha: string;
+          title: string;
+          summary?: string | null;
+          content: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          slug?: string;
+          parsha?: string;
+          title?: string;
+          summary?: string | null;
+          content?: string;
+          status?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -269,3 +304,6 @@ export type EventSponsorshipInsert = Database["public"]["Tables"]["event_sponsor
 
 export type EventRegistration = Database["public"]["Tables"]["event_registrations"]["Row"];
 export type EventRegistrationInsert = Database["public"]["Tables"]["event_registrations"]["Insert"];
+
+export type ParshaContent = Database["public"]["Tables"]["parsha_content"]["Row"];
+export type ParshaContentInsert = Database["public"]["Tables"]["parsha_content"]["Insert"];

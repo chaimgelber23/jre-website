@@ -33,14 +33,14 @@ import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 const purimEvent = {
   title: "JRE's Next-Level Purim Experience",
   subtitle: "Megillah, Music, Open Bar, Festive Banquet, Kids Activities & More",
-  date: "Sunday, March 2, 2025",
+  date: "Tuesday, March 3, 2026",
   time: "6:00 PM",
   location: "Life, The Place To Be - 2 Lawrence Street, Ardsley, NY, 10502",
   locationUrl: "https://maps.app.goo.gl/ibLU2DfYiH1ngTVd6",
   pricePerAdult: 40,
   kidsPrice: 10,
   familyMax: 100,
-  image: "/images/events/Purim25.jpg",
+  image: "/images/events/purim-2026-banner.jpg",
   description: `Join us for an unforgettable Purim celebration featuring Megillah reading, live music, an open bar, a festive banquet, and activities for kids of all ages!
 
 Experience the joy of Purim with your community as we celebrate together with delicious food, inspiring words, and joyful singing.
@@ -243,7 +243,7 @@ export default function PurimEventPage() {
         payload.paymentToken = token;
       }
 
-      const response = await fetch("/api/events/purim-2025/register", {
+      const response = await fetch("/api/events/purim-2026/register", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
