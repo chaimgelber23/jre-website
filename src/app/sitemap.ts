@@ -1,6 +1,5 @@
 import type { MetadataRoute } from "next";
 import { createServerClient } from "@/lib/supabase/server";
-import { createSpeechServerClient } from "@/lib/supabase/speech";
 import type { Event } from "@/types/database";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -30,12 +29,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       url: `${baseUrl}/classes`,
       lastModified: new Date(),
       changeFrequency: "monthly",
-      priority: 0.8,
-    },
-    {
-      url: `${baseUrl}/parsha`,
-      lastModified: new Date(),
-      changeFrequency: "weekly",
       priority: 0.8,
     },
     {
@@ -78,24 +71,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     // Silently continue if events fetch fails
   }
 
-  // Dynamic parsha pages from speech Supabase
-  let parshaPages: MetadataRoute.Sitemap = [];
-  try {
-    const speechSupabase = createSpeechServerClient();
-    const { data: parshaContent } = await speechSupabase
-      .from("parsha_content")
-      .select("*");
-
-    const items = (parshaContent || []) as Array<{ slug: string; updated_at: string }>;
-    parshaPages = items.map((p) => ({
-      url: `${baseUrl}/parsha/${p.slug}`,
-      lastModified: new Date(p.updated_at),
-      changeFrequency: "monthly" as const,
-      priority: 0.6,
-    }));
-  } catch {
-    // Silently continue if parsha fetch fails
-  }
-
-  return [...staticPages, ...eventPages, ...parshaPages];
+  return [...staticPages, ...eventPages];
 }
