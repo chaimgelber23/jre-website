@@ -351,7 +351,7 @@ export default function PurimEventPage() {
       <section className="relative pt-24 pb-0">
         {/* Event flyer/banner image - shows full image */}
         <div
-          className="relative h-[80vh] min-h-[500px] bg-[#2d3748] cursor-pointer group"
+          className="relative h-[80vh] min-h-[500px] bg-black cursor-pointer group"
           onClick={scrollToRegistration}
         >
           <Image
@@ -386,7 +386,7 @@ export default function PurimEventPage() {
         </div>
 
         {/* Event title below image */}
-        <div className="bg-gradient-to-b from-[#2d3748] to-[#2d3748] py-6">
+        <div className="bg-gradient-to-b from-black to-[#2d3748] py-6">
           <div className="container mx-auto px-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}
