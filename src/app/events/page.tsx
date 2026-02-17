@@ -460,13 +460,13 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
 // Standalone events that have their own dedicated pages (not in Supabase)
 const standaloneUpcoming: DisplayEvent[] = [
   {
-    id: "purim-2025",
+    id: "purim-2026",
     title: "JRE's Next-Level Purim Experience",
-    date: "Sunday, March 2, 2025",
+    date: "Monday, March 2, 2026",
     time: "6:00 PM",
     location: "Life, The Place To Be - Ardsley, NY",
     price: 40,
-    image: "/images/events/Purim25.jpg",
+    image: "/images/events/purim-2026-banner.jpg",
     description:
       "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $100.",
     featured: false,
@@ -474,6 +474,17 @@ const standaloneUpcoming: DisplayEvent[] = [
 ];
 
 const standalonePast: DisplayEvent[] = [
+  {
+    id: "purim-2025",
+    title: "JRE's Next-Level Purim Experience",
+    date: "March 2025",
+    time: "",
+    location: "",
+    price: 0,
+    image: "/images/events/Purim25.jpg",
+    description: "",
+    featured: false,
+  },
   {
     id: "staying-serene-2026",
     title: "Staying Serene in a Stressful World",

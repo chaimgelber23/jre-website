@@ -33,7 +33,7 @@ import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 const purimEvent = {
   title: "JRE's Next-Level Purim Experience",
   subtitle: "Megillah, Music, Open Bar, Festive Banquet, Kids Activities & More",
-  date: "Tuesday, March 3, 2026",
+  date: "Monday, March 2, 2026",
   time: "6:00 PM",
   location: "Life, The Place To Be - 2 Lawrence Street, Ardsley, NY, 10502",
   locationUrl: "https://maps.app.goo.gl/ibLU2DfYiH1ngTVd6",
@@ -347,120 +347,64 @@ export default function PurimEventPage() {
     <main className="min-h-screen">
       <Header />
 
-      {/* Hero Section - Cinematic Full-Bleed */}
-      <section className="relative h-screen max-h-[800px] min-h-[500px] md:min-h-[600px]">
-        {/* Background Images */}
-        <div className="absolute inset-0">
-          {/* Desktop: Wide panoramic banner */}
+      {/* Hero Section */}
+      <section className="relative pt-24 pb-0">
+        {/* Event flyer/banner image - shows full image */}
+        <div
+          className="relative h-[80vh] min-h-[500px] bg-[#2d3748] cursor-pointer group"
+          onClick={scrollToRegistration}
+        >
           <Image
-            src="/images/events/purim-2026-banner.jpg"
-            alt="Purim Extravaganza with The JRE"
+            src={purimEvent.image}
+            alt={purimEvent.title}
             fill
-            className="object-cover object-center hidden md:block"
-            sizes="100vw"
+            className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             priority
           />
-          {/* Mobile: Vertical flyer (designed for portrait) */}
-          <Image
-            src="/images/events/purim-2026-flyer.jpg"
-            alt="Purim Extravaganza with The JRE"
-            fill
-            className="object-cover object-top block md:hidden"
-            sizes="100vw"
-            priority
-          />
-        </div>
-
-        {/* Cinematic gradient overlays - using site's dark blue-gray instead of pure black */}
-        <div className="absolute inset-0 bg-gradient-to-t from-[#2d3748] via-[#2d3748]/20 to-transparent" />
-        <div className="absolute inset-0 bg-gradient-to-r from-[#2d3748]/30 to-transparent hidden md:block" />
-
-        {/* Back button */}
-        <div className="absolute top-28 left-6 z-20">
-          <Link
-            href="/events"
-            className="inline-flex items-center gap-2 text-white/90 hover:text-white bg-[#2d3748]/60 hover:bg-[#2d3748]/80 backdrop-blur-sm px-4 py-2 rounded-full border border-white/10 transition-all"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            <span className="text-sm font-medium">Back to Events</span>
-          </Link>
-        </div>
-
-        {/* Hero content overlay at bottom */}
-        <div className="absolute bottom-0 left-0 right-0 z-10">
-          <div className="container mx-auto px-6 pb-10 md:pb-14">
+          {/* Scroll hint */}
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
+            <span className="text-white/80 text-sm font-medium">Click to Register</span>
             <motion.div
-              initial={{ opacity: 0, y: 30 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.8, delay: 0.3 }}
+              animate={{ y: [0, 8, 0] }}
+              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
             >
-              {/* Event info chips */}
-              <div className="flex flex-wrap items-center gap-3 md:gap-4 mb-4">
-                <span className="flex items-center gap-1.5 text-white/90 text-sm bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                  <Calendar className="w-3.5 h-3.5 text-[#EF8046]" />
-                  {purimEvent.date}
-                </span>
-                <span className="flex items-center gap-1.5 text-white/90 text-sm bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full">
-                  <Clock className="w-3.5 h-3.5 text-[#EF8046]" />
-                  {purimEvent.time}
-                </span>
-                <a
-                  href={purimEvent.locationUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-1.5 text-white/90 text-sm bg-white/10 backdrop-blur-sm px-3 py-1.5 rounded-full hover:bg-white/20 transition-colors"
-                >
-                  <MapPin className="w-3.5 h-3.5 text-[#EF8046]" />
-                  <span className="hidden sm:inline">Life, The Place To Be -</span> Ardsley, NY
-                </a>
-              </div>
-
-              {/* Title - shown on mobile (desktop has it in the banner image) */}
-              <h1 className="text-3xl font-bold text-white mb-2 md:hidden">
-                {purimEvent.title}
-              </h1>
-              {/* Subtitle on desktop */}
-              <p className="text-white/70 text-lg mb-6 max-w-xl hidden md:block">
-                {purimEvent.subtitle}
-              </p>
-
-              {/* CTA row */}
-              <div className="flex flex-col sm:flex-row items-start sm:items-center gap-4">
-                <motion.button
-                  onClick={scrollToRegistration}
-                  whileHover={{ scale: 1.05 }}
-                  whileTap={{ scale: 0.95 }}
-                  className="bg-[#EF8046] hover:bg-[#d96a2f] text-white px-8 py-3.5 rounded-full font-bold text-lg shadow-lg shadow-[#EF8046]/30 flex items-center gap-2 transition-colors"
-                >
-                  <PartyPopper className="w-5 h-5" />
-                  Register Now
-                </motion.button>
-                <div className="text-white/50 text-sm">
-                  <span className="text-white font-bold text-base">${purimEvent.pricePerAdult}</span>/adult
-                  <span className="mx-2 text-white/30">&bull;</span>
-                  <span className="text-white font-bold text-base">${purimEvent.kidsPrice}</span>/child
-                  <span className="mx-2 text-white/30">&bull;</span>
-                  Family max <span className="text-[#EF8046] font-bold">${purimEvent.familyMax}</span>
-                </div>
-              </div>
+              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+              </svg>
             </motion.div>
+          </div>
+          {/* Back button overlay */}
+          <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
+            <Link
+              href="/events"
+              className="inline-flex items-center gap-2 text-gray-800 hover:text-[#EF8046] transition-colors bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border border-white/20"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Events
+            </Link>
           </div>
         </div>
 
-        {/* Scroll indicator */}
-        <motion.div
-          className="absolute bottom-3 left-1/2 -translate-x-1/2 z-10"
-          animate={{ y: [0, 6, 0] }}
-          transition={{ duration: 2, repeat: Infinity, ease: "easeInOut" }}
-        >
-          <svg className="w-5 h-5 text-white/30" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7" />
-          </svg>
-        </motion.div>
+        {/* Event title below image */}
+        <div className="bg-gradient-to-b from-[#2d3748] to-[#2d3748] py-6">
+          <div className="container mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-[#EF8046] font-medium tracking-wider uppercase text-sm mb-1">
+                We&apos;re thrilled you&apos;ll be joining us!
+              </p>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+                {purimEvent.title}
+              </h1>
+              <p className="text-lg text-white/80 max-w-2xl">
+                {purimEvent.subtitle}
+              </p>
+            </motion.div>
+          </div>
+        </div>
       </section>
-
-      {/* Smooth transition from dark hero to white content */}
-      <div className="h-16 bg-gradient-to-b from-[#2d3748] to-white" />
 
       {/* Content */}
       <section className="py-12 bg-white">

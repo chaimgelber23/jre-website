@@ -17,6 +17,11 @@ const nextConfig: NextConfig = {
   async redirects() {
     return [
       {
+        source: "/events/purim-2025",
+        destination: "/events/purim-2026",
+        permanent: true,
+      },
+      {
         source: "/:path*",
         has: [{ type: "host", value: "www.thejre.org" }],
         destination: "https://thejre.org/:path*",
