@@ -80,7 +80,6 @@ export async function POST(request: NextRequest) {
 
     if (processor === "banquest") {
       // Process payment via Banquest (tokenized - PCI compliant)
-      // For recurring donations, save the card for future charges
       const paymentResult = await processTokenizedPayment({
         paymentToken,
         amount: numericAmount,
@@ -90,7 +89,7 @@ export async function POST(request: NextRequest) {
         description: sponsorship
           ? `JRE Donation - ${sponsorship}`
           : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
-        saveCard: Boolean(isRecurring), // Save card for recurring payments
+        saveCard: Boolean(isRecurring),
       });
 
       if (!paymentResult.success) {
@@ -102,7 +101,7 @@ export async function POST(request: NextRequest) {
 
       paymentStatus = "success";
       paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
-      cardRef = paymentResult.cardRef || null; // Saved card for recurring charges
+      cardRef = paymentResult.cardRef || null;
 
       if (isRecurring && !cardRef) {
         console.warn("Recurring payment processed but no card_ref returned - future charges may fail");

@@ -6,8 +6,6 @@ import { Heart, Check, CreditCard, ChevronDown, Gift, MessageSquare } from "luci
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
-// Square kept for backup - uncomment to switch processors
-// import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { FadeUp } from "@/components/ui/motion";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
