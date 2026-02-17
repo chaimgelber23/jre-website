@@ -386,7 +386,7 @@ export default function PurimEventPage() {
         </div>
 
         {/* Event title below image */}
-        <div className="bg-gradient-to-b from-black to-[#2d3748] py-6">
+        <div className="bg-black py-6">
           <div className="container mx-auto px-6">
             <motion.div
               initial={{ opacity: 0, y: 20 }}

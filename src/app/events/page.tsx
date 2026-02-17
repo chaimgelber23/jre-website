@@ -644,8 +644,8 @@ export default function EventsPage() {
 
       {/* Hero Section - Clean and Professional */}
       <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background gradient - warm orange */}
-        <div className="absolute inset-0 bg-gradient-to-br from-[#EF8046] via-[#e8733a] to-[#d96a2f]" />
+        {/* Background - dark to match spotlight */}
+        <div className="absolute inset-0 bg-[#2d3748]" />
 
         {/* Subtle decorative elements */}
         <div className="absolute inset-0 overflow-hidden">
