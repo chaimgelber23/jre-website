@@ -181,11 +181,13 @@ export async function POST(request: NextRequest) {
         .eq("slug", "purim-2026")
         .single();
 
-      if (eventData) {
+      const event = eventData as { id: string } | null;
+
+      if (event) {
         const { error: insertError } = await supabase
           .from("event_registrations")
           .insert({
-            event_id: eventData.id,
+            event_id: event.id,
             name,
             email,
             phone: normalizedPhone || null,
