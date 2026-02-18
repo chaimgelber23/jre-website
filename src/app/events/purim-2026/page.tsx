@@ -307,6 +307,13 @@ export default function PurimEventPage() {
       }
     }
     setGuestErrors([]);
+
+    // Require a payment method
+    if (!paymentMethod) {
+      setError("Please select a payment method.");
+      return;
+    }
+
     setIsSubmitting(true);
 
     // For online payments, tokenize first then submit

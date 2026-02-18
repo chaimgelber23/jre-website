@@ -13,7 +13,7 @@ const PURIM_EVENT = {
   location: "Life, The Place To Be - 2 Lawrence Street, Ardsley, NY, 10502",
   pricePerAdult: 40,
   kidsPrice: 10,
-  familyMax: 100,
+  familyMax: 110,
 };
 
 interface FamilyMember {
@@ -45,6 +45,7 @@ export async function POST(request: NextRequest) {
       cardName,
       paymentToken,
       message,
+      guests,
     } = body;
 
     // Validate required fields
@@ -70,6 +71,14 @@ export async function POST(request: NextRequest) {
     const numAdults = Number(totalAdults) || 1;
     const numKids = Number(totalKids) || 0;
     const totalAmount = Number(amount) || 0;
+
+    // Require a valid payment method
+    if (paymentMethod !== "online" && paymentMethod !== "check") {
+      return NextResponse.json(
+        { success: false, error: "Please select a payment method" },
+        { status: 400 }
+      );
+    }
 
     // Process payment if online payment method selected
     let paymentStatus = "pending";
@@ -158,6 +167,11 @@ export async function POST(request: NextRequest) {
     if (children && children.length > 0) {
       children.forEach((c: FamilyMember) => {
         if (c.name) allAttendees.push(`Child: ${c.name}`);
+      });
+    }
+    if (guests && Array.isArray(guests)) {
+      guests.forEach((g: { name: string; email?: string }) => {
+        if (g.name) allAttendees.push(`Guest: ${g.name}${g.email ? ` (${g.email})` : ""}`);
       });
     }
 
