@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, use, useCallback } from "react";
+import React, { useState, useEffect, use, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -22,10 +22,26 @@ import {
   EyeOff,
   ExternalLink,
   Plus,
+  ChevronDown,
 } from "lucide-react";
 import StatsCard from "@/components/admin/StatsCard";
 import PaymentStatusBadge from "@/components/admin/PaymentStatusBadge";
 import type { Event, EventSponsorship, EventRegistration } from "@/types/database";
+
+// Parse the message field which may contain encoded guest data
+// Format: JSON { text, guests } when guests exist, plain text otherwise
+function parseMessageField(message: string | null): { text: string; guests: { name: string; email?: string }[] } {
+  if (!message) return { text: "", guests: [] };
+  try {
+    const parsed = JSON.parse(message);
+    if (parsed && typeof parsed === "object" && "guests" in parsed) {
+      return { text: parsed.text || "", guests: parsed.guests || [] };
+    }
+  } catch {
+    // Not JSON, treat as plain text
+  }
+  return { text: message, guests: [] };
+}
 
 interface EventRegistrationWithSponsorship extends EventRegistration {
   sponsorship_name: string | null;
@@ -133,6 +149,9 @@ export default function EventDetailPage({
   const [isSavingEvent, setIsSavingEvent] = useState(false);
   const [editEventError, setEditEventError] = useState<string | null>(null);
 
+  // Expanded registration rows (to show guest details)
+  const [expandedRegId, setExpandedRegId] = useState<string | null>(null);
+
   // Delete registration state
   const [deletingRegId, setDeletingRegId] = useState<string | null>(null);
   const [deletingRegName, setDeletingRegName] = useState<string>("");
@@ -201,6 +220,7 @@ export default function EventDetailPage({
   // === EDIT REGISTRATION ===
   const openEditRegModal = (registration: EventRegistrationWithSponsorship) => {
     setEditingRegistration(registration);
+    const { text: msgText } = parseMessageField(registration.message);
     setEditRegForm({
       name: registration.name,
       email: registration.email,
@@ -210,7 +230,7 @@ export default function EventDetailPage({
       sponsorship_id: registration.sponsorship_id,
       subtotal: registration.subtotal,
       payment_status: registration.payment_status,
-      message: registration.message || "",
+      message: msgText,
     });
     setEditRegError(null);
   };
@@ -219,6 +239,12 @@ export default function EventDetailPage({
     if (!editingRegistration) return;
     setIsSavingReg(true);
     setEditRegError(null);
+
+    // Re-encode message with guests if they existed in the original
+    const { guests: origGuests } = parseMessageField(editingRegistration.message);
+    const savedMessage = origGuests.length > 0
+      ? JSON.stringify({ text: editRegForm.message || "", guests: origGuests })
+      : (editRegForm.message || null);
 
     try {
       const response = await fetch(
@@ -235,7 +261,7 @@ export default function EventDetailPage({
             sponsorship_id: editRegForm.sponsorship_id,
             subtotal: editRegForm.subtotal,
             payment_status: editRegForm.payment_status,
-            message: editRegForm.message || null,
+            message: savedMessage,
           }),
         }
       );
@@ -666,76 +692,136 @@ export default function EventDetailPage({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {registrations.map((reg, index) => (
-                    <motion.tr
-                      key={reg.id}
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      transition={{ delay: index * 0.03 }}
-                      className="hover:bg-gray-50 transition-colors"
-                    >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <div>
-                          <p className="font-medium text-gray-900">
-                            {reg.name}
-                          </p>
-                          <p className="text-gray-500">{reg.email}</p>
-                          {reg.phone && (
-                            <p className="text-gray-400 text-xs">{reg.phone}</p>
+                  {registrations.map((reg, index) => {
+                    const { text: regMessage, guests: regGuests } = parseMessageField(reg.message);
+                    const isExpanded = expandedRegId === reg.id;
+                    const hasDetails = regGuests.length > 0 || regMessage;
+
+                    return (
+                      <React.Fragment key={reg.id}>
+                        <motion.tr
+                          initial={{ opacity: 0, y: 10 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          transition={{ delay: index * 0.03 }}
+                          className={`hover:bg-gray-50 transition-colors ${hasDetails ? "cursor-pointer" : ""}`}
+                          onClick={() => hasDetails && setExpandedRegId(isExpanded ? null : reg.id)}
+                        >
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <div className="flex items-center gap-2">
+                              {hasDetails && (
+                                <ChevronDown
+                                  className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                                />
+                              )}
+                              <div>
+                                <p className="font-medium text-gray-900">
+                                  {reg.name}
+                                </p>
+                                <p className="text-gray-500">{reg.email}</p>
+                                {reg.phone && (
+                                  <p className="text-gray-400 text-xs">{reg.phone}</p>
+                                )}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <span className="font-medium">{reg.adults}</span> adults
+                            {reg.kids > 0 && (
+                              <>
+                                ,{" "}
+                                <span className="font-medium">{reg.kids}</span> kids
+                              </>
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            {reg.sponsorship_name ? (
+                              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
+                                <Award className="w-3 h-3 mr-1" />
+                                {reg.sponsorship_name}
+                              </span>
+                            ) : (
+                              "-"
+                            )}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                            {formatCurrency(reg.subtotal)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm">
+                            <PaymentStatusBadge status={reg.payment_status} />
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {formatDateTime(reg.created_at)}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={(e) => { e.stopPropagation(); openEditRegModal(reg); }}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-[#EF8046] hover:bg-[#EF8046]/10 transition-colors"
+                                title="Edit registration"
+                              >
+                                <Pencil className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setDeletingRegId(reg.id);
+                                  setDeletingRegName(reg.name);
+                                }}
+                                className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
+                                title="Delete registration"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </td>
+                        </motion.tr>
+                        {/* Expanded details row */}
+                        <AnimatePresence>
+                          {isExpanded && hasDetails && (
+                            <motion.tr
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                            >
+                              <td colSpan={7} className="px-6 py-4 bg-gray-50/50">
+                                <div className="pl-6 space-y-3">
+                                  {regGuests.length > 0 && (
+                                    <div>
+                                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
+                                        Guests ({regGuests.length})
+                                      </p>
+                                      <div className="flex flex-wrap gap-2">
+                                        {regGuests.map((guest, gi) => (
+                                          <span
+                                            key={gi}
+                                            className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white rounded-lg border border-gray-200 text-sm"
+                                          >
+                                            <Users className="w-3.5 h-3.5 text-[#EF8046]" />
+                                            <span className="font-medium text-gray-900">{guest.name}</span>
+                                            {guest.email && (
+                                              <span className="text-gray-400 text-xs">({guest.email})</span>
+                                            )}
+                                          </span>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  )}
+                                  {regMessage && (
+                                    <div>
+                                      <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">
+                                        Message
+                                      </p>
+                                      <p className="text-sm text-gray-700">{regMessage}</p>
+                                    </div>
+                                  )}
+                                </div>
+                              </td>
+                            </motion.tr>
                           )}
-                        </div>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <span className="font-medium">{reg.adults}</span> adults
-                        {reg.kids > 0 && (
-                          <>
-                            ,{" "}
-                            <span className="font-medium">{reg.kids}</span> kids
-                          </>
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        {reg.sponsorship_name ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
-                            <Award className="w-3 h-3 mr-1" />
-                            {reg.sponsorship_name}
-                          </span>
-                        ) : (
-                          "-"
-                        )}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                        {formatCurrency(reg.subtotal)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm">
-                        <PaymentStatusBadge status={reg.payment_status} />
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                        {formatDateTime(reg.created_at)}
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
-                        <div className="flex items-center justify-end gap-1">
-                          <button
-                            onClick={() => openEditRegModal(reg)}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-[#EF8046] hover:bg-[#EF8046]/10 transition-colors"
-                            title="Edit registration"
-                          >
-                            <Pencil className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => {
-                              setDeletingRegId(reg.id);
-                              setDeletingRegName(reg.name);
-                            }}
-                            className="p-1.5 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition-colors"
-                            title="Delete registration"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
-                      </td>
-                    </motion.tr>
-                  ))}
+                        </AnimatePresence>
+                      </React.Fragment>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -1359,6 +1445,30 @@ export default function EventDetailPage({
                     <option value="refunded">Refunded</option>
                   </select>
                 </div>
+
+                {/* Guest names (read-only) */}
+                {editingRegistration && (() => {
+                  const { guests: editGuests } = parseMessageField(editingRegistration.message);
+                  if (editGuests.length === 0) return null;
+                  return (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-2">
+                        Guests ({editGuests.length})
+                      </label>
+                      <div className="space-y-1.5">
+                        {editGuests.map((guest, gi) => (
+                          <div key={gi} className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg text-sm">
+                            <Users className="w-3.5 h-3.5 text-[#EF8046] flex-shrink-0" />
+                            <span className="font-medium text-gray-900">{guest.name}</span>
+                            {guest.email && (
+                              <span className="text-gray-400">({guest.email})</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">

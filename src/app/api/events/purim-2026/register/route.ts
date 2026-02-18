@@ -148,6 +148,15 @@ export async function POST(request: NextRequest) {
       paymentReference = `free_${Date.now()}`;
     }
 
+    // Encode guests + message together for storage
+    // Format: JSON with { text, guests } when guests exist, plain text otherwise
+    const guestList = (guests && Array.isArray(guests))
+      ? guests.filter((g: { name: string; email?: string }) => g.name?.trim())
+      : [];
+    const encodedMessage = guestList.length > 0
+      ? JSON.stringify({ text: message || "", guests: guestList })
+      : (message || null);
+
     // Generate registration ID
     const registrationId = `purim26_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
@@ -194,7 +203,7 @@ export async function POST(request: NextRequest) {
             adults: numAdults,
             kids: numKids,
             sponsorship_id: null, // Standalone page uses sponsorship name, not ID
-            message: message || null,
+            message: encodedMessage,
             subtotal: totalAmount,
             payment_status: paymentStatus,
             payment_reference: paymentReference,
@@ -233,7 +242,7 @@ export async function POST(request: NextRequest) {
             payment_method: paymentMethod,
             payment_status: paymentStatus,
             payment_reference: paymentReference,
-            message: message || null,
+            message: encodedMessage,
           } as never);
 
         if (insertError) {

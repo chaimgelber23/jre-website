@@ -15,7 +15,7 @@ export async function POST(
     const body = await request.json();
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message, paymentToken, cardName, paymentMethod, paymentProcessor } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, paymentToken, cardName, paymentMethod, paymentProcessor, guests } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -164,6 +164,15 @@ export async function POST(
       paymentReference = `pending_${Date.now()}`;
     }
 
+    // Encode guests + message together for storage
+    // Format: JSON with { text, guests } when guests exist, plain text otherwise
+    const guestList = (guests && Array.isArray(guests))
+      ? guests.filter((g: { name: string; email?: string }) => g.name?.trim())
+      : [];
+    const encodedMessage = guestList.length > 0
+      ? JSON.stringify({ text: message || "", guests: guestList })
+      : (message || null);
+
     // Insert registration into Supabase
     const insertData: EventRegistrationInsert = {
       event_id: event.id,
@@ -173,7 +182,7 @@ export async function POST(
       adults: numAdults,
       kids: numKids,
       sponsorship_id: sponsorshipId || null,
-      message: message || null,
+      message: encodedMessage,
       subtotal,
       payment_status: paymentStatus,
       payment_reference: paymentReference,
@@ -208,7 +217,9 @@ export async function POST(
       "", // Spouse Phone
       numAdults,
       numKids,
-      `${name}${numAdults > 1 ? ` + ${numAdults - 1} adults` : ""}${numKids > 0 ? ` + ${numKids} kids` : ""}`,
+      guestList.length > 0
+        ? `${name}; ${guestList.map((g: { name: string; email?: string }) => `${g.name}${g.email ? ` (${g.email})` : ""}`).join("; ")}`
+        : `${name}${numAdults > 1 ? ` + ${numAdults - 1} adults` : ""}${numKids > 0 ? ` + ${numKids} kids` : ""}`,
       sponsorshipName || "None",
       sponsorshipPrice > 0 ? sponsorshipPrice : 0,
       subtotal,
