@@ -39,13 +39,13 @@ const purimEvent = {
   locationUrl: "https://maps.app.goo.gl/ibLU2DfYiH1ngTVd6",
   pricePerAdult: 40,
   kidsPrice: 10,
-  familyMax: 100,
+  familyMax: 110,
   image: "/images/events/purim-2026-banner.jpg",
   description: `Join us for an unforgettable Purim celebration featuring Megillah reading, live music, an open bar, a festive banquet, and activities for kids of all ages!
 
 Experience the joy of Purim with your community as we celebrate together with delicious food, inspiring words, and joyful singing.
 
-$40 per adult, $10 per child. Family max $100!`,
+$40 per adult, $10 per child. Family max $110!`,
   sponsorships: [
     { name: "For The Love Purim with The JRE Sponsorship", price: 1800 },
     { name: "Rabbi Yossi \"The Whole Megilla\" Sponsorship", price: 1200 },
@@ -79,11 +79,31 @@ export default function PurimEventPage() {
     honoreeEmail: "",
   });
 
+  // Guest details for additional adults (beyond the registrant)
+  const [guestDetails, setGuestDetails] = useState<{ name: string; email: string }[]>([]);
+
+  // Sync guest details array when numAdults changes
+  useEffect(() => {
+    const additionalGuests = Math.max(0, numAdults - 1);
+    setGuestDetails((prev) => {
+      if (prev.length === additionalGuests) return prev;
+      if (prev.length < additionalGuests) {
+        return [...prev, ...Array(additionalGuests - prev.length).fill(null).map(() => ({ name: "", email: "" }))];
+      }
+      return prev.slice(0, additionalGuests);
+    });
+  }, [numAdults]);
+
+  const updateGuest = (index: number, field: "name" | "email", value: string) => {
+    setGuestDetails((prev) => prev.map((g, i) => (i === index ? { ...g, [field]: value } : g)));
+  };
+
   const [paymentToken, setPaymentToken] = useState<string | null>(null);
   const [cardValid, setCardValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [guestErrors, setGuestErrors] = useState<boolean[]>([]);
 
   // Banquest tokenization hook
   const { requestToken } = useCollectJs();
@@ -228,6 +248,7 @@ export default function PurimEventPage() {
         phone: formState.phone,
         totalAdults: numAdults,
         totalKids: numKids,
+        guests: guestDetails.filter((g) => g.name.trim()),
         sponsorship: selectedSponsorship,
         sponsorshipAmount: sponsorshipPrice,
         paymentMethod,
@@ -262,7 +283,7 @@ export default function PurimEventPage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [formState, numAdults, numKids, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total]);
+  }, [formState, numAdults, numKids, guestDetails, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total]);
 
   // When payment token is received, submit the form
   useEffect(() => {
@@ -275,6 +296,17 @@ export default function PurimEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Validate guest names
+    if (guestDetails.length > 0) {
+      const errors = guestDetails.map((g) => !g.name.trim());
+      if (errors.some(Boolean)) {
+        setGuestErrors(errors);
+        setError("Please fill in the name for each guest.");
+        return;
+      }
+    }
+    setGuestErrors([]);
     setIsSubmitting(true);
 
     // For online payments, tokenize first then submit
@@ -614,6 +646,46 @@ export default function PurimEventPage() {
                           </p>
                         )}
                       </div>
+
+                      {/* Guest details for additional adults */}
+                      {guestDetails.length > 0 && (
+                        <div className="mt-4 space-y-4">
+                          <p className="text-sm text-gray-500 font-medium">Guest Details</p>
+                          {guestDetails.map((guest, index) => (
+                            <div key={index} className="space-y-2 bg-[#FBFBFB] rounded-lg p-3">
+                              <p className="text-xs text-gray-400 font-medium">Guest {index + 1}</p>
+                              <div>
+                                <input
+                                  type="text"
+                                  value={guest.name}
+                                  onChange={(e) => {
+                                    updateGuest(index, "name", e.target.value);
+                                    if (guestErrors[index] && e.target.value.trim()) {
+                                      setGuestErrors((prev) => prev.map((err, i) => (i === index ? false : err)));
+                                    }
+                                  }}
+                                  className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                                    guestErrors[index]
+                                      ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                      : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                                  }`}
+                                  placeholder="Guest name *"
+                                />
+                                {guestErrors[index] && (
+                                  <p className="text-xs text-red-500 mt-1">Please enter this guest&apos;s name</p>
+                                )}
+                              </div>
+                              <input
+                                type="email"
+                                value={guest.email}
+                                onChange={(e) => updateGuest(index, "email", e.target.value)}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                placeholder="Guest email (optional)"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Sponsorship Toggle */}
