@@ -30,6 +30,8 @@ interface EventAttendance {
   paymentStatus: string;
   sponsorshipName: string | null;
   guests: GuestInfo[];
+  role: "registrant" | "guest";
+  registeredBy?: string;
 }
 
 interface Person {
@@ -40,6 +42,7 @@ interface Person {
   totalSpent: number;
   totalEvents: number;
   lastSeen: string;
+  isGuest: boolean;
 }
 
 interface EventInfo {
@@ -226,20 +229,22 @@ export default function PeoplePage() {
               </thead>
               <tbody className="divide-y divide-gray-100">
                 {filteredPeople.map((person, index) => {
-                  const isExpanded = expandedEmail === person.email;
+                  // Unique key: email if available, otherwise name-based
+                  const personKey = person.email || `guest:${person.name}`;
+                  const isExpanded = expandedEmail === personKey;
                   const attendedEventIds = new Set(
                     person.events.map((e) => e.eventId)
                   );
 
                   return (
-                    <React.Fragment key={person.email}>
+                    <React.Fragment key={personKey}>
                       <motion.tr
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: index * 0.02 }}
                         className="hover:bg-gray-50 transition-colors cursor-pointer"
                         onClick={() =>
-                          setExpandedEmail(isExpanded ? null : person.email)
+                          setExpandedEmail(isExpanded ? null : personKey)
                         }
                       >
                         <td className="px-6 py-4 text-sm">
@@ -250,13 +255,24 @@ export default function PeoplePage() {
                               }`}
                             />
                             <div>
-                              <p className="font-medium text-gray-900">
-                                {person.name}
-                              </p>
-                              <p className="text-gray-500 text-xs flex items-center gap-1">
-                                <Mail className="w-3 h-3" />
-                                {person.email}
-                              </p>
+                              <div className="flex items-center gap-2">
+                                <p className="font-medium text-gray-900">
+                                  {person.name}
+                                </p>
+                                {person.isGuest && (
+                                  <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[10px] font-medium bg-blue-100 text-blue-700">
+                                    Guest
+                                  </span>
+                                )}
+                              </div>
+                              {person.email ? (
+                                <p className="text-gray-500 text-xs flex items-center gap-1">
+                                  <Mail className="w-3 h-3" />
+                                  {person.email}
+                                </p>
+                              ) : (
+                                <p className="text-gray-400 text-xs italic">No email</p>
+                              )}
                               {person.phone && (
                                 <p className="text-gray-400 text-xs flex items-center gap-1">
                                   <Phone className="w-3 h-3" />
@@ -274,7 +290,7 @@ export default function PeoplePage() {
                           </span>
                         </td>
                         <td className="px-6 py-4 text-sm font-medium text-gray-900">
-                          {formatCurrency(person.totalSpent)}
+                          {person.totalSpent > 0 ? formatCurrency(person.totalSpent) : "-"}
                         </td>
                         {allEvents.map((evt) => (
                           <td
@@ -314,25 +330,41 @@ export default function PeoplePage() {
                                     >
                                       <div className="flex items-start justify-between mb-2">
                                         <div>
-                                          <p className="font-medium text-gray-900 text-sm">
-                                            {evt.eventTitle}
-                                          </p>
+                                          <div className="flex items-center gap-2">
+                                            <p className="font-medium text-gray-900 text-sm">
+                                              {evt.eventTitle}
+                                            </p>
+                                            {evt.role === "guest" && (
+                                              <span className="px-1.5 py-0.5 bg-blue-100 text-blue-700 rounded text-[10px] font-medium">
+                                                Guest
+                                              </span>
+                                            )}
+                                          </div>
                                           <p className="text-xs text-gray-500">
                                             {formatDate(evt.eventDate)}
                                           </p>
+                                          {evt.registeredBy && (
+                                            <p className="text-xs text-gray-400">
+                                              Brought by {evt.registeredBy}
+                                            </p>
+                                          )}
                                         </div>
-                                        <span className="text-sm font-medium text-[#EF8046]">
-                                          {formatCurrency(evt.subtotal)}
-                                        </span>
+                                        {evt.subtotal > 0 && (
+                                          <span className="text-sm font-medium text-[#EF8046]">
+                                            {formatCurrency(evt.subtotal)}
+                                          </span>
+                                        )}
                                       </div>
                                       <div className="flex flex-wrap gap-2 text-xs text-gray-500">
-                                        <span>
-                                          {evt.adults} adult
-                                          {evt.adults !== 1 ? "s" : ""}
-                                          {evt.kids > 0
-                                            ? `, ${evt.kids} kid${evt.kids !== 1 ? "s" : ""}`
-                                            : ""}
-                                        </span>
+                                        {evt.role === "registrant" && (
+                                          <span>
+                                            {evt.adults} adult
+                                            {evt.adults !== 1 ? "s" : ""}
+                                            {evt.kids > 0
+                                              ? `, ${evt.kids} kid${evt.kids !== 1 ? "s" : ""}`
+                                              : ""}
+                                          </span>
+                                        )}
                                         {evt.sponsorshipName && (
                                           <span className="px-1.5 py-0.5 bg-purple-100 text-purple-700 rounded text-xs">
                                             {evt.sponsorshipName}
