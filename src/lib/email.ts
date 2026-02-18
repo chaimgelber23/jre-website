@@ -1,6 +1,7 @@
 import { Resend } from "resend";
 
 const FROM_EMAIL = "The JRE <noreply@beta.thejre.org>";
+const REPLY_TO = "office@thejre.org";
 
 // Lazy initialization to avoid build-time errors
 let resendClient: Resend | null = null;
@@ -55,6 +56,7 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
   try {
     const { data: result, error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: data.to,
       subject: `Thank you for your donation to The JRE!`,
       html: `
@@ -214,6 +216,7 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
   try {
     const { data: result, error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: data.to,
       subject: `You're registered for ${data.eventTitle}!`,
       html: `
@@ -384,6 +387,7 @@ export async function sendHonoreeNotification(data: HonoreeEmailData) {
   try {
     const { data: result, error } = await resend.emails.send({
       from: FROM_EMAIL,
+      replyTo: REPLY_TO,
       to: data.to,
       subject: `A donation was made in your honor`,
       html: `
