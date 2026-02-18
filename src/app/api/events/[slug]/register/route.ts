@@ -230,25 +230,30 @@ export async function POST(
     ];
     appendEventRegistration(sheetName, rowData).catch(console.error);
 
-    // Send confirmation email (async, non-blocking)
-    sendRegistrationConfirmation({
-      to: email,
-      name,
-      eventTitle: event.title,
-      eventDate: new Date(event.date).toLocaleDateString("en-US", {
-        weekday: "long",
-        year: "numeric",
-        month: "long",
-        day: "numeric",
-      }),
-      eventTime: event.start_time || "See event details",
-      eventLocation: event.location || "See event details",
-      adults: numAdults,
-      kids: numKids,
-      total: subtotal,
-      sponsorship: sponsorshipName || undefined,
-      transactionId: paymentReference,
-    }).catch(console.error);
+    // Send confirmation email
+    try {
+      const emailResult = await sendRegistrationConfirmation({
+        to: email,
+        name,
+        eventTitle: event.title,
+        eventDate: new Date(event.date).toLocaleDateString("en-US", {
+          weekday: "long",
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        }),
+        eventTime: event.start_time || "See event details",
+        eventLocation: event.location || "See event details",
+        adults: numAdults,
+        kids: numKids,
+        total: subtotal,
+        sponsorship: sponsorshipName || undefined,
+        transactionId: paymentReference,
+      });
+      console.log("Email send result:", JSON.stringify(emailResult));
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+    }
 
     return NextResponse.json({
       success: true,

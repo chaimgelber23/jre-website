@@ -287,42 +287,10 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration if sheets sync fails
     }
 
-    // Send confirmation email
-    sendRegistrationConfirmation({
-      to: email,
-      name,
-      eventTitle: PURIM_EVENT.title,
-      eventDate: "Monday, March 2, 2026",
-      eventTime: PURIM_EVENT.time,
-      eventLocation: PURIM_EVENT.location,
-      adults: numAdults,
-      kids: numKids,
-      total: totalAmount,
-      sponsorship: sponsorship || undefined,
-      transactionId: paymentReference,
-    }).catch(console.error);
-
-    // Send to spouse email too if provided
-    if (spouseEmail && emailRegex.test(spouseEmail)) {
-      sendRegistrationConfirmation({
-        to: spouseEmail,
-        name: spouseName || name,
-        eventTitle: PURIM_EVENT.title,
-        eventDate: "Monday, March 2, 2026",
-        eventTime: PURIM_EVENT.time,
-        eventLocation: PURIM_EVENT.location,
-        adults: numAdults,
-        kids: numKids,
-        total: totalAmount,
-        sponsorship: sponsorship || undefined,
-        transactionId: paymentReference,
-      }).catch(console.error);
-    }
-
-    // Send to honoree email if provided
-    if (honoreeEmail && emailRegex.test(honoreeEmail)) {
-      sendRegistrationConfirmation({
-        to: honoreeEmail,
+    // Send confirmation emails (awaited so errors are logged before response)
+    try {
+      const emailResult = await sendRegistrationConfirmation({
+        to: email,
         name,
         eventTitle: PURIM_EVENT.title,
         eventDate: "Monday, March 2, 2026",
@@ -333,7 +301,47 @@ export async function POST(request: NextRequest) {
         total: totalAmount,
         sponsorship: sponsorship || undefined,
         transactionId: paymentReference,
-      }).catch(console.error);
+      });
+      console.log("Email send result:", JSON.stringify(emailResult));
+
+      // Send to spouse email too if provided
+      if (spouseEmail && emailRegex.test(spouseEmail)) {
+        const spouseResult = await sendRegistrationConfirmation({
+          to: spouseEmail,
+          name: spouseName || name,
+          eventTitle: PURIM_EVENT.title,
+          eventDate: "Monday, March 2, 2026",
+          eventTime: PURIM_EVENT.time,
+          eventLocation: PURIM_EVENT.location,
+          adults: numAdults,
+          kids: numKids,
+          total: totalAmount,
+          sponsorship: sponsorship || undefined,
+          transactionId: paymentReference,
+        });
+        console.log("Spouse email result:", JSON.stringify(spouseResult));
+      }
+
+      // Send to honoree email if provided
+      if (honoreeEmail && emailRegex.test(honoreeEmail)) {
+        const honoreeResult = await sendRegistrationConfirmation({
+          to: honoreeEmail,
+          name,
+          eventTitle: PURIM_EVENT.title,
+          eventDate: "Monday, March 2, 2026",
+          eventTime: PURIM_EVENT.time,
+          eventLocation: PURIM_EVENT.location,
+          adults: numAdults,
+          kids: numKids,
+          total: totalAmount,
+          sponsorship: sponsorship || undefined,
+          transactionId: paymentReference,
+        });
+        console.log("Honoree email result:", JSON.stringify(honoreeResult));
+      }
+    } catch (emailError) {
+      console.error("Failed to send confirmation email:", emailError);
+      // Don't fail the registration if email fails
     }
 
     return NextResponse.json({
