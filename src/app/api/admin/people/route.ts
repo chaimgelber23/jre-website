@@ -73,11 +73,28 @@ export async function GET() {
     const eventMap = new Map(events.map((e) => [e.id, e]));
     const sponsorshipMap = new Map(sponsorships.map((s) => [s.id, s]));
 
-    // Aggregate people by key (email for those with email, "name:Name" for guests without)
+    // Aggregate people - dedup by email first, then by normalized name
+    // This ensures "John Smith" the registrant and "John Smith" the guest merge into one person
     const peopleMap = new Map<string, PersonRecord>();
+    // Secondary index: normalized name → primary key, for matching guests by name
+    const nameToKey = new Map<string, string>();
 
-    function addPersonToMap(
-      key: string,
+    function addEvent(person: PersonRecord, eventAttendance: EventAttendance, spent: number, isGuest: boolean) {
+      const alreadyHasEvent = person.events.some(
+        (e) => e.eventId === eventAttendance.eventId && e.role === eventAttendance.role
+      );
+      if (!alreadyHasEvent) {
+        person.events.push(eventAttendance);
+        person.totalEvents = new Set(person.events.map((e) => e.eventId)).size;
+      }
+      person.totalSpent += spent;
+      if (!isGuest) person.isGuest = false;
+      if (eventAttendance.registrationDate > person.lastSeen) {
+        person.lastSeen = eventAttendance.registrationDate;
+      }
+    }
+
+    function findOrCreatePerson(
       name: string,
       email: string,
       phone: string | null,
@@ -85,40 +102,50 @@ export async function GET() {
       spent: number,
       isGuest: boolean,
     ) {
-      if (peopleMap.has(key)) {
-        const person = peopleMap.get(key)!;
-        // Don't add duplicate event entries for the same event
-        const alreadyHasEvent = person.events.some(
-          (e) => e.eventId === eventAttendance.eventId
-        );
-        if (!alreadyHasEvent) {
-          person.events.push(eventAttendance);
-          person.totalEvents += 1;
+      const normalizedName = name.trim().toLowerCase();
+
+      // 1. Try exact email match first
+      if (email) {
+        const emailKey = email.toLowerCase().trim();
+        if (peopleMap.has(emailKey)) {
+          const person = peopleMap.get(emailKey)!;
+          addEvent(person, eventAttendance, spent, isGuest);
+          if (phone && !person.phone) person.phone = phone;
+          // Also register name mapping
+          if (normalizedName) nameToKey.set(normalizedName, emailKey);
+          return;
         }
-        person.totalSpent += spent;
-        // Upgrade from guest to registrant if they registered themselves
-        if (!isGuest) person.isGuest = false;
-        if (name) person.name = name;
-        if (phone) person.phone = phone;
-        if (eventAttendance.registrationDate > person.lastSeen) {
-          person.lastSeen = eventAttendance.registrationDate;
-        }
-      } else {
-        peopleMap.set(key, {
-          name,
-          email,
-          phone,
-          events: [eventAttendance],
-          totalSpent: spent,
-          totalEvents: 1,
-          lastSeen: eventAttendance.registrationDate,
-          isGuest,
-        });
       }
+
+      // 2. Try name match (catches guests without email matching registrants or other guests)
+      if (normalizedName && nameToKey.has(normalizedName)) {
+        const existingKey = nameToKey.get(normalizedName)!;
+        const person = peopleMap.get(existingKey);
+        if (person) {
+          addEvent(person, eventAttendance, spent, isGuest);
+          // Upgrade email/phone if we now have them
+          if (email && !person.email) person.email = email;
+          if (phone && !person.phone) person.phone = phone;
+          return;
+        }
+      }
+
+      // 3. New person - create entry
+      const key = email ? email.toLowerCase().trim() : `name:${normalizedName}`;
+      peopleMap.set(key, {
+        name,
+        email: email || "",
+        phone,
+        events: [eventAttendance],
+        totalSpent: spent,
+        totalEvents: 1,
+        lastSeen: eventAttendance.registrationDate,
+        isGuest,
+      });
+      if (normalizedName) nameToKey.set(normalizedName, key);
     }
 
     for (const reg of registrations) {
-      const email = reg.email.toLowerCase().trim();
       const event = eventMap.get(reg.event_id);
       const sponsorship = reg.sponsorship_id ? sponsorshipMap.get(reg.sponsorship_id) : null;
       const guests = parseGuests(reg.message);
@@ -138,14 +165,11 @@ export async function GET() {
       };
 
       // Add the registrant
-      addPersonToMap(email, reg.name, reg.email, reg.phone || null, eventRecord, Number(reg.subtotal), false);
+      findOrCreatePerson(reg.name, reg.email, reg.phone || null, eventRecord, Number(reg.subtotal), false);
 
       // Add each guest as their own person
       for (const guest of guests) {
         if (!guest.name?.trim()) continue;
-        const guestEmail = guest.email?.toLowerCase().trim() || "";
-        // Key: use email if available, otherwise use normalized name
-        const guestKey = guestEmail || `name:${guest.name.trim().toLowerCase()}`;
 
         const guestEventRecord: EventAttendance = {
           eventId: reg.event_id,
@@ -162,7 +186,7 @@ export async function GET() {
           registeredBy: reg.name,
         };
 
-        addPersonToMap(guestKey, guest.name.trim(), guestEmail, null, guestEventRecord, 0, true);
+        findOrCreatePerson(guest.name.trim(), guest.email?.trim() || "", null, guestEventRecord, 0, true);
       }
     }
 
