@@ -1,6 +1,6 @@
 import { Resend } from "resend";
 
-const FROM_EMAIL = "The JRE <onboarding@resend.dev>"; // TODO: Change back to noreply@thejre.org once domain is verified in Resend
+const FROM_EMAIL = "The JRE <noreply@beta.thejre.org>";
 
 // Lazy initialization to avoid build-time errors
 let resendClient: Resend | null = null;

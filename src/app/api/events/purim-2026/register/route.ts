@@ -5,22 +5,16 @@ import { processTokenizedPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
-// Purim event details
+// Purim event details (fallback if not in Supabase)
 const PURIM_EVENT = {
   title: "JRE's Next-Level Purim Experience",
-  date: "2025-03-02",
+  date: "2026-03-02",
   time: "6:00 PM",
   location: "Life, The Place To Be - 2 Lawrence Street, Ardsley, NY, 10502",
   pricePerAdult: 40,
   kidsPrice: 10,
   familyMax: 110,
 };
-
-interface FamilyMember {
-  id: string;
-  name: string;
-  type: "adult" | "child";
-}
 
 export async function POST(request: NextRequest) {
   try {
@@ -46,6 +40,7 @@ export async function POST(request: NextRequest) {
       paymentToken,
       message,
       guests,
+      honoreeEmail,
     } = body;
 
     // Validate required fields
@@ -108,7 +103,7 @@ export async function POST(request: NextRequest) {
           email,
           firstName,
           lastName,
-          description: `JRE Purim 2025 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
+          description: `JRE Purim 2026 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
         });
 
         if (!paymentResult.success) {
@@ -127,7 +122,7 @@ export async function POST(request: NextRequest) {
           amount: totalAmount,
           email,
           name: cardName || name,
-          description: `JRE Purim 2025 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
+          description: `JRE Purim 2026 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
         });
 
         if (!paymentResult.success) {
@@ -154,18 +149,18 @@ export async function POST(request: NextRequest) {
     }
 
     // Generate registration ID
-    const registrationId = `purim25_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    const registrationId = `purim26_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Compile all attendees for the sheet
     const allAttendees: string[] = [name];
     if (spouseName) allAttendees.push(`Spouse: ${spouseName}`);
-    if (additionalAdults && additionalAdults.length > 0) {
-      additionalAdults.forEach((a: FamilyMember) => {
+    if (additionalAdults && Array.isArray(additionalAdults)) {
+      additionalAdults.forEach((a: { name: string }) => {
         if (a.name) allAttendees.push(`Adult: ${a.name}`);
       });
     }
-    if (children && children.length > 0) {
-      children.forEach((c: FamilyMember) => {
+    if (children && Array.isArray(children)) {
+      children.forEach((c: { name: string }) => {
         if (c.name) allAttendees.push(`Child: ${c.name}`);
       });
     }
@@ -175,7 +170,79 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Sync to Google Sheets - Auto-creates "Purim25" tab if needed
+    const supabase = createServerClient();
+
+    // Try to save to event_registrations (admin-visible) by looking up event in Supabase
+    let savedToEventRegistrations = false;
+    try {
+      const { data: eventData } = await supabase
+        .from("events")
+        .select("id")
+        .eq("slug", "purim-2026")
+        .single();
+
+      if (eventData) {
+        const { error: insertError } = await supabase
+          .from("event_registrations")
+          .insert({
+            event_id: eventData.id,
+            name,
+            email,
+            phone: normalizedPhone || null,
+            adults: numAdults,
+            kids: numKids,
+            sponsorship_id: null, // Standalone page uses sponsorship name, not ID
+            message: message || null,
+            subtotal: totalAmount,
+            payment_status: paymentStatus,
+            payment_reference: paymentReference,
+          } as never);
+
+        if (!insertError) {
+          savedToEventRegistrations = true;
+          console.log("Purim 2026 registration saved to event_registrations:", registrationId);
+        } else {
+          console.error("Failed to save to event_registrations:", insertError.message);
+        }
+      }
+    } catch (err) {
+      console.log("Event lookup skipped:", err);
+    }
+
+    // Fallback: save to purim_registrations if event_registrations didn't work
+    if (!savedToEventRegistrations) {
+      try {
+        const { error: insertError } = await supabase
+          .from("purim_registrations")
+          .insert({
+            id: registrationId,
+            name,
+            email,
+            phone: normalizedPhone || null,
+            spouse_name: spouseName || null,
+            spouse_email: spouseEmail || null,
+            spouse_phone: spousePhone || null,
+            adults: numAdults,
+            kids: numKids,
+            all_attendees: allAttendees,
+            sponsorship: sponsorship || null,
+            sponsorship_amount: sponsorshipAmount || null,
+            total_amount: totalAmount,
+            payment_method: paymentMethod,
+            payment_status: paymentStatus,
+            payment_reference: paymentReference,
+            message: message || null,
+          } as never);
+
+        if (insertError) {
+          console.log("Supabase insert skipped (table may not exist):", insertError.message);
+        }
+      } catch (dbError) {
+        console.log("Database sync skipped:", dbError);
+      }
+    }
+
+    // Sync to Google Sheets - Auto-creates "Purim26" tab if needed
     try {
       const rowData = [
         registrationId,
@@ -198,9 +265,9 @@ export async function POST(request: NextRequest) {
         message || "",
       ];
 
-      const sheetResult = await appendEventRegistration("Purim25", rowData);
+      const sheetResult = await appendEventRegistration("Purim26", rowData);
       if (sheetResult.success) {
-        console.log("Purim registration synced to Google Sheets:", registrationId);
+        console.log("Purim 2026 registration synced to Google Sheets:", registrationId);
       } else {
         console.error("Failed to sync to Google Sheets:", sheetResult.error);
       }
@@ -209,47 +276,12 @@ export async function POST(request: NextRequest) {
       // Don't fail the registration if sheets sync fails
     }
 
-    // Optionally save to Supabase if you want to track in the database
-    try {
-      const supabase = createServerClient();
-
-      // Check if purim_registrations table exists, if not, skip this step
-      const { error: insertError } = await supabase
-        .from("purim_registrations")
-        .insert({
-          id: registrationId,
-          name,
-          email,
-          phone: normalizedPhone || null,
-          spouse_name: spouseName || null,
-          spouse_email: spouseEmail || null,
-          spouse_phone: spousePhone || null,
-          adults: numAdults,
-          kids: numKids,
-          all_attendees: allAttendees,
-          sponsorship: sponsorship || null,
-          sponsorship_amount: sponsorshipAmount || null,
-          total_amount: totalAmount,
-          payment_method: paymentMethod,
-          payment_status: paymentStatus,
-          payment_reference: paymentReference,
-          message: message || null,
-        } as never);
-
-      if (insertError) {
-        console.log("Supabase insert skipped (table may not exist):", insertError.message);
-      }
-    } catch (dbError) {
-      console.log("Database sync skipped:", dbError);
-      // Don't fail if database table doesn't exist
-    }
-
     // Send confirmation email
     sendRegistrationConfirmation({
       to: email,
       name,
       eventTitle: PURIM_EVENT.title,
-      eventDate: "Sunday, March 2, 2025",
+      eventDate: "Monday, March 2, 2026",
       eventTime: PURIM_EVENT.time,
       eventLocation: PURIM_EVENT.location,
       adults: numAdults,
@@ -265,7 +297,24 @@ export async function POST(request: NextRequest) {
         to: spouseEmail,
         name: spouseName || name,
         eventTitle: PURIM_EVENT.title,
-        eventDate: "Sunday, March 2, 2025",
+        eventDate: "Monday, March 2, 2026",
+        eventTime: PURIM_EVENT.time,
+        eventLocation: PURIM_EVENT.location,
+        adults: numAdults,
+        kids: numKids,
+        total: totalAmount,
+        sponsorship: sponsorship || undefined,
+        transactionId: paymentReference,
+      }).catch(console.error);
+    }
+
+    // Send to honoree email if provided
+    if (honoreeEmail && emailRegex.test(honoreeEmail)) {
+      sendRegistrationConfirmation({
+        to: honoreeEmail,
+        name,
+        eventTitle: PURIM_EVENT.title,
+        eventDate: "Monday, March 2, 2026",
         eventTime: PURIM_EVENT.time,
         eventLocation: PURIM_EVENT.location,
         adults: numAdults,

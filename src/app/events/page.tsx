@@ -468,7 +468,7 @@ const standaloneUpcoming: DisplayEvent[] = [
     price: 40,
     image: "/images/events/purim-2026-banner.jpg",
     description:
-      "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $100.",
+      "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $110.",
     featured: false,
   },
 ];
