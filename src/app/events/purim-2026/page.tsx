@@ -104,6 +104,7 @@ export default function PurimEventPage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestErrors, setGuestErrors] = useState<boolean[]>([]);
+  const [fieldErrors, setFieldErrors] = useState<{ name?: boolean; email?: boolean }>({});
 
   // Banquest tokenization hook
   const { requestToken } = useCollectJs();
@@ -296,17 +297,46 @@ export default function PurimEventPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+    setGuestErrors([]);
+    setFieldErrors({});
 
-    // Validate guest names
+    // Validate registrant name
+    if (!formState.name.trim()) {
+      setError("Please enter your full name.");
+      setFieldErrors({ name: true });
+      document.querySelector<HTMLInputElement>('input[name="name"]')?.focus();
+      return;
+    }
+
+    // Validate registrant email
+    if (!formState.email.trim()) {
+      setError("Please enter your email address.");
+      setFieldErrors({ email: true });
+      document.querySelector<HTMLInputElement>('input[name="email"]')?.focus();
+      return;
+    }
+
+    // Validate guest names for additional adults
     if (guestDetails.length > 0) {
       const errors = guestDetails.map((g) => !g.name.trim());
       if (errors.some(Boolean)) {
+        const missingCount = errors.filter(Boolean).length;
         setGuestErrors(errors);
-        setError("Please fill in the name for each guest.");
+        setError(
+          missingCount === 1
+            ? "Please enter the name for your guest."
+            : `Please enter the names for all ${missingCount} guests.`
+        );
+        // Scroll to and focus the first empty guest name field
+        const firstErrorIndex = errors.findIndex(Boolean);
+        const guestInputs = document.querySelectorAll<HTMLInputElement>('[data-guest-name]');
+        if (guestInputs[firstErrorIndex]) {
+          guestInputs[firstErrorIndex].scrollIntoView({ behavior: "smooth", block: "center" });
+          setTimeout(() => guestInputs[firstErrorIndex].focus(), 400);
+        }
         return;
       }
     }
-    setGuestErrors([]);
 
     // Require a payment method
     if (!paymentMethod) {
@@ -556,9 +586,17 @@ export default function PurimEventPage() {
                   <form onSubmit={handleSubmit} className="p-6 space-y-5">
                     {/* Error Message */}
                     {error && (
-                      <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                      <motion.div
+                        initial={{ opacity: 0, y: -8 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm flex items-start gap-2"
+                        ref={(el) => el?.scrollIntoView({ behavior: "smooth", block: "nearest" })}
+                      >
+                        <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
                         {error}
-                      </div>
+                      </motion.div>
                     )}
 
                     {/* Your Details */}
@@ -568,24 +606,46 @@ export default function PurimEventPage() {
                         Your Details
                       </h4>
                       <div className="space-y-3">
-                        <input
-                          type="text"
-                          name="name"
-                          value={formState.name}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                          placeholder="Full Name *"
-                        />
-                        <input
-                          type="email"
-                          name="email"
-                          value={formState.email}
-                          onChange={handleChange}
-                          required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
-                          placeholder="Email Address *"
-                        />
+                        <div>
+                          <input
+                            type="text"
+                            name="name"
+                            value={formState.name}
+                            onChange={(e) => {
+                              handleChange(e);
+                              if (fieldErrors.name && e.target.value.trim()) setFieldErrors((prev) => ({ ...prev, name: false }));
+                            }}
+                            className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                              fieldErrors.name
+                                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                            }`}
+                            placeholder="Full Name *"
+                          />
+                          {fieldErrors.name && (
+                            <p className="text-xs text-red-500 mt-1">Your name is required</p>
+                          )}
+                        </div>
+                        <div>
+                          <input
+                            type="email"
+                            name="email"
+                            value={formState.email}
+                            onChange={(e) => {
+                              handleChange(e);
+                              if (fieldErrors.email && e.target.value.trim()) setFieldErrors((prev) => ({ ...prev, email: false }));
+                            }}
+                            className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                              fieldErrors.email
+                                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
+                                : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                            }`}
+                            placeholder="Email Address *"
+                          />
+                          {fieldErrors.email && (
+                            <p className="text-xs text-red-500 mt-1">Your email is required</p>
+                          )}
+                        </div>
                         <input
                           type="tel"
                           name="phone"
@@ -664,6 +724,7 @@ export default function PurimEventPage() {
                               <div>
                                 <input
                                   type="text"
+                                  data-guest-name
                                   value={guest.name}
                                   onChange={(e) => {
                                     updateGuest(index, "name", e.target.value);
