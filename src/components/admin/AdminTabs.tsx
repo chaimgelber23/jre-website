@@ -6,8 +6,8 @@ import { DollarSign, Calendar, Users } from "lucide-react";
 import { motion } from "framer-motion";
 
 const tabs = [
-  { name: "Donations", href: "/admin", icon: DollarSign },
   { name: "Events", href: "/admin/events", icon: Calendar },
+  { name: "Donations", href: "/admin", icon: DollarSign },
   { name: "People", href: "/admin/people", icon: Users },
 ];
 

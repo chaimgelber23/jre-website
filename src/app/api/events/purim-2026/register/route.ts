@@ -221,8 +221,7 @@ export async function POST(request: NextRequest) {
 
     const supabase = createServerClient();
 
-    // Try to save to event_registrations (admin-visible) by looking up event in Supabase
-    let savedToEventRegistrations = false;
+    // Save to event_registrations (admin-visible) by looking up event in Supabase
     try {
       const { data: eventData } = await supabase
         .from("events")
@@ -250,47 +249,15 @@ export async function POST(request: NextRequest) {
           } as never);
 
         if (!insertError) {
-          savedToEventRegistrations = true;
           console.log("Purim 2026 registration saved to event_registrations:", registrationId);
         } else {
           console.error("Failed to save to event_registrations:", insertError.message);
         }
+      } else {
+        console.error("Purim 2026 event not found in Supabase - registration not saved to DB!");
       }
     } catch (err) {
-      console.log("Event lookup skipped:", err);
-    }
-
-    // Fallback: save to purim_registrations if event_registrations didn't work
-    if (!savedToEventRegistrations) {
-      try {
-        const { error: insertError } = await supabase
-          .from("purim_registrations")
-          .insert({
-            id: registrationId,
-            name,
-            email,
-            phone: normalizedPhone || null,
-            spouse_name: spouseName || null,
-            spouse_email: spouseEmail || null,
-            spouse_phone: spousePhone || null,
-            adults: numAdults,
-            kids: numKids,
-            all_attendees: allAttendees,
-            sponsorship: sponsorship || null,
-            sponsorship_amount: sponsorshipAmount || null,
-            total_amount: totalAmount,
-            payment_method: paymentMethod,
-            payment_status: paymentStatus,
-            payment_reference: paymentReference,
-            message: encodedMessage,
-          } as never);
-
-        if (insertError) {
-          console.log("Supabase insert skipped (table may not exist):", insertError.message);
-        }
-      } catch (dbError) {
-        console.log("Database sync skipped:", dbError);
-      }
+      console.error("Failed to save registration to Supabase:", err);
     }
 
     // Sync to Google Sheets - Auto-creates "Purim26" tab if needed
