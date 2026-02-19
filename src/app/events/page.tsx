@@ -42,10 +42,20 @@ function formatEventDate(dateStr: string): string {
   });
 }
 
+function to12Hour(time: string): string {
+  // Convert "18:00" → "6:00 PM", pass through already-formatted times like "6:00 PM"
+  if (/am|pm/i.test(time)) return time;
+  const [h, m] = time.split(":").map(Number);
+  if (isNaN(h)) return time;
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
 function formatEventTime(startTime: string | null, endTime: string | null): string {
   if (!startTime) return "See event details";
-  const start = startTime;
-  if (endTime) return `${start} - ${endTime}`;
+  const start = to12Hour(startTime);
+  if (endTime) return `${start} - ${to12Hour(endTime)}`;
   return start;
 }
 
@@ -215,6 +225,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
           </h2>
         </motion.div>
 
+        <Link href={`/events/${event.id}`} className="block cursor-pointer">
         <div className="grid lg:grid-cols-2 gap-8 items-center max-w-6xl mx-auto">
           {/* Image side */}
           <motion.div
@@ -308,11 +319,10 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               </motion.div>
             </div>
 
-            <Link href={`/events/${event.id}`}>
-              <motion.button
+            <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg shadow-[#EF8046]/30 flex items-center gap-3 group"
+                className="inline-flex bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg shadow-[#EF8046]/30 items-center gap-3"
               >
                 Register Now
                 <motion.span
@@ -321,10 +331,10 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                 >
                   <ArrowRight className="w-5 h-5" />
                 </motion.span>
-              </motion.button>
-            </Link>
+              </motion.span>
           </motion.div>
         </div>
+        </Link>
       </div>
     </section>
   );

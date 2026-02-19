@@ -1001,7 +1001,28 @@ export default function PurimEventPage() {
                           name="cardName"
                           value={formState.cardName}
                           onChange={handleChange}
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          style={{
+                            fontSize: '15px',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
+                            color: '#1a202c',
+                            border: '1.5px solid #e2e8f0',
+                            borderRadius: '0.5rem',
+                            padding: '10px 14px',
+                            height: '44px',
+                            backgroundColor: '#ffffff',
+                            boxSizing: 'border-box' as const,
+                            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
+                            outline: 'none',
+                            width: '100%',
+                          }}
+                          onFocus={(e) => {
+                            e.target.style.borderColor = '#EF8046';
+                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 128, 70, 0.15)';
+                          }}
+                          onBlur={(e) => {
+                            e.target.style.borderColor = '#e2e8f0';
+                            e.target.style.boxShadow = 'none';
+                          }}
                           placeholder="Name on Card"
                         />
 

@@ -289,11 +289,20 @@ export default function EventDetailClient({
     });
   };
 
+  const to12Hour = (time: string): string => {
+    if (/am|pm/i.test(time)) return time;
+    const [h, m] = time.split(":").map(Number);
+    if (isNaN(h)) return time;
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
   const formatTime = (start: string | null, end: string | null) => {
     if (!start) return "";
-    const parts = [start];
-    if (end) parts.push(end);
-    return parts.join(" - ");
+    const s = to12Hour(start);
+    if (end) return `${s} - ${to12Hour(end)}`;
+    return s;
   };
 
   // Loading State
