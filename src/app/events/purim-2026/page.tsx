@@ -119,6 +119,10 @@ export default function PurimEventPage() {
   const totalRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
   const registrationRef = useRef<HTMLDivElement>(null);
+  const cardNameRef = useRef<HTMLInputElement>(null);
+  const cardNumberRef = useRef<HTMLInputElement>(null);
+  const cardExpiryRef = useRef<HTMLInputElement>(null);
+  const cardCvvRef = useRef<HTMLInputElement>(null);
 
   // Scroll to registration form
   const scrollToRegistration = () => {
@@ -250,6 +254,17 @@ export default function PurimEventPage() {
       return digits.slice(0, 2) + "/" + digits.slice(2);
     }
     return digits;
+  };
+
+  // Enter key handler for card fields - jump to next field
+  const handleCardKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    nextRef: React.RefObject<HTMLInputElement | null> | null
+  ) => {
+    if (e.key === "Enter" && nextRef?.current) {
+      e.preventDefault();
+      nextRef.current.focus();
+    }
   };
 
   // Submit form with direct card data
@@ -917,12 +932,15 @@ export default function PurimEventPage() {
                                   <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-[#EF8046] focus-within:ring-2 focus-within:ring-[#EF8046]/20">
                                     <span className="px-3 py-2 bg-gray-50 text-gray-500 border-r">$</span>
                                     <input
-                                      type="number"
+                                      type="text"
+                                      inputMode="numeric"
                                       value={customAmount || ""}
-                                      onChange={(e) => setCustomAmount(Number(e.target.value))}
+                                      onChange={(e) => {
+                                        const digits = e.target.value.replace(/\D/g, "");
+                                        setCustomAmount(digits ? Number(digits) : 0);
+                                      }}
                                       className="w-full px-3 py-2 outline-none text-sm"
-                                      placeholder="0"
-                                      min="1"
+                                      placeholder="Enter amount"
                                     />
                                   </div>
                                 </motion.div>
@@ -1018,12 +1036,14 @@ export default function PurimEventPage() {
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
                             <input
+                              ref={cardNameRef}
                               type="text"
                               name="cardName"
                               value={formState.cardName}
                               onChange={handleChange}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors"
-                              placeholder="John Smith"
+                              onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors"
+                              placeholder="Name on Card"
                               autoComplete="cc-name"
                             />
                           </div>
@@ -1033,15 +1053,21 @@ export default function PurimEventPage() {
                             <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
                             <div className="relative">
                               <input
+                                ref={cardNumberRef}
                                 type="text"
                                 inputMode="numeric"
                                 value={formState.cardNumber}
                                 onChange={(e) => {
                                   const formatted = formatCardNumber(e.target.value);
                                   setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                                  // Auto-jump to expiry when 16 digits entered
+                                  if (formatted.replace(/\s/g, "").length === 16) {
+                                    cardExpiryRef.current?.focus();
+                                  }
                                 }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider pr-12"
-                                placeholder="4111 1111 1111 1111"
+                                onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                                placeholder="Card Number"
                                 maxLength={19}
                                 autoComplete="cc-number"
                               />
@@ -1052,24 +1078,31 @@ export default function PurimEventPage() {
                           {/* Expiry + CVV row */}
                           <div className="grid grid-cols-2 gap-3">
                             <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry</label>
+                              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
                               <input
+                                ref={cardExpiryRef}
                                 type="text"
                                 inputMode="numeric"
                                 value={formState.cardExpiry}
                                 onChange={(e) => {
                                   const formatted = formatExpiry(e.target.value, formState.cardExpiry);
                                   setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                                  // Auto-jump to CVV when full expiry entered (MM/YY = 5 chars)
+                                  if (formatted.length === 5) {
+                                    cardCvvRef.current?.focus();
+                                  }
                                 }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider"
-                                placeholder="MM/YY"
+                                onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                placeholder="MM / YY"
                                 maxLength={5}
                                 autoComplete="cc-exp"
                               />
                             </div>
                             <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">CVV</label>
+                              <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
                               <input
+                                ref={cardCvvRef}
                                 type="text"
                                 inputMode="numeric"
                                 value={formState.cardCvv}
@@ -1077,8 +1110,15 @@ export default function PurimEventPage() {
                                   const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
                                   setFormState((prev) => ({ ...prev, cardCvv: digits }));
                                 }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider"
-                                placeholder="123"
+                                onKeyDown={(e) => {
+                                  // Enter on last card field moves focus to submit button
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+                                    submitRef.current?.focus();
+                                  }
+                                }}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                placeholder="CVV"
                                 maxLength={4}
                                 autoComplete="cc-csc"
                               />
