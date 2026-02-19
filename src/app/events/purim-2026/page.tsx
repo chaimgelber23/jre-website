@@ -33,7 +33,7 @@ import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
 const purimEvent = {
-  title: "JRE's Next-Level Purim Experience",
+  title: "JRE Purim Extravaganza",
   subtitle: "Megillah, Music, Open Bar, Festive Banquet, Kids Activities & More",
   date: "Monday, March 2, 2026",
   time: "6:00 PM",

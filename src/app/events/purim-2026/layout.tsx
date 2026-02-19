@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import { JsonLd } from "@/components/seo/JsonLd";
 
 export const metadata: Metadata = {
-  title: "JRE's Next-Level Purim 2026 Celebration - Ardsley, NY",
+  title: "JRE Purim Extravaganza 2026 - Ardsley, NY",
   description:
     "Join The JRE for an unforgettable Purim celebration on March 3, 2026 at Life, The Place To Be in Ardsley, NY. Megillah reading, live music, open bar, festive banquet, and kids activities.",
   keywords: [
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     "Purim White Plains",
   ],
   openGraph: {
-    title: "JRE's Next-Level Purim 2026 - March 3, Ardsley NY",
+    title: "JRE Purim Extravaganza 2026 - March 3, Ardsley NY",
     description:
       "Megillah reading, live music, open bar, festive banquet, and kids activities. The ultimate Purim experience in Westchester County.",
     url: "https://thejre.org/events/purim-2026",
@@ -34,7 +34,7 @@ export const metadata: Metadata = {
 const purimEventJsonLd = {
   "@context": "https://schema.org",
   "@type": "Event",
-  name: "JRE's Next-Level Purim 2026 Experience",
+  name: "JRE Purim Extravaganza 2026",
   startDate: "2026-03-03T18:00:00-05:00",
   endDate: "2026-03-03T22:00:00-05:00",
   eventStatus: "https://schema.org/EventScheduled",

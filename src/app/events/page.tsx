@@ -471,7 +471,7 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
 const standaloneUpcoming: DisplayEvent[] = [
   {
     id: "purim-2026",
-    title: "JRE's Next-Level Purim Experience",
+    title: "JRE Purim Extravaganza",
     date: "Monday, March 2, 2026",
     time: "6:00 PM",
     location: "Life, The Place To Be - Ardsley, NY",

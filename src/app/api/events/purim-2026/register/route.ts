@@ -9,7 +9,7 @@ import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
 // Purim event details (fallback if not in Supabase)
 const PURIM_EVENT = {
-  title: "JRE's Next-Level Purim Experience",
+  title: "JRE Purim Extravaganza",
   date: "2026-03-02",
   time: "6:00 PM",
   location: "Life, The Place To Be - 2 Lawrence Street, Ardsley, NY, 10502",
