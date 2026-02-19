@@ -24,9 +24,11 @@ import {
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
+// KEPT FOR FALLBACK: Banquest Hosted Tokenization (has expiry encoding bug as of Feb 2026)
+// import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
 // Square kept for backup - uncomment to switch processors
 // import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
+import { Lock } from "lucide-react";
 import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
@@ -75,6 +77,9 @@ export default function PurimEventPage() {
     email: "",
     phone: "",
     cardName: "",
+    cardNumber: "",
+    cardExpiry: "",
+    cardCvv: "",
     message: "",
     honoreeEmail: "",
   });
@@ -98,16 +103,15 @@ export default function PurimEventPage() {
     setGuestDetails((prev) => prev.map((g, i) => (i === index ? { ...g, [field]: value } : g)));
   };
 
-  const [paymentToken, setPaymentToken] = useState<string | null>(null);
-  const [cardValid, setCardValid] = useState(false);
+  // KEPT FOR FALLBACK: Tokenization state
+  // const [paymentToken, setPaymentToken] = useState<string | null>(null);
+  // const { requestToken } = useCollectJs();
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [guestErrors, setGuestErrors] = useState<boolean[]>([]);
   const [fieldErrors, setFieldErrors] = useState<{ name?: boolean; email?: boolean }>({});
-
-  // Banquest tokenization hook
-  const { requestToken } = useCollectJs();
 
   // Refs for auto-scroll
   const sponsorshipRef = useRef<HTMLDivElement>(null);
@@ -224,24 +228,32 @@ export default function PurimEventPage() {
     });
   };
 
-  // Handle token received from Collect.js
-  const handleTokenReceived = useCallback((token: string) => {
-    setPaymentToken(token);
-  }, []);
+  // KEPT FOR FALLBACK: Tokenization callbacks
+  // const handleTokenReceived = useCallback((token: string) => { setPaymentToken(token); }, []);
+  // const handlePaymentError = useCallback((errorMsg: string) => { setError(errorMsg); setIsSubmitting(false); }, []);
+  // const handleValidationChange = useCallback((isValid: boolean) => { setCardValid(isValid); }, []);
 
-  // Handle payment errors from Collect.js
-  const handlePaymentError = useCallback((errorMsg: string) => {
-    setError(errorMsg);
-    setIsSubmitting(false);
-  }, []);
+  // Card number formatting: adds spaces every 4 digits (e.g., "4111 1111 1111 1111")
+  const formatCardNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+  };
 
-  // Handle card validation changes
-  const handleValidationChange = useCallback((isValid: boolean) => {
-    setCardValid(isValid);
-  }, []);
+  // Expiry formatting: auto-inserts slash (e.g., "03/26")
+  const formatExpiry = (value: string, prevValue: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    // Auto-add slash after 2 digits (but not when deleting)
+    if (digits.length >= 2 && value.length > prevValue.length) {
+      return digits.slice(0, 2) + "/" + digits.slice(2);
+    }
+    if (digits.length >= 3) {
+      return digits.slice(0, 2) + "/" + digits.slice(2);
+    }
+    return digits;
+  };
 
-  // Submit form with token
-  const doSubmit = useCallback(async (token: string | null) => {
+  // Submit form with direct card data
+  const doSubmit = useCallback(async () => {
     try {
       const payload: Record<string, unknown> = {
         name: formState.name,
@@ -260,9 +272,11 @@ export default function PurimEventPage() {
         honoreeEmail: formState.honoreeEmail || null,
       };
 
-      // Include payment token for online payment
-      if (paymentMethod === "online" && token) {
-        payload.paymentToken = token;
+      // Include card data for online payment (direct card input - matches old working site)
+      if (paymentMethod === "online") {
+        payload.cardNumber = formState.cardNumber.replace(/\s/g, "");
+        payload.cardExpiry = formState.cardExpiry;
+        payload.cardCvv = formState.cardCvv;
       }
 
       const response = await fetch("/api/events/purim-2026/register", {
@@ -285,14 +299,6 @@ export default function PurimEventPage() {
       setIsSubmitting(false);
     }
   }, [formState, numAdults, numKids, guestDetails, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total]);
-
-  // When payment token is received, submit the form
-  useEffect(() => {
-    if (paymentToken && isSubmitting) {
-      doSubmit(paymentToken);
-      setPaymentToken(null); // Reset for next submission
-    }
-  }, [paymentToken, isSubmitting, doSubmit]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -344,20 +350,30 @@ export default function PurimEventPage() {
       return;
     }
 
-    setIsSubmitting(true);
-
-    // For online payments, tokenize first then submit
+    // Validate card fields for online payment
     if (paymentMethod === "online") {
-      const tokenStarted = requestToken();
-      if (!tokenStarted) {
-        setError("Payment system not ready. Please try again.");
-        setIsSubmitting(false);
+      const cardNum = formState.cardNumber.replace(/\s/g, "");
+      if (cardNum.length < 14) {
+        setError("Please enter a valid card number.");
+        return;
       }
-      // Token callback will trigger doSubmit via useEffect
-    } else {
-      // For check payments, submit directly
-      doSubmit(null);
+      if (!formState.cardExpiry || !formState.cardExpiry.includes("/")) {
+        setError("Please enter the card expiry date (MM/YY).");
+        return;
+      }
+      const [mm, yy] = formState.cardExpiry.split("/");
+      if (!mm || !yy || parseInt(mm) < 1 || parseInt(mm) > 12) {
+        setError("Invalid expiry month. Please use MM/YY format.");
+        return;
+      }
+      if (!formState.cardCvv || formState.cardCvv.length < 3) {
+        setError("Please enter the CVV code from your card.");
+        return;
+      }
     }
+
+    setIsSubmitting(true);
+    doSubmit();
   };
 
   if (isSubmitted) {
@@ -995,38 +1011,91 @@ export default function PurimEventPage() {
                       </div>
 
                       {/* Card form (hidden until Credit Card selected) */}
-                      <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>
-                        <input
-                          type="text"
-                          name="cardName"
-                          value={formState.cardName}
-                          onChange={handleChange}
-                          style={{
-                            fontSize: '15px',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif',
-                            color: '#1a202c',
-                            border: '1.5px solid #e2e8f0',
-                            borderRadius: '0.5rem',
-                            padding: '10px 14px',
-                            height: '44px',
-                            backgroundColor: '#ffffff',
-                            boxSizing: 'border-box' as const,
-                            transition: 'border-color 0.2s ease, box-shadow 0.2s ease',
-                            outline: 'none',
-                            width: '100%',
-                          }}
-                          onFocus={(e) => {
-                            e.target.style.borderColor = '#EF8046';
-                            e.target.style.boxShadow = '0 0 0 3px rgba(239, 128, 70, 0.15)';
-                          }}
-                          onBlur={(e) => {
-                            e.target.style.borderColor = '#e2e8f0';
-                            e.target.style.boxShadow = 'none';
-                          }}
-                          placeholder="Name on Card"
-                        />
+                      {/* Direct card input - matches old working site (thejre.org/donation) pattern */}
+                      <div className={paymentMethod === "online" ? "mt-4" : "hidden"}>
+                        <div className="bg-[#FBFBFB] rounded-xl p-4 space-y-3 border border-gray-100">
+                          {/* Name on Card */}
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
+                            <input
+                              type="text"
+                              name="cardName"
+                              value={formState.cardName}
+                              onChange={handleChange}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors"
+                              placeholder="John Smith"
+                              autoComplete="cc-name"
+                            />
+                          </div>
 
-                        {/* Banquest Tokenized Payment (PCI Compliant) */}
+                          {/* Card Number */}
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
+                            <div className="relative">
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formState.cardNumber}
+                                onChange={(e) => {
+                                  const formatted = formatCardNumber(e.target.value);
+                                  setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                                }}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider pr-12"
+                                placeholder="4111 1111 1111 1111"
+                                maxLength={19}
+                                autoComplete="cc-number"
+                              />
+                              <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                            </div>
+                          </div>
+
+                          {/* Expiry + CVV row */}
+                          <div className="grid grid-cols-2 gap-3">
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry</label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formState.cardExpiry}
+                                onChange={(e) => {
+                                  const formatted = formatExpiry(e.target.value, formState.cardExpiry);
+                                  setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                                }}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider"
+                                placeholder="MM/YY"
+                                maxLength={5}
+                                autoComplete="cc-exp"
+                              />
+                            </div>
+                            <div>
+                              <label className="text-xs text-gray-500 mb-1 block font-medium">CVV</label>
+                              <input
+                                type="text"
+                                inputMode="numeric"
+                                value={formState.cardCvv}
+                                onChange={(e) => {
+                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                  setFormState((prev) => ({ ...prev, cardCvv: digits }));
+                                }}
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white transition-colors font-mono tracking-wider"
+                                placeholder="123"
+                                maxLength={4}
+                                autoComplete="cc-csc"
+                              />
+                            </div>
+                          </div>
+
+                          {/* Security Badge */}
+                          <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                            <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                            <span>Your payment is encrypted and secure.</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* KEPT FOR FALLBACK: Banquest Hosted Tokenization (has expiry bug)
+                      <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>
+                        <input type="text" name="cardName" placeholder="Name on Card" ... />
                         <CollectJsPayment
                           onTokenReceived={handleTokenReceived}
                           onError={handlePaymentError}
@@ -1034,6 +1103,7 @@ export default function PurimEventPage() {
                           disabled={isSubmitting}
                         />
                       </div>
+                      */}
 
                       <AnimatePresence>
                         {paymentMethod === "check" && (

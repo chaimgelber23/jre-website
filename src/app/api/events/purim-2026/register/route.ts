@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { processSquarePayment } from "@/lib/square";
-import { processTokenizedPayment } from "@/lib/banquest";
+import { processDirectCardPayment } from "@/lib/banquest";
+// KEPT FOR FALLBACK: Hosted Tokenization (has expiry encoding bug as of Feb 2026)
+// import { processTokenizedPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
 
@@ -37,6 +39,10 @@ export async function POST(request: NextRequest) {
       paymentProcessor,
       amount,
       cardName,
+      cardNumber,
+      cardExpiry,
+      cardCvv,
+      // KEPT FOR FALLBACK: paymentToken (for tokenized flow)
       paymentToken,
       message,
       guests,
@@ -83,26 +89,38 @@ export async function POST(request: NextRequest) {
       // Determine which processor to use (default to Banquest - lower fees)
       const processor = paymentProcessor || "banquest";
 
-      if (!paymentToken) {
-        return NextResponse.json(
-          { success: false, error: "Payment token is required" },
-          { status: 400 }
-        );
-      }
-
-      // Parse name for first/last
-      const nameParts = (cardName || name).trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
       if (processor === "banquest") {
-        // Process payment via Banquest (tokenized - PCI compliant)
-        const paymentResult = await processTokenizedPayment({
-          paymentToken,
+        // Direct card payment - matches old working site (thejre.org) pattern
+        // Sends card, expiry_month, expiry_year, cvv2 as separate fields to charge API
+        if (!cardNumber || !cardExpiry || !cardCvv) {
+          return NextResponse.json(
+            { success: false, error: "Card details are required" },
+            { status: 400 }
+          );
+        }
+
+        // Parse expiry: "MM/YY" or "MM/YYYY" → separate month + 4-digit year
+        const expiryParts = cardExpiry.split("/");
+        if (expiryParts.length < 2 || !expiryParts[0] || !expiryParts[1]) {
+          return NextResponse.json(
+            { success: false, error: "Invalid expiry date format. Please use MM/YY." },
+            { status: 400 }
+          );
+        }
+        const expMonth = parseInt(expiryParts[0], 10);
+        let expYear = parseInt(expiryParts[1], 10);
+        if (expYear < 100) {
+          expYear += 2000; // Convert 2-digit to 4-digit year (e.g., 26 → 2026)
+        }
+
+        const paymentResult = await processDirectCardPayment({
+          cardNumber: cardNumber.replace(/\s/g, ""),
+          expiryMonth: expMonth,
+          expiryYear: expYear,
+          cvv: cardCvv,
           amount: totalAmount,
+          cardName: cardName || name,
           email,
-          firstName,
-          lastName,
           description: `JRE Purim 2026 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
         });
 
@@ -117,6 +135,13 @@ export async function POST(request: NextRequest) {
         paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
       } else if (processor === "square") {
         // Process payment via Square (backup - tokenized)
+        if (!paymentToken) {
+          return NextResponse.json(
+            { success: false, error: "Payment token is required for Square" },
+            { status: 400 }
+          );
+        }
+
         const paymentResult = await processSquarePayment({
           sourceId: paymentToken,
           amount: totalAmount,
@@ -140,6 +165,21 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+
+      /* KEPT FOR FALLBACK: Banquest Hosted Tokenization (has expiry encoding bug)
+      if (processor === "banquest") {
+        const nameParts = (cardName || name).trim().split(" ");
+        const paymentResult = await processTokenizedPayment({
+          paymentToken,
+          amount: totalAmount,
+          email,
+          firstName: nameParts[0] || "",
+          lastName: nameParts.slice(1).join(" ") || "",
+          description: `JRE Purim 2026 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
+        });
+        // ...
+      }
+      */
     } else if (paymentMethod === "check") {
       paymentStatus = "pending_check";
       paymentReference = `check_${Date.now()}`;
