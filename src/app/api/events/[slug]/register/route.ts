@@ -1,8 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { appendEventRegistration, slugToSheetName } from "@/lib/google-sheets/event-sheets";
-import { processSquarePayment } from "@/lib/square";
-import { processTokenizedPayment } from "@/lib/banquest";
+// Square kept for backup - uncomment to switch processors
+// import { processSquarePayment } from "@/lib/square";
+import { processDirectCardPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
@@ -15,7 +16,7 @@ export async function POST(
     const body = await request.json();
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message, paymentToken, cardName, paymentMethod, paymentProcessor, guests } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -90,66 +91,48 @@ export async function POST(
     let paymentReference = "";
 
     if (subtotal > 0 && paymentMethod === "online") {
-      // Determine which processor to use (default to Banquest - lower fees)
-      const processor = paymentProcessor || "banquest";
-
-      if (!paymentToken) {
+      // Validate card fields
+      if (!cardNumber || !cardExpiry || !cardCvv) {
         return NextResponse.json(
-          { success: false, error: "Payment token is required" },
+          { success: false, error: "Card details are required for online payment" },
           { status: 400 }
         );
       }
 
-      // Parse name for first/last
-      const nameParts = (cardName || name).trim().split(" ");
-      const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
-
-      if (processor === "banquest") {
-        // Process payment via Banquest (tokenized - PCI compliant)
-        const paymentResult = await processTokenizedPayment({
-          paymentToken,
-          amount: subtotal,
-          email,
-          firstName,
-          lastName,
-          description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
-        });
-
-        if (!paymentResult.success) {
-          return NextResponse.json(
-            { success: false, error: paymentResult.error || "Payment failed" },
-            { status: 400 }
-          );
-        }
-
-        paymentStatus = "success";
-        paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
-      } else if (processor === "square") {
-        // Process payment via Square (backup - tokenized)
-        const paymentResult = await processSquarePayment({
-          sourceId: paymentToken,
-          amount: subtotal,
-          email,
-          name: cardName || name,
-          description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
-        });
-
-        if (!paymentResult.success) {
-          return NextResponse.json(
-            { success: false, error: paymentResult.error || "Payment failed" },
-            { status: 400 }
-          );
-        }
-
-        paymentStatus = "success";
-        paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
-      } else {
+      // Parse expiry: "MM/YY" or "MM/YYYY" → separate month + 4-digit year
+      const expiryParts = cardExpiry.split("/");
+      if (expiryParts.length < 2 || !expiryParts[0] || !expiryParts[1]) {
         return NextResponse.json(
-          { success: false, error: "Invalid payment processor" },
+          { success: false, error: "Invalid expiry date format. Please use MM/YY." },
           { status: 400 }
         );
       }
+      const expMonth = parseInt(expiryParts[0], 10);
+      let expYear = parseInt(expiryParts[1], 10);
+      if (expYear < 100) {
+        expYear += 2000;
+      }
+
+      const paymentResult = await processDirectCardPayment({
+        cardNumber: cardNumber.replace(/\s/g, ""),
+        expiryMonth: expMonth,
+        expiryYear: expYear,
+        cvv: cardCvv,
+        amount: subtotal,
+        cardName: cardName || name,
+        email,
+        description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
+      });
+
+      if (!paymentResult.success) {
+        return NextResponse.json(
+          { success: false, error: paymentResult.error || "Payment failed" },
+          { status: 400 }
+        );
+      }
+
+      paymentStatus = "success";
+      paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
     } else if (subtotal === 0) {
       // Free event
       paymentStatus = "success";
