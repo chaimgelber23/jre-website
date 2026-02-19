@@ -589,6 +589,8 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
       expiry_year: expYear,
       cvv2: data.cvv,
       customer: {
+        first_name: firstName,
+        last_name: lastName,
         email: data.email,
         send_receipt: false,
       },
