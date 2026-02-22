@@ -25,41 +25,26 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
           {/* About Section */}
           <FadeUp className="lg:col-span-2">
-            <Link href="/" className="inline-block mb-6 relative group">
-              <div className="relative">
-                {/* Torch glow - matches header */}
-                <motion.div
-                  animate={{
-                    opacity: [0.3, 0.6, 0.3],
-                    scale: [1, 1.15, 1],
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="absolute left-[3%] top-[30%] -translate-y-1/2 w-14 h-14 bg-gradient-to-br from-[#EF8046] via-[#f5a623] to-transparent blur-[20px] rounded-full -z-10 pointer-events-none"
-                />
-                <motion.div
-                  animate={{
-                    opacity: [0.5, 0.9, 0.5],
-                    scale: [0.9, 1.25, 0.9],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                  }}
-                  className="absolute left-[6%] top-[20%] -translate-y-1/2 w-7 h-7 bg-yellow-400 blur-[10px] rounded-full -z-10 mix-blend-screen pointer-events-none"
-                />
-                <Image
-                  src="/images/logo.png"
-                  alt="The JRE"
-                  width={170}
-                  height={57}
-                  className="brightness-0 invert opacity-95 relative z-10"
-                />
-              </div>
+            <Link href="/" className="inline-block mb-6 relative">
+              <Image
+                src="/images/logo.png"
+                alt="The JRE"
+                width={140}
+                height={47}
+                className="brightness-0 invert"
+              />
+              {/* Torch/flame glow - matches header */}
+              <div
+                className="absolute pointer-events-none"
+                style={{
+                  top: '2%',
+                  left: '3%',
+                  width: '20px',
+                  height: '24px',
+                  background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
+                  filter: 'blur(4px)',
+                }}
+              />
             </Link>
             <p className="text-gray-300 leading-relaxed mb-6">
               The JRE&apos;s mission is to enable Jews of all backgrounds to access

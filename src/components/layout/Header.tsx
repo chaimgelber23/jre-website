@@ -52,59 +52,35 @@ export default function Header() {
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400 }}
-                className="relative flex items-center"
+                className="relative"
               >
-                {/* Torch glow behind logo - only visible at top of page */}
-                <AnimatePresence>
-                  {!isScrolled && (
-                    <>
-                      {/* Outer Aura */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{
-                          opacity: [0.4, 0.7, 0.4],
-                          scale: [1, 1.15, 1],
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{
-                          duration: 4,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                        className="absolute left-[3%] top-[30%] -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EF8046] via-[#f5a623] to-transparent blur-[25px] rounded-full -z-10 pointer-events-none"
-                      />
-                      {/* Inner Core */}
-                      <motion.div
-                        initial={{ opacity: 0 }}
-                        animate={{
-                          opacity: [0.6, 1, 0.6],
-                          scale: [0.9, 1.25, 0.9],
-                        }}
-                        exit={{ opacity: 0 }}
-                        transition={{
-                          duration: 2,
-                          repeat: Infinity,
-                          ease: "easeInOut",
-                        }}
-                        className="absolute left-[6%] top-[20%] -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 blur-[12px] rounded-full -z-10 mix-blend-screen pointer-events-none"
-                      />
-                    </>
-                  )}
-                </AnimatePresence>
-
                 <Image
                   src="/images/logo.png"
                   alt="The JRE"
-                  width={210}
-                  height={70}
+                  width={180}
+                  height={60}
                   className={cn(
-                    "w-auto transition-all duration-500 relative z-10",
+                    "w-auto transition-all duration-500",
                     isScrolled
-                      ? "h-14"
-                      : "h-20 brightness-0 invert opacity-95"
+                      ? "h-12"
+                      : "h-16 brightness-0 invert opacity-95"
                   )}
                   priority
                 />
+                {/* Torch/flame glow - only when not scrolled */}
+                {!isScrolled && (
+                  <div
+                    className="absolute pointer-events-none"
+                    style={{
+                      top: '2%',
+                      left: '3%',
+                      width: '24px',
+                      height: '28px',
+                      background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
+                      filter: 'blur(4px)',
+                    }}
+                  />
+                )}
               </motion.div>
             </Link>
 
