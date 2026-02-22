@@ -188,17 +188,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
       {/* Background */}
       <div className="absolute inset-0 bg-[#2d3748]" />
 
-      {/* Subtle decorative elements */}
-      <div className="absolute inset-0 overflow-hidden">
-        <DecorativeShape
-          className="absolute top-10 left-10 w-64 h-64 bg-[#EF8046]/10 rounded-full blur-3xl"
-          delay={0}
-        />
-        <DecorativeShape
-          className="absolute bottom-10 right-10 w-80 h-80 bg-[#EF8046]/8 rounded-full blur-3xl"
-          delay={0.3}
-        />
-      </div>
+
 
       <div className="container mx-auto px-6 relative z-10">
         <motion.div
@@ -226,100 +216,100 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
         </motion.div>
 
         <Link href={`/events/${event.id}`} className="block cursor-pointer">
-        <div className="grid lg:grid-cols-2 gap-8 items-center max-w-6xl mx-auto">
-          {/* Image side */}
-          <motion.div
-            initial={{ opacity: 0, x: -50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            className="relative"
-          >
-            <div className="relative h-[400px] rounded-2xl overflow-hidden group">
-              <Image
-                src={event.image}
-                alt={event.title}
-                fill
-                className="object-cover object-left transition-transform duration-700 group-hover:scale-105"
-              />
-              {/* Animated border */}
-              <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors" />
+          <div className="grid lg:grid-cols-2 gap-8 items-center max-w-6xl mx-auto">
+            {/* Image side */}
+            <motion.div
+              initial={{ opacity: 0, x: -50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6 }}
+              className="relative"
+            >
+              <div className="relative h-[400px] rounded-2xl overflow-hidden group">
+                <Image
+                  src={event.image}
+                  alt={event.title}
+                  fill
+                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105"
+                />
+                {/* Animated border */}
+                <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors" />
 
-              {/* Corner accents */}
-              <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
-              <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
-            </div>
-          </motion.div>
+                {/* Corner accents */}
+                <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
+                <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
+              </div>
+            </motion.div>
 
-          {/* Content side */}
-          <motion.div
-            initial={{ opacity: 0, x: 50 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6, delay: 0.2 }}
-            className="text-white"
-          >
-            <h3 className="text-3xl md:text-4xl font-bold mb-4">
-              {event.title}
-            </h3>
-            <p className="text-gray-300 text-lg mb-8 leading-relaxed">
-              {event.description}
-            </p>
+            {/* Content side */}
+            <motion.div
+              initial={{ opacity: 0, x: 50 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+              className="text-white"
+            >
+              <h3 className="text-3xl md:text-4xl font-bold mb-4">
+                {event.title}
+              </h3>
+              <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+                {event.description}
+              </p>
 
-            <div className="space-y-4 mb-8">
-              <motion.div
-                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{
-                  x: 10,
-                  backgroundColor: "rgba(255,255,255,0.15)",
-                }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                  <Calendar className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Date</p>
-                  <p className="font-semibold">{event.date}</p>
-                </div>
-              </motion.div>
+              <div className="space-y-4 mb-8">
+                <motion.div
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                  whileHover={{
+                    x: 10,
+                    backgroundColor: "rgba(255,255,255,0.15)",
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                    <Calendar className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Date</p>
+                    <p className="font-semibold">{event.date}</p>
+                  </div>
+                </motion.div>
 
-              <motion.div
-                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{
-                  x: 10,
-                  backgroundColor: "rgba(255,255,255,0.15)",
-                }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                  <Clock className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Time</p>
-                  <p className="font-semibold">{event.time}</p>
-                </div>
-              </motion.div>
+                <motion.div
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                  whileHover={{
+                    x: 10,
+                    backgroundColor: "rgba(255,255,255,0.15)",
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Time</p>
+                    <p className="font-semibold">{event.time}</p>
+                  </div>
+                </motion.div>
 
-              <motion.div
-                className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                whileHover={{
-                  x: 10,
-                  backgroundColor: "rgba(255,255,255,0.15)",
-                }}
-                transition={{ duration: 0.2 }}
-              >
-                <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                  <MapPin className="w-6 h-6 text-white" />
-                </div>
-                <div>
-                  <p className="text-sm text-gray-400">Location</p>
-                  <p className="font-semibold">{event.location}</p>
-                </div>
-              </motion.div>
-            </div>
+                <motion.div
+                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                  whileHover={{
+                    x: 10,
+                    backgroundColor: "rgba(255,255,255,0.15)",
+                  }}
+                  transition={{ duration: 0.2 }}
+                >
+                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                    <MapPin className="w-6 h-6 text-white" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-gray-400">Location</p>
+                    <p className="font-semibold">{event.location}</p>
+                  </div>
+                </motion.div>
+              </div>
 
-            <motion.span
+              <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
                 className="inline-flex bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg shadow-[#EF8046]/30 items-center gap-3"
@@ -332,8 +322,8 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                   <ArrowRight className="w-5 h-5" />
                 </motion.span>
               </motion.span>
-          </motion.div>
-        </div>
+            </motion.div>
+          </div>
         </Link>
       </div>
     </section>
@@ -563,6 +553,86 @@ const standalonePast: DisplayEvent[] = [
   },
 ];
 
+function EventsSkeleton() {
+  return (
+    <div className="w-full">
+      {/* Featured Location Skeleton */}
+      <section className="relative py-20 overflow-hidden bg-[#2d3748]">
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="text-center mb-12">
+            <div className="w-40 h-8 bg-gray-600/50 rounded-full mx-auto mb-4 animate-pulse" />
+            <div className="w-96 h-12 bg-gray-600/50 rounded-lg mx-auto animate-pulse" />
+          </div>
+          <div className="grid lg:grid-cols-2 gap-8 items-center max-w-6xl mx-auto">
+            <div className="relative h-[400px] rounded-2xl bg-gray-600/50 animate-pulse" />
+            <div className="space-y-6">
+              <div className="w-3/4 h-12 bg-gray-600/50 rounded-lg animate-pulse" />
+              <div className="space-y-3">
+                <div className="w-full h-4 bg-gray-600/50 rounded animate-pulse" />
+                <div className="w-full h-4 bg-gray-600/50 rounded animate-pulse" />
+                <div className="w-2/3 h-4 bg-gray-600/50 rounded animate-pulse" />
+              </div>
+              <div className="space-y-4 pt-4">
+                {[1, 2, 3].map(i => (
+                  <div key={i} className="flex gap-4 p-4 bg-white/5 rounded-xl animate-pulse">
+                    <div className="w-12 h-12 bg-gray-600/50 rounded-xl" />
+                    <div className="flex-1 space-y-2 py-1">
+                      <div className="w-16 h-3 bg-gray-600/50 rounded" />
+                      <div className="w-32 h-4 bg-gray-600/50 rounded" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+              <div className="w-48 h-14 bg-gray-600/50 rounded-xl animate-pulse mt-8" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* Grid Skeletons */}
+      <section className="py-20 bg-white relative">
+        <div className="container mx-auto px-6">
+          <div className="text-center mb-12">
+            <div className="w-48 h-6 bg-gray-200 rounded-full mx-auto mb-3 animate-pulse" />
+            <div className="w-64 h-12 bg-gray-200 rounded-lg mx-auto animate-pulse" />
+          </div>
+          <div className="flex flex-wrap justify-center gap-8">
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="w-[350px] bg-white rounded-2xl overflow-hidden shadow-lg border border-gray-100 flex flex-col">
+                <div className="h-52 bg-gray-200 animate-pulse" />
+                <div className="p-6 flex-grow space-y-4">
+                  <div className="w-3/4 h-7 bg-gray-200 rounded animate-pulse" />
+                  <div className="space-y-2">
+                    <div className="w-full h-4 bg-gray-200 rounded animate-pulse" />
+                    <div className="w-5/6 h-4 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                  <div className="space-y-3 pt-4 px-1 border-t border-gray-100">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                      <div className="w-32 h-4 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                      <div className="w-24 h-4 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-gray-200 animate-pulse" />
+                      <div className="w-36 h-4 bg-gray-200 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="pt-6 mt-auto">
+                    <div className="w-32 h-5 bg-gray-200 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+    </div>
+  );
+}
+
 export default function EventsPage() {
   const [upcomingEvents, setUpcomingEvents] = useState<DisplayEvent[]>([]);
   const [pastEvents, setPastEvents] = useState<DisplayEvent[]>([]);
@@ -629,25 +699,6 @@ export default function EventsPage() {
   const featuredEvent = upcomingEvents.find((e) => e.featured);
   const otherEvents = upcomingEvents.filter((e) => !e.featured);
 
-  if (isLoading) {
-    return (
-      <main className="min-h-screen">
-        <Header />
-        <div className="flex items-center justify-center min-h-[60vh]">
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="flex flex-col items-center gap-4"
-          >
-            <Loader2 className="w-10 h-10 text-[#EF8046] animate-spin" />
-            <p className="text-gray-500">Loading events...</p>
-          </motion.div>
-        </div>
-        <Footer />
-      </main>
-    );
-  }
-
   return (
     <main className="min-h-screen">
       <Header />
@@ -657,17 +708,7 @@ export default function EventsPage() {
         {/* Background - dark to match spotlight */}
         <div className="absolute inset-0 bg-[#2d3748]" />
 
-        {/* Subtle decorative elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <DecorativeShape
-            className="absolute -top-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"
-            delay={0}
-          />
-          <DecorativeShape
-            className="absolute -bottom-32 -left-32 w-[400px] h-[400px] bg-white/5 rounded-full blur-3xl"
-            delay={0.2}
-          />
-        </div>
+
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.p
@@ -723,82 +764,76 @@ export default function EventsPage() {
         </div>
       </section>
 
-      {/* Featured Event Spotlight */}
-      {featuredEvent && <FeaturedEventSpotlight event={featuredEvent} />}
+      {isLoading ? (
+        <EventsSkeleton />
+      ) : (
+        <>
+          {/* Featured Event Spotlight */}
+          {featuredEvent && <FeaturedEventSpotlight event={featuredEvent} />}
 
-      {/* Other Upcoming Events */}
-      {otherEvents.length > 0 && (
-        <section className="py-20 bg-white relative overflow-hidden">
-          {/* Background decoration */}
-          <div className="absolute top-0 right-0 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
-          <div className="absolute bottom-0 left-0 w-64 h-64 bg-[#EF8046]/5 rounded-full blur-3xl" />
+          {/* Other Upcoming Events */}
+          {otherEvents.length > 0 && (
+            <section className="py-20 bg-white relative overflow-hidden">
 
-          <div className="container mx-auto px-6 relative z-10">
-            <FadeUp className="text-center mb-12">
-              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-                Mark Your Calendar
-              </p>
-              <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                More Events
-              </h2>
-            </FadeUp>
 
-            <div className="flex flex-wrap justify-center gap-8">
-              {otherEvents.map((event, index) => (
-                <EventCard key={event.id} event={event} index={index} />
-              ))}
-            </div>
-          </div>
-        </section>
-      )}
+              <div className="container mx-auto px-6 relative z-10">
+                <FadeUp className="text-center mb-12">
+                  <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
+                    Mark Your Calendar
+                  </p>
+                  <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
+                    More Events
+                  </h2>
+                </FadeUp>
 
-      {/* No events message */}
-      {upcomingEvents.length === 0 && !isLoading && (
-        <section className="py-20 bg-white">
-          <div className="container mx-auto px-6 text-center">
-            <FadeUp>
-              <div className="max-w-lg mx-auto">
-                <Calendar className="w-16 h-16 text-[#EF8046]/40 mx-auto mb-6" />
-                <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                  Stay Tuned!
-                </h2>
-                <p className="text-gray-600 text-lg">
-                  We&apos;re planning exciting new events. Join our mailing list
-                  to be the first to know!
-                </p>
-                <Link href="/contact">
-                  <motion.button
-                    whileHover={{ scale: 1.03 }}
-                    whileTap={{ scale: 0.98 }}
-                    className="mt-8 bg-[#EF8046] text-white px-8 py-4 rounded font-medium hover:bg-[#d96a2f]"
-                  >
-                    Get in Touch
-                  </motion.button>
-                </Link>
+                <div className="flex flex-wrap justify-center gap-8">
+                  {otherEvents.map((event, index) => (
+                    <EventCard key={event.id} event={event} index={index} />
+                  ))}
+                </div>
               </div>
-            </FadeUp>
-          </div>
-        </section>
-      )}
+            </section>
+          )}
 
-      {/* Past Events - Horizontal Carousel */}
-      {pastEvents.length > 0 && (
-        <PastEventsCarousel events={pastEvents} />
+          {/* No events message */}
+          {upcomingEvents.length === 0 && !isLoading && (
+            <section className="py-20 bg-white">
+              <div className="container mx-auto px-6 text-center">
+                <FadeUp>
+                  <div className="max-w-lg mx-auto">
+                    <Calendar className="w-16 h-16 text-[#EF8046]/40 mx-auto mb-6" />
+                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
+                      Stay Tuned!
+                    </h2>
+                    <p className="text-gray-600 text-lg">
+                      We&apos;re planning exciting new events. Join our mailing list
+                      to be the first to know!
+                    </p>
+                    <Link href="/contact">
+                      <motion.button
+                        whileHover={{ scale: 1.03 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="mt-8 bg-[#EF8046] text-white px-8 py-4 rounded font-medium hover:bg-[#d96a2f]"
+                      >
+                        Get in Touch
+                      </motion.button>
+                    </Link>
+                  </div>
+                </FadeUp>
+              </div>
+            </section>
+          )}
+
+          {/* Past Events - Horizontal Carousel */}
+          {pastEvents.length > 0 && (
+            <PastEventsCarousel events={pastEvents} />
+          )}
+        </>
       )}
 
       {/* CTA Section */}
       <section className="py-20 bg-[#EF8046] relative overflow-hidden">
-        {/* Subtle decorative shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <DecorativeShape
-            className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"
-            delay={0}
-          />
-          <DecorativeShape
-            className="absolute bottom-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl"
-            delay={0.2}
-          />
-        </div>
+
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <FadeUp>

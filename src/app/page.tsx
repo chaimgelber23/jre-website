@@ -87,18 +87,20 @@ export default function Home() {
               className="flex flex-col sm:flex-row gap-4 justify-center items-center"
             >
               <Link href="/events">
-                <button
-                  className="bg-[#EF8046] text-white px-8 py-4 rounded font-medium text-lg shadow-lg hover:shadow-xl hover:bg-[#d96a2f] transition-all flex items-center gap-2"
+                <motion.button
+                  whileHover={{ scale: 1.05, y: -2 }}
+                  whileTap={{ scale: 0.98 }}
+                  className="bg-[#EF8046] text-white px-8 py-4 rounded font-medium text-lg shadow-lg shadow-[#EF8046]/20 hover:shadow-xl hover:shadow-[#EF8046]/40 hover:bg-[#d96a2f] transition-colors flex items-center gap-2 group"
                 >
                   Upcoming Events
-                  <ArrowRight className="w-5 h-5" />
-                </button>
+                  <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                </motion.button>
               </Link>
               <Link href="/about">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-gray-900 transition-all"
+                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-gray-900 shadow-lg hover:shadow-xl transition-colors"
                 >
                   Learn More
                 </motion.button>
@@ -133,14 +135,13 @@ export default function Home() {
                       className="object-cover"
                     />
                     <div className="absolute inset-0 bg-black/30 flex items-center justify-center">
-                      <button onClick={() => setIsVideoPlaying(true)}>
-                        <motion.div
-                          whileHover={{ scale: 1.1 }}
-                          whileTap={{ scale: 0.95 }}
-                          className="w-20 h-20 bg-[#EF8046] rounded-full flex items-center justify-center shadow-lg cursor-pointer"
+                      <button onClick={() => setIsVideoPlaying(true)} className="relative group">
+                        <div className="absolute inset-0 bg-[#EF8046] rounded-full animate-ping opacity-60 group-hover:opacity-100 transition-opacity"></div>
+                        <div
+                          className="relative w-20 h-20 bg-[#EF8046] rounded-full flex items-center justify-center shadow-lg cursor-pointer z-10 transform group-hover:scale-110 active:scale-95 transition-transform duration-300"
                         >
                           <Play className="w-8 h-8 text-white ml-1" />
-                        </motion.div>
+                        </div>
                       </button>
                     </div>
                   </>
@@ -198,7 +199,8 @@ export default function Home() {
             <FadeUp delay={0.1}>
               <Link href="/classes">
                 <ScaleOnHover scale={1.02}>
-                  <div className="relative h-80 rounded-xl overflow-hidden group cursor-pointer shadow-lg">
+                  <div className="relative h-80 rounded-xl overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-[#EF8046]/60 transition-colors duration-500 z-20 pointer-events-none" />
                     <Image
                       src="/images/classes/WomensClass.png"
                       alt="Our Classes"
@@ -229,7 +231,8 @@ export default function Home() {
             <FadeUp delay={0.2}>
               <Link href="/events">
                 <ScaleOnHover scale={1.02}>
-                  <div className="relative h-80 rounded-xl overflow-hidden group cursor-pointer shadow-lg">
+                  <div className="relative h-80 rounded-xl overflow-hidden group cursor-pointer shadow-lg hover:shadow-2xl transition-all duration-300">
+                    <div className="absolute inset-0 rounded-xl border-2 border-transparent group-hover:border-[#EF8046]/60 transition-colors duration-500 z-20 pointer-events-none" />
                     <Image
                       src="/images/events/ScotchNSteak.jpg"
                       alt="Our Events"
@@ -354,18 +357,18 @@ export default function Home() {
             <div className="flex flex-col sm:flex-row gap-4 justify-center">
               <Link href="/events">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-white text-[#EF8046] px-8 py-4 rounded font-medium text-lg shadow-lg hover:shadow-xl transition-all"
+                  className="bg-white text-[#EF8046] px-8 py-4 rounded font-medium text-lg shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-black/20 transition-all font-semibold"
                 >
                   View Upcoming Events
                 </motion.button>
               </Link>
               <Link href="/donate">
                 <motion.button
-                  whileHover={{ scale: 1.02 }}
+                  whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-[#EF8046] transition-all"
+                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-[#EF8046] shadow-lg hover:shadow-xl transition-all font-semibold"
                 >
                   Support Our Mission
                 </motion.button>

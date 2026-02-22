@@ -264,21 +264,7 @@ export default function ClassesPage() {
         {/* Gradient background */}
         <div className="absolute inset-0 bg-gradient-to-br from-[#2d3748] via-[#1a202c] to-[#2d3748]" />
 
-        {/* Decorative elements */}
-        <div className="absolute inset-0 overflow-hidden">
-          <DecorativeShape
-            className="absolute -top-20 -right-20 w-96 h-96 bg-[#EF8046]/10 rounded-full blur-3xl"
-            delay={0}
-          />
-          <DecorativeShape
-            className="absolute -bottom-32 -left-32 w-[400px] h-[400px] bg-[#EF8046]/5 rounded-full blur-3xl"
-            delay={0.2}
-          />
-          <DecorativeShape
-            className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[600px] h-[600px] bg-[#EF8046]/5 rounded-full blur-3xl"
-            delay={0.4}
-          />
-        </div>
+
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.div
@@ -339,9 +325,7 @@ export default function ClassesPage() {
 
       {/* Classes Grid */}
       <section className="py-20 bg-[#FBFBFB] relative overflow-hidden">
-        {/* Background decorations */}
-        <div className="absolute top-20 left-10 w-72 h-72 bg-[#EF8046]/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-20 right-10 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
+
 
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid md:grid-cols-2 gap-8">
@@ -397,17 +381,7 @@ export default function ClassesPage() {
 
       {/* CTA Section */}
       <section className="py-20 bg-[#EF8046] relative overflow-hidden">
-        {/* Decorative shapes */}
-        <div className="absolute inset-0 overflow-hidden">
-          <DecorativeShape
-            className="absolute top-0 left-0 w-64 h-64 bg-white/10 rounded-full blur-3xl"
-            delay={0}
-          />
-          <DecorativeShape
-            className="absolute bottom-0 right-0 w-80 h-80 bg-white/5 rounded-full blur-3xl"
-            delay={0.2}
-          />
-        </div>
+
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <FadeUp>

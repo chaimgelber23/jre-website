@@ -29,21 +29,9 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
               <Image
                 src="/images/logo.png"
                 alt="The JRE"
-                width={140}
-                height={47}
+                width={170}
+                height={57}
                 className="brightness-0 invert"
-              />
-              {/* Torch/flame glow effect */}
-              <div
-                className="absolute pointer-events-none"
-                style={{
-                  top: '2%',
-                  left: '3%',
-                  width: '20px',
-                  height: '24px',
-                  background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
-                  filter: 'blur(4px)',
-                }}
               />
             </Link>
             <p className="text-gray-300 leading-relaxed mb-6">

@@ -58,30 +58,16 @@ export default function Header() {
                 <Image
                   src="/images/logo.png"
                   alt="The JRE"
-                  width={180}
-                  height={60}
+                  width={210}
+                  height={70}
                   className={cn(
                     "w-auto transition-all duration-500",
                     isScrolled
-                      ? "h-12"
-                      : "h-16 brightness-0 invert opacity-95"
+                      ? "h-14"
+                      : "h-20 brightness-0 invert opacity-95"
                   )}
                   priority
                 />
-                {/* Torch/flame glow - only when not scrolled */}
-                {!isScrolled && (
-                  <div
-                    className="absolute pointer-events-none"
-                    style={{
-                      top: '2%',
-                      left: '3%',
-                      width: '24px',
-                      height: '28px',
-                      background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
-                      filter: 'blur(4px)',
-                    }}
-                  />
-                )}
               </motion.div>
             </Link>
 

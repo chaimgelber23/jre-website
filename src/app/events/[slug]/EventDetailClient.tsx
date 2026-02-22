@@ -384,8 +384,6 @@ export default function EventDetailClient({
       <main className="min-h-screen">
         <Header />
         <section className="pt-32 pb-20 min-h-[80vh] flex items-center justify-center bg-gradient-to-b from-[#FBFBFB] to-white relative overflow-hidden">
-          <div className="absolute top-20 left-10 w-64 h-64 bg-[#EF8046]/10 rounded-full blur-3xl" />
-          <div className="absolute bottom-20 right-10 w-80 h-80 bg-green-500/10 rounded-full blur-3xl" />
 
           <motion.div
             initial={{ opacity: 0, y: 20 }}
@@ -562,8 +560,6 @@ export default function EventDetailClient({
 
       {/* Content */}
       <section className="pt-12 pb-24 bg-white relative">
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[#EF8046]/5 rounded-full blur-3xl" />
-
         <div className="container mx-auto px-6 relative z-10">
           <div className="grid lg:grid-cols-3 gap-10">
             {/* Event Details - Left Column */}
@@ -623,7 +619,7 @@ export default function EventDetailClient({
                     <h2 className="text-2xl font-bold text-gray-900 mb-4">
                       About This Event
                     </h2>
-                    <div className="prose prose-lg max-w-none text-gray-600">
+                    <div className="prose prose-lg max-w-prose text-gray-600">
                       {event.description.split("\n\n").map((paragraph, index) => (
                         <p key={index} className="mb-4">
                           {paragraph}
@@ -728,7 +724,7 @@ export default function EventDetailClient({
                           value={formState.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
                           placeholder="Full Name *"
                         />
                         <input
@@ -737,7 +733,7 @@ export default function EventDetailClient({
                           value={formState.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
                           placeholder="Email Address *"
                         />
                         <input
@@ -745,7 +741,7 @@ export default function EventDetailClient({
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
                           placeholder="Phone (optional)"
                         />
                       </div>
@@ -818,19 +814,12 @@ export default function EventDetailClient({
                             }
                           }}
                           className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
-                              ? "bg-gray-50 text-gray-500 border border-gray-200"
-                              : "bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white shadow-lg shadow-[#EF8046]/25"
+                            ? "bg-gray-50 text-gray-500 border border-transparent hover:bg-gray-100"
+                            : "border-2 border-[#EF8046] text-[#EF8046] hover:bg-[#EF8046]/5 shadow-sm"
                             }`}
                           whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          {!showSponsorship && (
-                            <motion.div
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                              animate={{ x: ["-100%", "200%"] }}
-                              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
-                            />
-                          )}
                           <span className="relative flex items-center gap-2">
                             {showSponsorship ? (
                               <>
@@ -903,12 +892,12 @@ export default function EventDetailClient({
                                         whileHover={{ y: -3, scale: 1.02 }}
                                         whileTap={{ scale: 0.97 }}
                                         className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${isSelected
-                                            ? "border-[#EF8046] bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5"
-                                            : isTop
-                                              ? "border-[#EF8046]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
-                                              : isHigh
-                                                ? "border-[#EF8046]/20 bg-white hover:border-[#EF8046]/40"
-                                                : "border-gray-200 bg-white hover:border-gray-300"
+                                          ? "border-[#EF8046] bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5"
+                                          : isTop
+                                            ? "border-[#EF8046]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
+                                            : isHigh
+                                              ? "border-[#EF8046]/20 bg-white hover:border-[#EF8046]/40"
+                                              : "border-gray-200 bg-white hover:border-gray-300"
                                           }`}
                                       >
                                         {/* Shine sweep for top/high tiers */}
@@ -956,8 +945,8 @@ export default function EventDetailClient({
                                               ${s.price}
                                             </span>
                                             <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${isSelected
-                                                ? "border-[#EF8046] bg-[#EF8046]"
-                                                : "border-gray-300"
+                                              ? "border-[#EF8046] bg-[#EF8046]"
+                                              : "border-gray-300"
                                               }`}>
                                               {isSelected && (
                                                 <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
@@ -984,7 +973,7 @@ export default function EventDetailClient({
                                       value={formState.message}
                                       onChange={handleChange}
                                       rows={2}
-                                      className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm resize-none transition-all shadow-sm"
                                       placeholder="In honor of... (optional)"
                                     />
                                     <input
@@ -992,7 +981,7 @@ export default function EventDetailClient({
                                       name="honoreeEmail"
                                       value={formState.honoreeEmail}
                                       onChange={handleChange}
-                                      className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
                                       placeholder="Honoree's email (optional - we'll notify them)"
                                     />
                                   </motion.div>
@@ -1035,24 +1024,34 @@ export default function EventDetailClient({
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("online")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "online"
-                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
-                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "online"
+                            ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
+                            : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
                           <CreditCard className="w-5 h-5 mx-auto mb-1" />
                           <span className="text-sm font-medium">Credit Card</span>
+                          {paymentMethod === "online" && (
+                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
+                              <Check className="w-4 h-4 text-[#EF8046]" />
+                            </div>
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setPaymentMethod("check")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "check"
-                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
-                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "check"
+                            ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
+                            : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
                           <span className="text-lg block mb-1">&#9993;</span>
                           <span className="text-sm font-medium">Send a Check</span>
+                          {paymentMethod === "check" && (
+                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
+                              <Check className="w-4 h-4 text-[#EF8046]" />
+                            </div>
+                          )}
                         </button>
                       </div>
 
@@ -1212,6 +1211,6 @@ export default function EventDetailClient({
       </section>
 
       <Footer />
-    </main>
+    </main >
   );
 }
