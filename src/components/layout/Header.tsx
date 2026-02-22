@@ -54,35 +54,43 @@ export default function Header() {
                 transition={{ type: "spring", stiffness: 400 }}
                 className="relative flex items-center"
               >
-                {/* Premium Animated Torch Glow - Outer Aura */}
-                <motion.div
-                  animate={{
-                    opacity: isScrolled ? 0 : [0.4, 0.7, 0.4],
-                    scale: isScrolled ? 0.8 : [1, 1.15, 1],
-                  }}
-                  transition={{
-                    duration: 4,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  className="absolute left-[3%] top-[30%] -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EF8046] via-[#f5a623] to-transparent blur-[25px] rounded-full -z-10 pointer-events-none"
-                  style={{ willChange: "opacity, transform" }}
-                />
-
-                {/* Premium Animated Torch Glow - Inner Core (Targeting the Flame dot) */}
-                <motion.div
-                  animate={{
-                    opacity: isScrolled ? 0 : [0.6, 1, 0.6],
-                    scale: isScrolled ? 0.8 : [0.9, 1.25, 0.9],
-                  }}
-                  transition={{
-                    duration: 2,
-                    repeat: Infinity,
-                    ease: "easeInOut"
-                  }}
-                  className="absolute left-[6%] top-[20%] -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 blur-[12px] rounded-full -z-10 mix-blend-screen pointer-events-none"
-                  style={{ willChange: "opacity, transform" }}
-                />
+                {/* Torch glow behind logo - only visible at top of page */}
+                <AnimatePresence>
+                  {!isScrolled && (
+                    <>
+                      {/* Outer Aura */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: [0.4, 0.7, 0.4],
+                          scale: [1, 1.15, 1],
+                        }}
+                        exit={{ opacity: 0 }}
+                        transition={{
+                          duration: 4,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="absolute left-[3%] top-[30%] -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EF8046] via-[#f5a623] to-transparent blur-[25px] rounded-full -z-10 pointer-events-none"
+                      />
+                      {/* Inner Core */}
+                      <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{
+                          opacity: [0.6, 1, 0.6],
+                          scale: [0.9, 1.25, 0.9],
+                        }}
+                        exit={{ opacity: 0 }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          ease: "easeInOut",
+                        }}
+                        className="absolute left-[6%] top-[20%] -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 blur-[12px] rounded-full -z-10 mix-blend-screen pointer-events-none"
+                      />
+                    </>
+                  )}
+                </AnimatePresence>
 
                 <Image
                   src="/images/logo.png"
