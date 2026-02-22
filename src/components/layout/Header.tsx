@@ -11,7 +11,6 @@ const navLinks = [
   { href: "/", label: "Home" },
   { href: "/events", label: "Events" },
   { href: "/classes", label: "Classes" },
-  { href: "/parsha", label: "Parsha" },
   { href: "/about", label: "About" },
   { href: "/contact", label: "Contact" },
 ];
@@ -53,15 +52,45 @@ export default function Header() {
               <motion.div
                 whileHover={{ scale: 1.02 }}
                 transition={{ type: "spring", stiffness: 400 }}
-                className="relative"
+                className="relative flex items-center"
               >
+                {/* Premium Animated Torch Glow - Outer Aura */}
+                <motion.div
+                  animate={{
+                    opacity: isScrolled ? 0 : [0.4, 0.7, 0.4],
+                    scale: isScrolled ? 0.8 : [1, 1.15, 1],
+                  }}
+                  transition={{
+                    duration: 4,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute left-[3%] top-[30%] -translate-y-1/2 w-16 h-16 sm:w-20 sm:h-20 bg-gradient-to-br from-[#EF8046] via-[#f5a623] to-transparent blur-[25px] rounded-full -z-10 pointer-events-none"
+                  style={{ willChange: "opacity, transform" }}
+                />
+
+                {/* Premium Animated Torch Glow - Inner Core (Targeting the Flame dot) */}
+                <motion.div
+                  animate={{
+                    opacity: isScrolled ? 0 : [0.6, 1, 0.6],
+                    scale: isScrolled ? 0.8 : [0.9, 1.25, 0.9],
+                  }}
+                  transition={{
+                    duration: 2,
+                    repeat: Infinity,
+                    ease: "easeInOut"
+                  }}
+                  className="absolute left-[6%] top-[20%] -translate-y-1/2 w-8 h-8 sm:w-10 sm:h-10 bg-yellow-400 blur-[12px] rounded-full -z-10 mix-blend-screen pointer-events-none"
+                  style={{ willChange: "opacity, transform" }}
+                />
+
                 <Image
                   src="/images/logo.png"
                   alt="The JRE"
                   width={210}
                   height={70}
                   className={cn(
-                    "w-auto transition-all duration-500",
+                    "w-auto transition-all duration-500 relative z-10",
                     isScrolled
                       ? "h-14"
                       : "h-20 brightness-0 invert opacity-95"
