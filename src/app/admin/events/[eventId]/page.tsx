@@ -199,6 +199,15 @@ export default function EventDetailPage({
     }).format(amount);
   };
 
+  const to12Hour = (time: string): string => {
+    if (/am|pm/i.test(time)) return time;
+    const [h, m] = time.split(":").map(Number);
+    if (isNaN(h)) return time;
+    const period = h >= 12 ? "PM" : "AM";
+    const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+    return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+  };
+
   const formatDate = (dateString: string) => {
     return new Date(dateString + "T00:00:00").toLocaleDateString("en-US", {
       weekday: "long",
@@ -525,8 +534,8 @@ export default function EventDetailPage({
               {event.start_time && (
                 <span className="flex items-center gap-1">
                   <Clock className="w-4 h-4" />
-                  {event.start_time}
-                  {event.end_time && ` - ${event.end_time}`}
+                  {to12Hour(event.start_time)}
+                  {event.end_time && ` - ${to12Hour(event.end_time)}`}
                 </span>
               )}
               {event.location && (

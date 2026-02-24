@@ -519,7 +519,7 @@ export default function EventDetailClient({
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
         <div
-          className="relative h-[50vh] min-h-[400px] cursor-pointer group"
+          className="relative h-[60vh] min-h-[500px] cursor-pointer group"
           onClick={scrollToRegistration}
         >
           {hasEventImage ? (
@@ -538,22 +538,28 @@ export default function EventDetailClient({
             <>
               <EventPlaceholder
                 title={event.title}
-                date={eventDate}
                 variant="hero"
                 themeColor={event.theme_color}
+                backgroundOnly
                 className="absolute inset-0"
               />
-              {/* Gradient overlay for text at bottom */}
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent z-[1]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-[1]" />
             </>
           )}
 
-          {/* Decorative corner accents */}
-          <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-[var(--theme-primary)]/50 rounded-tl-3xl" />
-          <div className="absolute bottom-4 right-4 w-20 h-20 border-b-4 border-r-4 border-[var(--theme-primary)]/50 rounded-br-3xl" />
+          {/* Back to Events - top left */}
+          <div className="absolute top-6 left-0 right-0 container mx-auto px-6 z-10">
+            <Link
+              href="/events"
+              className="inline-flex items-center gap-2 text-gray-800 hover:text-[var(--theme-primary)] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg transition-colors text-sm border border-white/20"
+            >
+              <ArrowLeft className="w-4 h-4" />
+              Back to Events
+            </Link>
+          </div>
 
           {/* Scroll hint */}
-          <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
+          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             <span className="text-white/90 text-sm font-medium">Click to Register</span>
             <motion.div
               animate={{ y: [0, 8, 0] }}
@@ -565,45 +571,42 @@ export default function EventDetailClient({
             </motion.div>
           </div>
 
-          <div className="absolute bottom-0 left-0 right-0 container mx-auto px-6 pb-10">
-            <Link
-              href="/events"
-              className="inline-flex items-center gap-2 text-gray-800 hover:text-[var(--theme-primary)] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm border border-white/20"
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Events
-            </Link>
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5 }}
-            >
-              <div className="flex items-center gap-2 mb-3">
-                <span className="bg-[var(--theme-primary)] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
-                  Upcoming Event
-                </span>
-              </div>
-              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
-                {event.title}
-              </h1>
-              <div className="flex flex-wrap gap-4 text-white/90 text-sm">
-                <span className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4" />
-                  {eventDate}
-                </span>
-                {eventTime && (
-                  <span className="flex items-center gap-2">
-                    <Clock className="w-4 h-4" />
-                    {eventTime}
-                  </span>
+          {/* Hero content at bottom */}
+          <div className="absolute bottom-0 left-0 right-0 z-10">
+            <div className="container mx-auto px-6 pb-8">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
+                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight max-w-4xl">
+                  {event.title}
+                </h1>
+                {event.description && (
+                  <p className="text-white/80 text-sm md:text-base mb-4 max-w-2xl leading-relaxed">
+                    {event.description}
+                  </p>
                 )}
-              </div>
-              {event.description && (
-                <p className="text-white/80 text-base mt-3 max-w-2xl leading-relaxed">
-                  {event.description}
-                </p>
-              )}
-            </motion.div>
+                <div className="flex flex-wrap items-center gap-4 text-white/90 text-sm">
+                  <span className="flex items-center gap-2">
+                    <Calendar className="w-4 h-4" />
+                    {eventDate}
+                  </span>
+                  {eventTime && (
+                    <span className="flex items-center gap-2">
+                      <Clock className="w-4 h-4" />
+                      {eventTime}
+                    </span>
+                  )}
+                  {event.location && (
+                    <span className="flex items-center gap-2">
+                      <MapPin className="w-4 h-4" />
+                      {event.location}
+                    </span>
+                  )}
+                </div>
+              </motion.div>
+            </div>
           </div>
         </div>
       </section>

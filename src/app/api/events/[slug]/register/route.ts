@@ -7,6 +7,23 @@ import { processDirectCardPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
+/** Convert 24-hour time (e.g. "19:30:00") to 12-hour (e.g. "7:30 PM") */
+function to12Hour(time: string): string {
+  if (/am|pm/i.test(time)) return time;
+  const [h, m] = time.split(":").map(Number);
+  if (isNaN(h)) return time;
+  const period = h >= 12 ? "PM" : "AM";
+  const hour12 = h === 0 ? 12 : h > 12 ? h - 12 : h;
+  return `${hour12}:${String(m).padStart(2, "0")} ${period}`;
+}
+
+function formatEventTime(start: string | null, end: string | null): string {
+  if (!start) return "See event details";
+  const s = to12Hour(start);
+  if (end) return `${s} - ${to12Hour(end)}`;
+  return s;
+}
+
 export async function POST(
   request: NextRequest,
   { params }: { params: Promise<{ slug: string }> }
@@ -225,7 +242,7 @@ export async function POST(
           month: "long",
           day: "numeric",
         }),
-        eventTime: event.start_time || "See event details",
+        eventTime: formatEventTime(event.start_time, event.end_time),
         eventLocation: event.location || "See event details",
         adults: numAdults,
         kids: numKids,

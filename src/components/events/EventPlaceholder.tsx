@@ -11,6 +11,8 @@ interface EventPlaceholderProps {
   variant?: "card" | "featured" | "hero";
   /** Event theme_color value (e.g. "womens") - colors the placeholder accents */
   themeColor?: string | null;
+  /** When true, only renders the decorative background (no text). Use for hero where overlay text is separate. */
+  backgroundOnly?: boolean;
   className?: string;
 }
 
@@ -24,6 +26,7 @@ export default function EventPlaceholder({
   date,
   variant = "card",
   themeColor,
+  backgroundOnly = false,
   className = "",
 }: EventPlaceholderProps) {
   const theme = getEventTheme(themeColor);
@@ -118,55 +121,57 @@ export default function EventPlaceholder({
       <div className={`absolute bottom-3 left-3 ${cornerSize[variant]} rounded-bl-lg`} style={{ borderBottom: cornerBorder, borderLeft: cornerBorder }} />
       <div className={`absolute bottom-3 right-3 ${cornerSize[variant]} rounded-br-lg`} style={{ borderBottom: cornerBorder, borderRight: cornerBorder }} />
 
-      {/* Content */}
-      <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${padding[variant]}`}>
-        {/* "THE JRE PRESENTS" header */}
-        <div className="flex items-center gap-2 mb-3">
+      {/* Content - hidden in backgroundOnly mode */}
+      {!backgroundOnly && (
+        <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${padding[variant]}`}>
+          {/* "THE JRE PRESENTS" header */}
+          <div className="flex items-center gap-2 mb-3">
+            {variant !== "card" && (
+              <div className="w-6 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
+            )}
+            <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.7)` }}>
+              The JRE Presents
+            </span>
+            {variant !== "card" && (
+              <div className="w-6 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
+            )}
+          </div>
+
+          {/* Decorative sparkle */}
           {variant !== "card" && (
-            <div className="w-6 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
+            <motion.div
+              initial={{ opacity: 0, scale: 0 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.3, type: "spring" }}
+              className="mb-3"
+            >
+              <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.4)` }} />
+            </motion.div>
           )}
-          <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.7)` }}>
-            The JRE Presents
-          </span>
-          {variant !== "card" && (
-            <div className="w-6 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
+
+          {/* Event Title */}
+          <div className={`${titleSizes[variant]} font-bold text-white leading-tight max-w-[90%]`}>
+            {isShortTitle ? (
+              <span>{title}</span>
+            ) : (
+              <>
+                <span className="block">{line1}</span>
+                <span className="block" style={{ color: theme.primary }}>{line2}</span>
+              </>
+            )}
+          </div>
+
+          {/* Accent line */}
+          <div className={`${accentLineWidth[variant]} h-0.5 my-3`} style={{ background: `linear-gradient(to right, transparent, ${theme.primary}, transparent)` }} />
+
+          {/* Date */}
+          {date && (
+            <p className={`${dateSizes[variant]} text-gray-400 font-medium tracking-wide`}>
+              {date}
+            </p>
           )}
         </div>
-
-        {/* Decorative sparkle */}
-        {variant !== "card" && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={{ delay: 0.3, type: "spring" }}
-            className="mb-3"
-          >
-            <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.4)` }} />
-          </motion.div>
-        )}
-
-        {/* Event Title */}
-        <div className={`${titleSizes[variant]} font-bold text-white leading-tight max-w-[90%]`}>
-          {isShortTitle ? (
-            <span>{title}</span>
-          ) : (
-            <>
-              <span className="block">{line1}</span>
-              <span className="block" style={{ color: theme.primary }}>{line2}</span>
-            </>
-          )}
-        </div>
-
-        {/* Accent line */}
-        <div className={`${accentLineWidth[variant]} h-0.5 my-3`} style={{ background: `linear-gradient(to right, transparent, ${theme.primary}, transparent)` }} />
-
-        {/* Date */}
-        {date && (
-          <p className={`${dateSizes[variant]} text-gray-400 font-medium tracking-wide`}>
-            {date}
-          </p>
-        )}
-      </div>
+      )}
     </div>
   );
 }
