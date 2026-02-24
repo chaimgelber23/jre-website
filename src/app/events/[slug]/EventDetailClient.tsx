@@ -598,6 +598,11 @@ export default function EventDetailClient({
                   </span>
                 )}
               </div>
+              {event.description && (
+                <p className="text-white/80 text-base mt-3 max-w-2xl leading-relaxed">
+                  {event.description}
+                </p>
+              )}
             </motion.div>
           </div>
         </div>
