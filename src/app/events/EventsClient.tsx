@@ -393,28 +393,25 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                     draggable={false}
                   />
 
-                  {/* Gradient overlay */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  {/* Gradient overlay — strong enough so title is always readable */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[2]" />
 
                   {/* Subtle border on hover */}
                   <div
-                    className="absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    className="absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[3]"
                     style={{ borderColor: `${cardTheme.primary}66` }}
                   />
 
-                  {/* Content */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                  {/* Content — always visible, not hover-dependent */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5 z-[4]">
                     <span
                       className="inline-block text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide"
                       style={{ backgroundColor: cardTheme.primary }}
                     >
                       {event.date}
                     </span>
-                    <h3
-                      className="text-lg md:text-xl font-bold text-white transition-colors duration-300 leading-tight"
-                      style={{ ["--card-accent" as string]: cardTheme.primary }}
-                    >
-                      <span className="group-hover:text-[var(--card-accent)]">{event.title}</span>
+                    <h3 className="text-lg md:text-xl font-bold text-white leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+                      {event.title}
                     </h3>
                   </div>
                 </motion.div>
