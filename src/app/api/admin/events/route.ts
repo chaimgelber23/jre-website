@@ -107,6 +107,8 @@ export async function POST(request: NextRequest) {
       imageUrl,
       pricePerAdult,
       kidsPrice,
+      themeColor,
+      speaker,
       sponsorships,
     } = body;
 
@@ -132,6 +134,8 @@ export async function POST(request: NextRequest) {
       image_url: imageUrl || null,
       price_per_adult: pricePerAdult || 0,
       kids_price: kidsPrice || 0,
+      theme_color: themeColor || null,
+      speaker: speaker || null,
     };
 
     const { data: eventData, error: eventError } = await supabase
@@ -175,6 +179,79 @@ export async function POST(request: NextRequest) {
     });
   } catch (error) {
     console.error("Admin create event API error:", error);
+    return NextResponse.json(
+      { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+export async function PATCH(request: NextRequest) {
+  try {
+    const body = await request.json();
+    const { id, slug, ...updates } = body;
+
+    if (!id && !slug) {
+      return NextResponse.json(
+        { success: false, error: "Event id or slug is required" },
+        { status: 400 }
+      );
+    }
+
+    const supabase = createServerClient();
+
+    // Map camelCase to snake_case for allowed fields
+    const fieldMap: Record<string, string> = {
+      title: "title",
+      description: "description",
+      date: "date",
+      startTime: "start_time",
+      endTime: "end_time",
+      location: "location",
+      locationUrl: "location_url",
+      imageUrl: "image_url",
+      pricePerAdult: "price_per_adult",
+      kidsPrice: "kids_price",
+      themeColor: "theme_color",
+      speaker: "speaker",
+      isActive: "is_active",
+    };
+
+    const dbUpdates: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(updates)) {
+      const dbKey = fieldMap[key];
+      if (dbKey) {
+        dbUpdates[dbKey] = value;
+      }
+    }
+
+    if (Object.keys(dbUpdates).length === 0) {
+      return NextResponse.json(
+        { success: false, error: "No valid fields to update" },
+        { status: 400 }
+      );
+    }
+
+    let query = supabase.from("events").update(dbUpdates as never);
+    if (id) {
+      query = query.eq("id", id);
+    } else {
+      query = query.eq("slug", slug);
+    }
+
+    const { data, error } = await query.select().single();
+
+    if (error) {
+      console.error("Supabase event update error:", error);
+      return NextResponse.json(
+        { success: false, error: "Failed to update event" },
+        { status: 500 }
+      );
+    }
+
+    return NextResponse.json({ success: true, event: data });
+  } catch (error) {
+    console.error("Admin update event API error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
       { status: 500 }
