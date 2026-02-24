@@ -567,41 +567,45 @@ export default function EventDetailClient({
         </div>
       </section>
 
-      {/* Event title + info bar */}
-      <section>
-        <div style={{ background: theme.darkBg }} className="py-4">
-          <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <h1 className="text-lg md:text-xl font-bold text-white mb-2">{event.title}</h1>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-white/90 text-xs">
+      {/* Title band below hero */}
+      <div style={{ background: hasEventImage ? "#000" : theme.darkBg }} className="py-4">
+        <div className="container mx-auto px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {hasEventImage ? (
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+                {event.title}
+              </h1>
+            ) : (
+              <h1 className="sr-only">{event.title}</h1>
+            )}
+            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-white/90 text-xs">
+              <span className="flex items-center gap-1.5">
+                <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
+                  <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                </div>
+                <span className="font-medium">{eventDate}</span>
+              </span>
+              {eventTime && (
                 <span className="flex items-center gap-1.5">
                   <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                    <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                    <Clock className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                   </div>
-                  <span className="font-medium">{eventDate}</span>
+                  <span className="font-medium">{eventTime}</span>
                 </span>
-                {eventTime && (
-                  <span className="flex items-center gap-1.5">
-                    <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                      <Clock className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                    </div>
-                    <span className="font-medium">{eventTime}</span>
-                  </span>
-                )}
-                <span className="flex items-center gap-1.5">
-                  <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                    <Users className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                  </div>
-                  <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
-                </span>
-              </div>
-            </motion.div>
-          </div>
+              )}
+              <span className="flex items-center gap-1.5">
+                <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
+                  <Users className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
+                </div>
+                <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
+              </span>
+            </div>
+          </motion.div>
         </div>
-      </section>
+      </div>
 
       {/* Content */}
       <section className="pt-12 pb-24 bg-white relative">
