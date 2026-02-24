@@ -639,7 +639,28 @@ export default function EventsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
+    // Filter standalone events by date so they auto-move to past
+    function filterStandaloneByDate() {
+      const today = new Date();
+      today.setHours(0, 0, 0, 0);
+      const allStandalone = [...standaloneUpcoming, ...standalonePast];
+      const stillUpcoming: DisplayEvent[] = [];
+      const nowPast: DisplayEvent[] = [];
+      for (const evt of allStandalone) {
+        // Try to parse the date - standalone dates may be formatted like "Monday, March 2, 2026" or "March 2025"
+        const parsed = new Date(evt.date);
+        if (!isNaN(parsed.getTime()) && parsed >= today) {
+          stillUpcoming.push(evt);
+        } else {
+          nowPast.push(evt);
+        }
+      }
+      return { stillUpcoming, nowPast };
+    }
+
     async function fetchEvents() {
+      const { stillUpcoming: saUpcoming, nowPast: saPast } = filterStandaloneByDate();
+
       try {
         const res = await fetch("/api/events");
         const data = await res.json();
@@ -648,46 +669,45 @@ export default function EventsPage() {
           const upcoming: Event[] = data.upcoming || [];
           const past: Event[] = data.past || [];
 
-          // Convert DB events to display format
-          const dbUpcoming = upcoming.map((e, i) =>
-            eventToDisplay(e, i === 0)
-          );
+          // Convert DB events to display format (no featured flag yet)
+          const dbUpcoming = upcoming.map((e) => eventToDisplay(e, false));
           const dbPast = past.map((e) => eventToDisplay(e, false));
 
           // Merge: DB events first, then standalone events (skip duplicates by id)
           const dbUpcomingIds = new Set(dbUpcoming.map((e) => e.id));
           const mergedUpcoming = [
             ...dbUpcoming,
-            ...standaloneUpcoming.filter((e) => !dbUpcomingIds.has(e.id)),
+            ...saUpcoming.filter((e) => !dbUpcomingIds.has(e.id)),
           ];
 
-          // Mark the first upcoming event as featured
-          if (mergedUpcoming.length > 0) {
+          // Only mark featured if there's exactly 1 upcoming event
+          if (mergedUpcoming.length === 1) {
             mergedUpcoming[0] = { ...mergedUpcoming[0], featured: true };
           }
 
           const dbPastIds = new Set(dbPast.map((e) => e.id));
           const mergedPast = [
             ...dbPast,
-            ...standalonePast.filter((e) => !dbPastIds.has(e.id)),
+            ...saPast.filter((e) => !dbPastIds.has(e.id)),
           ];
 
           setUpcomingEvents(mergedUpcoming);
           setPastEvents(mergedPast);
         } else {
           // API failed, show standalone events as fallback
-          const fallback = [...standaloneUpcoming];
-          if (fallback.length > 0) fallback[0] = { ...fallback[0], featured: true };
-          setUpcomingEvents(fallback);
-          setPastEvents(standalonePast);
+          if (saUpcoming.length === 1) {
+            saUpcoming[0] = { ...saUpcoming[0], featured: true };
+          }
+          setUpcomingEvents(saUpcoming);
+          setPastEvents(saPast);
         }
       } catch (err) {
         console.error("Failed to fetch events:", err);
-        // Network error, show standalone events as fallback
-        const fallback = [...standaloneUpcoming];
-        if (fallback.length > 0) fallback[0] = { ...fallback[0], featured: true };
-        setUpcomingEvents(fallback);
-        setPastEvents(standalonePast);
+        if (saUpcoming.length === 1) {
+          saUpcoming[0] = { ...saUpcoming[0], featured: true };
+        }
+        setUpcomingEvents(saUpcoming);
+        setPastEvents(saPast);
       } finally {
         setIsLoading(false);
       }
@@ -697,7 +717,6 @@ export default function EventsPage() {
   }, []);
 
   const featuredEvent = upcomingEvents.find((e) => e.featured);
-  const otherEvents = upcomingEvents.filter((e) => !e.featured);
 
   return (
     <main className="min-h-screen">
@@ -707,8 +726,6 @@ export default function EventsPage() {
       <section className="relative pt-32 pb-20 overflow-hidden">
         {/* Background - dark to match spotlight */}
         <div className="absolute inset-0 bg-[#2d3748]" />
-
-
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.p
@@ -726,7 +743,7 @@ export default function EventsPage() {
             transition={{ delay: 0.1, duration: 0.5 }}
             className="text-5xl md:text-6xl font-bold mb-6 text-white"
           >
-            Upcoming Events
+            {upcomingEvents.length > 0 && !isLoading ? "Upcoming Events" : "Our Events"}
           </motion.h1>
 
           <motion.p
@@ -756,7 +773,9 @@ export default function EventsPage() {
               className="inline-flex flex-col items-center gap-1 text-white/60"
             >
               <span className="text-xs uppercase tracking-widest">
-                See What&apos;s Coming
+                {upcomingEvents.length > 0 && !isLoading
+                  ? "See What\u2019s Coming"
+                  : "Browse Past Events"}
               </span>
               <ChevronDown className="w-6 h-6" />
             </motion.div>
@@ -768,26 +787,37 @@ export default function EventsPage() {
         <EventsSkeleton />
       ) : (
         <>
-          {/* Featured Event Spotlight */}
+          {/* === 1 event: Spotlight treatment === */}
           {featuredEvent && <FeaturedEventSpotlight event={featuredEvent} />}
 
-          {/* Other Upcoming Events */}
-          {otherEvents.length > 0 && (
+          {/* === 2+ events: All shown as equal cards === */}
+          {upcomingEvents.length >= 2 && (
             <section className="py-20 bg-white relative overflow-hidden">
-
-
               <div className="container mx-auto px-6 relative z-10">
                 <FadeUp className="text-center mb-12">
-                  <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-                    Mark Your Calendar
-                  </p>
+                  <motion.div
+                    initial={{ scale: 0 }}
+                    whileInView={{ scale: 1 }}
+                    viewport={{ once: true }}
+                    transition={{ type: "spring", delay: 0.2 }}
+                    className="inline-flex items-center gap-2 bg-[#EF8046]/10 text-[#EF8046] px-4 py-2 rounded-full mb-4"
+                  >
+                    <Star className="w-4 h-4 fill-current" />
+                    <span className="font-semibold text-sm uppercase tracking-wider">
+                      Open for Registration
+                    </span>
+                    <Star className="w-4 h-4 fill-current" />
+                  </motion.div>
                   <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    More Events
+                    Happening Soon
                   </h2>
+                  <p className="text-gray-600 text-lg mt-4 max-w-xl mx-auto">
+                    We&apos;ve got {upcomingEvents.length} events coming up — pick one (or join them all!)
+                  </p>
                 </FadeUp>
 
                 <div className="flex flex-wrap justify-center gap-8">
-                  {otherEvents.map((event, index) => (
+                  {upcomingEvents.map((event, index) => (
                     <EventCard key={event.id} event={event} index={index} />
                   ))}
                 </div>
@@ -795,25 +825,29 @@ export default function EventsPage() {
             </section>
           )}
 
-          {/* No events message */}
-          {upcomingEvents.length === 0 && !isLoading && (
-            <section className="py-20 bg-white">
+          {/* === 0 events: Stay tuned message === */}
+          {upcomingEvents.length === 0 && (
+            <section className="py-24 bg-white">
               <div className="container mx-auto px-6 text-center">
                 <FadeUp>
                   <div className="max-w-lg mx-auto">
-                    <Calendar className="w-16 h-16 text-[#EF8046]/40 mx-auto mb-6" />
-                    <h2 className="text-3xl font-bold text-gray-900 mb-4">
-                      Stay Tuned!
+                    <div className="w-20 h-20 bg-[#EF8046]/10 rounded-full flex items-center justify-center mx-auto mb-6">
+                      <Calendar className="w-10 h-10 text-[#EF8046]" />
+                    </div>
+                    <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-4">
+                      Something Great Is Coming
                     </h2>
-                    <p className="text-gray-600 text-lg">
-                      We&apos;re planning exciting new events. Join our mailing list
-                      to be the first to know!
+                    <p className="text-gray-600 text-lg leading-relaxed mb-2">
+                      Our next event is being planned right now.
+                    </p>
+                    <p className="text-gray-500 text-base">
+                      Stay connected so you&apos;re the first to know when registration opens!
                     </p>
                     <Link href="/contact">
                       <motion.button
                         whileHover={{ scale: 1.03 }}
                         whileTap={{ scale: 0.98 }}
-                        className="mt-8 bg-[#EF8046] text-white px-8 py-4 rounded font-medium hover:bg-[#d96a2f]"
+                        className="mt-8 bg-[#EF8046] text-white px-8 py-4 rounded font-medium hover:bg-[#d96a2f] transition-colors"
                       >
                         Get in Touch
                       </motion.button>

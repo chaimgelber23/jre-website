@@ -631,23 +631,24 @@ export default function EventDetailClient({
 
                 {/* Pricing */}
                 <div className="bg-[#FBFBFB] rounded-2xl p-6 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                    <Ticket className="w-5 h-5 text-[#EF8046]" />
+                  <h3 className="text-xl font-bold text-gray-900 mb-4">
                     Pricing
                   </h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Adults</span>
+                    <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
+                      <span className="text-gray-600">Per person</span>
                       <span className="font-semibold text-gray-900">
-                        ${event.price_per_adult} per person
+                        ${event.price_per_adult}
                       </span>
                     </div>
-                    <div className="flex justify-between items-center py-2">
-                      <span className="text-gray-600">Kids</span>
-                      <span className="font-semibold text-[#EF8046]">
-                        {event.kids_price === 0 ? "Free!" : `$${event.kids_price}`}
-                      </span>
-                    </div>
+                    {event.kids_price > 0 && (
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">Per child</span>
+                        <span className="font-semibold text-gray-900">
+                          ${event.kids_price}
+                        </span>
+                      </div>
+                    )}
                   </div>
                   {sponsorships.length > 0 && (
                     <p className="text-sm text-gray-500 mt-4">
@@ -774,31 +775,33 @@ export default function EventDetailClient({
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
-                          <div>
-                            <span className="text-gray-700 text-sm">Kids</span>
-                            <span className="text-gray-400 text-xs ml-1">
-                              ({event.kids_price === 0 ? "Free!" : `$${event.kids_price}/child`})
-                            </span>
+                        {event.kids_price > 0 && (
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <span className="text-gray-700 text-sm">Kids</span>
+                              <span className="text-gray-400 text-xs ml-1">
+                                (${event.kids_price}/child)
+                              </span>
+                            </div>
+                            <div className="flex items-center gap-3">
+                              <button
+                                type="button"
+                                onClick={() => setKids(Math.max(0, kids - 1))}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                              >
+                                <Minus className="w-4 h-4" />
+                              </button>
+                              <span className="w-6 text-center font-bold text-gray-900">{kids}</span>
+                              <button
+                                type="button"
+                                onClick={() => setKids(kids + 1)}
+                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                              >
+                                <Plus className="w-4 h-4" />
+                              </button>
+                            </div>
                           </div>
-                          <div className="flex items-center gap-3">
-                            <button
-                              type="button"
-                              onClick={() => setKids(Math.max(0, kids - 1))}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
-                            >
-                              <Minus className="w-4 h-4" />
-                            </button>
-                            <span className="w-6 text-center font-bold text-gray-900">{kids}</span>
-                            <button
-                              type="button"
-                              onClick={() => setKids(kids + 1)}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
-                            >
-                              <Plus className="w-4 h-4" />
-                            </button>
-                          </div>
-                        </div>
+                        )}
                       </div>
                     </div>
 
