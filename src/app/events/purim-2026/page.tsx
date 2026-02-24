@@ -1210,7 +1210,7 @@ export default function PurimEventPage() {
         </div>
       </section>
 
-      <Footer bgColor="bg-black" />
+      <Footer bgColor="#000000" />
     </main>
   );
 }

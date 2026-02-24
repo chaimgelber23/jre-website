@@ -1248,7 +1248,7 @@ export default function EventDetailClient({
         </div>
       </section>
 
-      <Footer bgColor={`bg-[${theme.darkBg}]`} accentColor={theme.primary} />
+      <Footer bgColor={theme.darkBg} accentColor={theme.primary} />
     </main >
   );
 }

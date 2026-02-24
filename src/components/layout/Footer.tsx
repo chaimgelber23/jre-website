@@ -26,7 +26,7 @@ export default function Footer({ bgColor, accentColor }: FooterProps) {
   const accent = accentColor || "#EF8046";
 
   return (
-    <footer className={`${bgColor || "bg-[#2d3748]"} text-white pt-8`}>
+    <footer className="text-white pt-8" style={{ backgroundColor: bgColor || "#2d3748" }}>
       {/* Main Footer */}
       <div className="container mx-auto px-6 py-12">
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8 lg:gap-12">
