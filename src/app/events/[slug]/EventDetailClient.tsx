@@ -569,31 +569,31 @@ export default function EventDetailClient({
 
       {/* Event title + info bar */}
       <section>
-        <div style={{ background: theme.darkBg }} className="py-6">
+        <div style={{ background: theme.darkBg }} className="py-4">
           <div className="container mx-auto px-6">
             <motion.div
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{event.title}</h1>
-              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-white/90 text-sm">
-                <span className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+              <h1 className="text-lg md:text-xl font-bold text-white mb-2">{event.title}</h1>
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-white/90 text-xs">
+                <span className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
+                    <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                   </div>
                   <span className="font-medium">{eventDate}</span>
                 </span>
                 {eventTime && (
-                  <span className="flex items-center gap-2">
-                    <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                  <span className="flex items-center gap-1.5">
+                    <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
+                      <Clock className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                     </div>
                     <span className="font-medium">{eventTime}</span>
                   </span>
                 )}
-                <span className="flex items-center gap-2">
-                  <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
-                    <Users className="w-4 h-4 text-[var(--theme-primary)]" />
+                <span className="flex items-center gap-1.5">
+                  <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
+                    <Users className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
                   </div>
                   <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
                 </span>
