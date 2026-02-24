@@ -90,7 +90,7 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-[#EF8046] text-white px-8 py-4 rounded font-medium text-lg shadow-lg shadow-[#EF8046]/20 hover:shadow-xl hover:shadow-[#EF8046]/40 hover:bg-[#d96a2f] transition-colors flex items-center gap-2 group"
+                  className="bg-[#EF8046] text-white px-8 py-4 rounded-xl font-medium text-lg shadow-lg shadow-[#EF8046]/20 hover:shadow-xl hover:shadow-[#EF8046]/40 hover:bg-[#d96a2f] transition-colors flex items-center gap-2 group"
                 >
                   Upcoming Events
                   <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
@@ -100,7 +100,7 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-gray-900 shadow-lg hover:shadow-xl transition-colors"
+                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-medium text-lg hover:bg-white hover:text-gray-900 shadow-lg hover:shadow-xl transition-colors"
                 >
                   Learn More
                 </motion.button>
@@ -151,9 +151,11 @@ export default function Home() {
 
             {/* Content */}
             <SlideInRight>
-              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-                Our Story —
-              </p>
+              <div className="inline-flex items-center gap-3 mb-3">
+                <div className="w-8 h-px bg-[#EF8046]" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Our Story</span>
+                <div className="w-8 h-px bg-[#EF8046]" />
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Welcome to the JRE
               </h2>
@@ -186,9 +188,11 @@ export default function Home() {
       <section className="section bg-[#FBFBFB]">
         <div className="container mx-auto px-6">
           <FadeUp className="text-center mb-16">
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-              Get Involved
-            </p>
+            <div className="inline-flex items-center gap-3 mb-3">
+              <div className="w-8 h-px bg-[#EF8046]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Get Involved</span>
+              <div className="w-8 h-px bg-[#EF8046]" />
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
               What We Offer
             </h2>
@@ -325,9 +329,11 @@ export default function Home() {
       <section className="py-16 bg-[#FBFBFB]">
         <div className="container mx-auto px-6 text-center max-w-3xl">
           <FadeUp>
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-2">
-              Our Reach
-            </p>
+            <div className="inline-flex items-center gap-3 mb-3">
+              <div className="w-8 h-px bg-[#EF8046]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Our Reach</span>
+              <div className="w-8 h-px bg-[#EF8046]" />
+            </div>
             <h2 className="text-3xl md:text-4xl font-bold text-gray-900 mb-6">
               Proudly Serving Westchester County
             </h2>
@@ -359,7 +365,7 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-white text-[#EF8046] px-8 py-4 rounded font-medium text-lg shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-black/20 transition-all font-semibold"
+                  className="bg-white text-[#EF8046] px-8 py-4 rounded-xl font-medium text-lg shadow-lg shadow-black/10 hover:shadow-xl hover:shadow-black/20 transition-all font-semibold"
                 >
                   View Upcoming Events
                 </motion.button>
@@ -368,7 +374,7 @@ export default function Home() {
                 <motion.button
                   whileHover={{ scale: 1.05, y: -2 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-[#EF8046] shadow-lg hover:shadow-xl transition-all font-semibold"
+                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-medium text-lg hover:bg-white hover:text-[#EF8046] shadow-lg hover:shadow-xl transition-all font-semibold"
                 >
                   Support Our Mission
                 </motion.button>

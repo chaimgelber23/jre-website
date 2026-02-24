@@ -261,7 +261,7 @@ export default function DonatePage() {
                         value={customAmount}
                         onChange={handleCustomAmountChange}
                         placeholder="Other amount"
-                        className="w-full pl-8 pr-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none"
+                        className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
                       />
                     </div>
 
@@ -296,7 +296,7 @@ export default function DonatePage() {
                           value={formState.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                           placeholder="Your name"
                         />
                       </div>
@@ -310,7 +310,7 @@ export default function DonatePage() {
                           value={formState.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                           placeholder="your@email.com"
                         />
                       </div>
@@ -346,7 +346,7 @@ export default function DonatePage() {
                                 name="honorName"
                                 value={formState.honorName}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                                 placeholder="Honoree's name"
                               />
                               <input
@@ -354,7 +354,7 @@ export default function DonatePage() {
                                 name="honorEmail"
                                 value={formState.honorEmail}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                                 placeholder="Honoree's email (optional)"
                               />
                             </div>
@@ -389,7 +389,7 @@ export default function DonatePage() {
                                 name="sponsorship"
                                 value={formState.sponsorship}
                                 onChange={handleChange}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                               >
                                 {sponsorships.map((option) => (
                                   <option key={option.value} value={option.value}>
@@ -402,7 +402,7 @@ export default function DonatePage() {
                                 value={formState.message}
                                 onChange={handleChange}
                                 rows={2}
-                                className="w-full px-3 py-2 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                className="w-full px-3 py-2 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all resize-none"
                                 placeholder="Add a personal message (optional)"
                               />
                             </div>
@@ -441,7 +441,7 @@ export default function DonatePage() {
                           value={formState.cardName}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
                           placeholder="Name on card"
                         />
                       </div>

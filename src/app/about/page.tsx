@@ -83,14 +83,16 @@ export default function AboutPage() {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 bg-gradient-to-b from-[#2d3748] to-[#1a202c]">
         <div className="container mx-auto px-6 text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-[#EF8046] font-medium tracking-wider uppercase mb-4"
+            className="inline-flex items-center gap-3 mb-4"
           >
-            Our Story
-          </motion.p>
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Our Story</span>
+            <div className="w-8 h-px bg-[#EF8046]" />
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -134,9 +136,11 @@ export default function AboutPage() {
             </SlideInLeft>
 
             <SlideInRight>
-              <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-                Our Mission
-              </p>
+              <div className="inline-flex items-center gap-3 mb-3">
+                <div className="w-8 h-px bg-[#EF8046]" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Our Mission</span>
+                <div className="w-8 h-px bg-[#EF8046]" />
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Empower. Engage. Inspire.
               </h2>
@@ -173,9 +177,11 @@ export default function AboutPage() {
       <section className="section bg-[#FBFBFB]">
         <div className="container mx-auto px-6">
           <FadeUp className="text-center mb-16">
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-              What We Stand For
-            </p>
+            <div className="inline-flex items-center gap-3 mb-3">
+              <div className="w-8 h-px bg-[#EF8046]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">What We Stand For</span>
+              <div className="w-8 h-px bg-[#EF8046]" />
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
               Our Values
             </h2>
@@ -206,9 +212,11 @@ export default function AboutPage() {
       <section className="section bg-white">
         <div className="container mx-auto px-6">
           <FadeUp className="text-center mb-16">
-            <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-              Our Journey
-            </p>
+            <div className="inline-flex items-center gap-3 mb-3">
+              <div className="w-8 h-px bg-[#EF8046]" />
+              <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Our Journey</span>
+              <div className="w-8 h-px bg-[#EF8046]" />
+            </div>
             <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
               Through the Years
             </h2>
@@ -282,7 +290,7 @@ export default function AboutPage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-white text-[#EF8046] px-8 py-4 rounded font-medium text-lg shadow-lg"
+                  className="bg-white text-[#EF8046] px-8 py-4 rounded-xl font-medium text-lg shadow-lg"
                 >
                   View Events
                 </motion.button>
@@ -291,7 +299,7 @@ export default function AboutPage() {
                 <motion.button
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.98 }}
-                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded font-medium text-lg hover:bg-white hover:text-[#EF8046] transition-all"
+                  className="bg-transparent border-2 border-white text-white px-8 py-4 rounded-xl font-medium text-lg hover:bg-white hover:text-[#EF8046] transition-all"
                 >
                   Contact Us
                 </motion.button>

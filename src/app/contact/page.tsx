@@ -72,14 +72,16 @@ export default function ContactPage() {
       {/* Hero Section */}
       <section className="relative pt-32 pb-20 bg-gradient-to-b from-[#2d3748] to-[#1a202c]">
         <div className="container mx-auto px-6 text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-[#EF8046] font-medium tracking-wider uppercase mb-4"
+            className="inline-flex items-center gap-3 mb-4"
           >
-            Get In Touch
-          </motion.p>
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Get In Touch</span>
+            <div className="w-8 h-px bg-[#EF8046]" />
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -109,9 +111,11 @@ export default function ContactPage() {
             {/* Contact Info */}
             <SlideInLeft>
               <div>
-                <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-                  Reach Out
-                </p>
+                <div className="inline-flex items-center gap-3 mb-3">
+                  <div className="w-8 h-px bg-[#EF8046]" />
+                  <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Reach Out</span>
+                  <div className="w-8 h-px bg-[#EF8046]" />
+                </div>
                 <h2 className="text-4xl font-bold text-gray-900 mb-6">
                   We&apos;re Here to Help
                 </h2>
@@ -226,7 +230,7 @@ export default function ContactPage() {
                           value={formState.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
                           placeholder="Your name"
                         />
                       </div>
@@ -244,7 +248,7 @@ export default function ContactPage() {
                           value={formState.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
                           placeholder="your@email.com"
                         />
                       </div>
@@ -264,7 +268,7 @@ export default function ContactPage() {
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
                           placeholder="(123) 456-7890"
                         />
                       </div>
@@ -280,7 +284,7 @@ export default function ContactPage() {
                           name="subject"
                           value={formState.subject}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
+                          className="w-full px-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
                         >
                           <option value="">Select a topic</option>
                           <option value="classes">Classes</option>
@@ -305,7 +309,7 @@ export default function ContactPage() {
                         onChange={handleChange}
                         required
                         rows={5}
-                        className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all resize-none"
+                        className="w-full px-4 py-3 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all resize-none"
                         placeholder="How can we help you?"
                       />
                     </div>
