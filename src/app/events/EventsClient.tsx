@@ -183,20 +183,13 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
           viewport={{ once: true }}
           className="text-center mb-12"
         >
-          <motion.div
-            initial={{ scale: 0 }}
-            whileInView={{ scale: 1 }}
-            viewport={{ once: true }}
-            transition={{ type: "spring", delay: 0.2 }}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
-            style={{ backgroundColor: `rgba(${theme.primaryRgb}, 0.2)`, color: theme.primary }}
-          >
-            <Star className="w-4 h-4 fill-current" />
-            <span className="font-semibold text-sm uppercase tracking-wider">
+          <div className="inline-flex items-center gap-3 mb-4">
+            <div className="w-8 h-px" style={{ backgroundColor: theme.primary }} />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em]" style={{ color: theme.primary }}>
               Don&apos;t Miss Out
             </span>
-            <Star className="w-4 h-4 fill-current" />
-          </motion.div>
+            <div className="w-8 h-px" style={{ backgroundColor: theme.primary }} />
+          </div>
           <h2 className="text-4xl md:text-5xl font-bold text-white">
             Our Next Event
           </h2>
@@ -336,9 +329,13 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
 
       <div className="container mx-auto px-6 relative z-10">
         <FadeUp className="text-center mb-12">
-          <p className="text-[#EF8046] font-medium tracking-wider uppercase mb-3">
-            Memories
-          </p>
+          <div className="inline-flex items-center gap-3 mb-3">
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <p className="text-xs font-semibold tracking-[0.2em] uppercase text-[#EF8046]">
+              Memories
+            </p>
+            <div className="w-8 h-px bg-[#EF8046]" />
+          </div>
           <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
             Past Events
           </h2>
@@ -517,19 +514,13 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
         <section className="py-20 bg-[#FBFBFB] relative overflow-hidden">
           <div className="container mx-auto px-6 relative z-10">
             <FadeUp className="text-center mb-12">
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring", delay: 0.2 }}
-                className="inline-flex items-center gap-2 bg-[#EF8046]/10 text-[#EF8046] px-4 py-2 rounded-full mb-4"
-              >
-                <Star className="w-4 h-4 fill-current" />
-                <span className="font-semibold text-sm uppercase tracking-wider">
+              <div className="inline-flex items-center gap-3 mb-1">
+                <div className="w-8 h-px bg-[#EF8046]" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">
                   Open for Registration
                 </span>
-                <Star className="w-4 h-4 fill-current" />
-              </motion.div>
+                <div className="w-8 h-px bg-[#EF8046]" />
+              </div>
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
                 Coming Up
               </h2>

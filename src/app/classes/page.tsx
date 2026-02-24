@@ -3,7 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { Clock, Users, BookOpen, MapPin, Video, ChevronDown, Sparkles } from "lucide-react";
+import { Clock, Users, BookOpen, MapPin, Video, ChevronDown } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { FadeUp } from "@/components/ui/motion";
@@ -268,16 +268,16 @@ export default function ClassesPage() {
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: "spring", delay: 0.1 }}
-            className="inline-flex items-center gap-2 bg-[#EF8046]/20 text-[#EF8046] px-4 py-2 rounded-full mb-6"
+            initial={{ opacity: 0, y: 10 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.1 }}
+            className="inline-flex items-center gap-3 mb-6"
           >
-            <Sparkles className="w-4 h-4" />
-            <span className="font-semibold text-sm uppercase tracking-wider">
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">
               Learn & Grow
             </span>
-            <Sparkles className="w-4 h-4" />
+            <div className="w-8 h-px bg-[#EF8046]" />
           </motion.div>
 
           <motion.h1
@@ -344,17 +344,13 @@ export default function ClassesPage() {
         <div className="container mx-auto px-6">
           <div className="max-w-4xl mx-auto text-center">
             <FadeUp>
-              <motion.div
-                initial={{ scale: 0 }}
-                whileInView={{ scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ type: "spring" }}
-                className="inline-flex items-center gap-2 bg-[#EF8046]/10 text-[#EF8046] px-4 py-2 rounded-full mb-6"
-              >
-                <span className="font-semibold text-sm uppercase tracking-wider">
+              <div className="inline-flex items-center gap-3 mb-6">
+                <div className="w-8 h-px bg-[#EF8046]" />
+                <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">
                   One-on-One
                 </span>
-              </motion.div>
+                <div className="w-8 h-px bg-[#EF8046]" />
+              </div>
 
               <h2 className="text-4xl md:text-5xl font-bold text-gray-900 mb-6">
                 Private Learning

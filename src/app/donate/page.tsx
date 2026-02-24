@@ -187,13 +187,16 @@ export default function DonatePage() {
       <section className="relative pt-32 pb-20 bg-gradient-to-b from-[#2d3748] to-[#1a202c]">
         <div className="container mx-auto px-6 text-center">
           <motion.div
-            initial={{ opacity: 0, y: 20 }}
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="inline-flex items-center gap-2 bg-[#EF8046]/20 text-[#EF8046] px-4 py-2 rounded-full mb-4"
+            className="inline-flex items-center gap-3 mb-4"
           >
-            <Heart className="w-4 h-4" />
-            <span className="font-medium">Partner With Us</span>
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">
+              Partner With Us
+            </span>
+            <div className="w-8 h-px bg-[#EF8046]" />
           </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
