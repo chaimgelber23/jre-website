@@ -378,42 +378,54 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
           >
             {events.map((event) => {
               const cardTheme = getEventTheme(event.themeColor);
+              const hasPhoto = event.hasImage;
               return (
                 <motion.div
                   key={event.id}
                   whileHover={{ y: -8 }}
                   transition={{ duration: 0.2 }}
-                  className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300"
+                  className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 cursor-pointer"
                   style={{ background: `linear-gradient(to bottom right, ${cardTheme.darkBg}, ${cardTheme.darkerBg})` }}
                 >
-                  <EventImage
-                    event={event}
-                    variant="card"
-                    className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
-                    draggable={false}
-                  />
-
-                  {/* Gradient overlay — strong enough so title is always readable */}
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[2]" />
+                  {hasPhoto ? (
+                    <>
+                      <EventImage
+                        event={event}
+                        variant="card"
+                        className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
+                        draggable={false}
+                      />
+                      {/* Gradient overlay for photo readability */}
+                      <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/40 to-transparent z-[2]" />
+                      {/* Bottom content over photo */}
+                      <div className="absolute bottom-0 left-0 right-0 p-5 z-[4]">
+                        <span
+                          className="inline-block text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide"
+                          style={{ backgroundColor: cardTheme.primary }}
+                        >
+                          {event.date}
+                        </span>
+                        <h3 className="text-lg md:text-xl font-bold text-white leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
+                          {event.title}
+                        </h3>
+                      </div>
+                    </>
+                  ) : (
+                    /* Elegant placeholder — themed, self-contained */
+                    <EventPlaceholder
+                      title={event.title}
+                      date={event.date}
+                      variant="card"
+                      themeColor={event.themeColor}
+                      className="absolute inset-0"
+                    />
+                  )}
 
                   {/* Subtle border on hover */}
                   <div
-                    className="absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[3]"
+                    className="absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none z-[5]"
                     style={{ borderColor: `${cardTheme.primary}66` }}
                   />
-
-                  {/* Content — always visible, not hover-dependent */}
-                  <div className="absolute bottom-0 left-0 right-0 p-5 z-[4]">
-                    <span
-                      className="inline-block text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide"
-                      style={{ backgroundColor: cardTheme.primary }}
-                    >
-                      {event.date}
-                    </span>
-                    <h3 className="text-lg md:text-xl font-bold text-white leading-tight drop-shadow-[0_1px_3px_rgba(0,0,0,0.5)]">
-                      {event.title}
-                    </h3>
-                  </div>
                 </motion.div>
               );
             })}
