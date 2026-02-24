@@ -32,6 +32,7 @@ interface RegistrationEmailData {
   eventDate: string;
   eventTime: string;
   eventLocation: string;
+  eventImageUrl?: string | null;
   adults: number;
   kids: number;
   total: number;
@@ -265,14 +266,32 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                             <p style="color: #1a1a1a; font-size: 16px; margin: 0 0 8px; line-height: 1.5;">Dear ${data.name},</p>
                             <p style="color: #6b7280; font-size: 15px; margin: 0 0 40px; line-height: 1.6;">Your registration has been confirmed. Here are your event details:</p>
 
-                            <!-- Event Title -->
+                            <!-- Event Banner -->
+                            ${data.eventImageUrl ? `
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
-                                <td style="padding: 24px; background: #fafafa; border-left: 4px solid #EF8046; border-radius: 8px;">
+                                <td style="border-radius: 12px; overflow: hidden;">
+                                  <img src="https://beta.thejre.org${data.eventImageUrl}" alt="${data.eventTitle}" width="504" style="display: block; width: 100%; height: auto; border-radius: 12px;" />
+                                </td>
+                              </tr>
+                              <tr>
+                                <td style="padding: 16px 0 0;">
                                   <h2 style="color: #1a1a1a; font-size: 22px; font-weight: 600; margin: 0; line-height: 1.3;">${data.eventTitle}</h2>
                                 </td>
                               </tr>
                             </table>
+                            ` : `
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
+                              <tr>
+                                <td style="background: linear-gradient(135deg, #1a202c 0%, #2d3748 40%, #1a202c 100%); border-radius: 12px; padding: 40px 32px; text-align: center;">
+                                  <div style="color: rgba(239, 128, 70, 0.6); font-size: 10px; font-weight: 600; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 16px;">The JRE Presents</div>
+                                  <h2 style="color: #ffffff; font-size: 24px; font-weight: 700; margin: 0 0 12px; line-height: 1.3;">${data.eventTitle}</h2>
+                                  <div style="width: 40px; height: 2px; background: linear-gradient(90deg, transparent, #EF8046, transparent); margin: 0 auto 12px;"></div>
+                                  <div style="color: #9ca3af; font-size: 13px; font-weight: 500;">${data.eventDate}</div>
+                                </td>
+                              </tr>
+                            </table>
+                            `}
 
                             <!-- Event Details -->
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">

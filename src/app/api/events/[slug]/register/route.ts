@@ -244,6 +244,7 @@ export async function POST(
         }),
         eventTime: formatEventTime(event.start_time, event.end_time),
         eventLocation: event.location || "See event details",
+        eventImageUrl: event.image_url || null,
         adults: numAdults,
         kids: numKids,
         total: subtotal,
