@@ -718,14 +718,14 @@ export default function EventDetailClient({
               >
                 <div ref={formContainerRef} className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-gray-100/80 overflow-hidden">
                   {/* Form Header */}
-                  <div className="relative bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] p-8 text-white overflow-hidden">
+                  <div className="relative bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] px-8 py-5 text-white overflow-hidden">
                     {/* Subtle shine sweep */}
                     <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-200%] animate-[shimmer_6s_ease-in-out_infinite]" />
                     <div className="relative">
-                      <p className="text-white/70 text-xs font-medium tracking-[0.2em] uppercase mb-2">
+                      <p className="text-white/70 text-[10px] font-medium tracking-[0.2em] uppercase mb-1">
                         Reserve Your Spot
                       </p>
-                      <h3 className="text-2xl font-bold">
+                      <h3 className="text-xl font-bold">
                         Register Now
                       </h3>
                     </div>
