@@ -40,7 +40,14 @@ function formatEventTime(
   return start;
 }
 
-function eventToDisplay(event: Event, isFeatured: boolean): DisplayEvent {
+function eventToDisplay(event: Event, isFeatured: boolean, isPast = false): DisplayEvent {
+  // Past events show placeholder by default (flyers look out of place in the carousel).
+  // To show a real post-event photo: update image_url AND set post_event_photo = true,
+  // or use the naming convention of adding "-photo" or "-recap" to the filename.
+  const hasPostEventPhoto = isPast
+    ? !!event.image_url && /-(photo|recap|gallery)/.test(event.image_url)
+    : !!event.image_url;
+
   return {
     id: event.slug,
     title: event.title,
@@ -48,8 +55,8 @@ function eventToDisplay(event: Event, isFeatured: boolean): DisplayEvent {
     time: formatEventTime(event.start_time, event.end_time),
     location: event.location || "See event details",
     price: event.price_per_adult,
-    image: event.image_url || "",
-    hasImage: !!event.image_url,
+    image: hasPostEventPhoto ? (event.image_url || "") : "",
+    hasImage: hasPostEventPhoto,
     description: event.description || "",
     featured: isFeatured,
     themeColor: event.theme_color,
@@ -212,8 +219,8 @@ export default async function EventsPage() {
             new Date(b.date).getTime() - new Date(a.date).getTime()
         );
 
-      const dbUpcoming = upcoming.map((e) => eventToDisplay(e, false));
-      const dbPast = past.map((e) => eventToDisplay(e, false));
+      const dbUpcoming = upcoming.map((e) => eventToDisplay(e, false, false));
+      const dbPast = past.map((e) => eventToDisplay(e, false, true));
 
       // Merge: DB events first, then standalone (skip duplicates by id)
       const dbUpcomingIds = new Set(dbUpcoming.map((e) => e.id));
