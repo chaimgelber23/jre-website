@@ -804,7 +804,7 @@ export default function EventsPage() {
 
           {/* === 2+ events: All shown as equal cards === */}
           {upcomingEvents.length >= 2 && (
-            <section className="py-20 bg-white relative overflow-hidden">
+            <section className="py-20 bg-[#FBFBFB] relative overflow-hidden">
               <div className="container mx-auto px-6 relative z-10">
                 <FadeUp className="text-center mb-12">
                   <motion.div
