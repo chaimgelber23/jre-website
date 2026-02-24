@@ -517,8 +517,7 @@ export default function EventDetailClient({
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-0">
-        {/* Image / Placeholder area */}
+      <section className="relative pt-24 pb-0" style={{ background: hasEventImage ? "#000" : theme.darkBg }}>
         <div
           className={`relative h-[80vh] min-h-[500px] cursor-pointer group ${hasEventImage ? "bg-black" : ""}`}
           onClick={scrollToRegistration}
@@ -566,28 +565,38 @@ export default function EventDetailClient({
             </motion.div>
           </div>
         </div>
+      </section>
 
-        {/* Title band below hero */}
-        <div style={{ background: hasEventImage ? "#000" : theme.darkBg }} className="py-6">
+      {/* Event title + info bar */}
+      <section>
+        <div style={{ background: theme.darkBg }} className="py-6">
           <div className="container mx-auto px-6">
             <motion.div
-              initial={{ opacity: 0, y: 20 }}
+              initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3">
-                {event.title}
-              </h1>
-              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-white/80 text-sm">
+              <h1 className="text-2xl md:text-3xl font-bold text-white mb-3">{event.title}</h1>
+              <div className="flex flex-wrap items-center gap-x-6 gap-y-2 text-white/90 text-sm">
                 <span className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
-                  {eventDate}
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+                  </div>
+                  <span className="font-medium">{eventDate}</span>
                 </span>
                 {eventTime && (
                   <span className="flex items-center gap-2">
-                    <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
-                    {eventTime}
+                    <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">{eventTime}</span>
                   </span>
                 )}
+                <span className="flex items-center gap-2">
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                    <Users className="w-4 h-4 text-[var(--theme-primary)]" />
+                  </div>
+                  <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
+                </span>
               </div>
             </motion.div>
           </div>
@@ -605,49 +614,7 @@ export default function EventDetailClient({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                {/* Quick Info Bar */}
-                <div className="bg-gradient-to-r from-[var(--theme-dark)] to-[var(--theme-darker)] rounded-2xl p-8 mb-10 text-white">
-                  <div className="grid sm:grid-cols-3 gap-6">
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
-                        <Calendar className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Date</p>
-                        <p className="font-semibold">{eventDate}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
-                        <Clock className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Time</p>
-                        <p className="font-semibold">{eventTime || "See details"}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
-                        <MapPin className="w-6 h-6 text-white" />
-                      </div>
-                      <div>
-                        <p className="text-xs text-gray-400 uppercase tracking-wider">Location</p>
-                        {event.location_url ? (
-                          <a
-                            href={event.location_url}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="font-semibold text-[var(--theme-primary)] hover:underline"
-                          >
-                            View Map
-                          </a>
-                        ) : (
-                          <p className="font-semibold">{event.location || "TBA"}</p>
-                        )}
-                      </div>
-                    </div>
-                  </div>
-                </div>
+
 
                 {/* Description */}
                 {event.description && (
@@ -1099,103 +1066,103 @@ export default function EventDetailClient({
                       {/* Card form - expands/collapses with animation */}
                       <AnimatePresence>
                         {paymentMethod === "online" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 overflow-hidden"
-                      >
-                        <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
-                            <input
-                              ref={cardNameRef}
-                              type="text"
-                              name="cardName"
-                              value={formState.cardName}
-                              onChange={handleChange}
-                              onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
-                              placeholder="Name on Card"
-                              autoComplete="cc-name"
-                            />
-                          </div>
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
-                            <div className="relative">
-                              <input
-                                ref={cardNumberRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardNumber}
-                                onChange={(e) => {
-                                  const formatted = formatCardNumber(e.target.value);
-                                  setFormState((prev) => ({ ...prev, cardNumber: formatted }));
-                                  if (formatted.replace(/\s/g, "").length === 16) {
-                                    cardExpiryRef.current?.focus();
-                                  }
-                                }}
-                                onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
-                                placeholder="Card Number"
-                                maxLength={19}
-                                autoComplete="cc-number"
-                              />
-                              <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-4 overflow-hidden"
+                          >
+                            <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
+                                <input
+                                  ref={cardNameRef}
+                                  type="text"
+                                  name="cardName"
+                                  value={formState.cardName}
+                                  onChange={handleChange}
+                                  onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
+                                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
+                                  placeholder="Name on Card"
+                                  autoComplete="cc-name"
+                                />
+                              </div>
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
+                                <div className="relative">
+                                  <input
+                                    ref={cardNumberRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardNumber}
+                                    onChange={(e) => {
+                                      const formatted = formatCardNumber(e.target.value);
+                                      setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                                      if (formatted.replace(/\s/g, "").length === 16) {
+                                        cardExpiryRef.current?.focus();
+                                      }
+                                    }}
+                                    onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                                    placeholder="Card Number"
+                                    maxLength={19}
+                                    autoComplete="cc-number"
+                                  />
+                                  <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                                </div>
+                              </div>
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
+                                  <input
+                                    ref={cardExpiryRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardExpiry}
+                                    onChange={(e) => {
+                                      const formatted = formatExpiry(e.target.value, formState.cardExpiry);
+                                      setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                                      if (formatted.length === 5) {
+                                        cardCvvRef.current?.focus();
+                                      }
+                                    }}
+                                    onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                    placeholder="MM / YY"
+                                    maxLength={5}
+                                    autoComplete="cc-exp"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
+                                  <input
+                                    ref={cardCvvRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardCvv}
+                                    onChange={(e) => {
+                                      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                      setFormState((prev) => ({ ...prev, cardCvv: digits }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        submitRef.current?.focus();
+                                      }
+                                    }}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                    placeholder="CVV"
+                                    maxLength={4}
+                                    autoComplete="cc-csc"
+                                  />
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                                <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                <span>Your payment is encrypted and secure.</span>
+                              </div>
                             </div>
-                          </div>
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
-                              <input
-                                ref={cardExpiryRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardExpiry}
-                                onChange={(e) => {
-                                  const formatted = formatExpiry(e.target.value, formState.cardExpiry);
-                                  setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
-                                  if (formatted.length === 5) {
-                                    cardCvvRef.current?.focus();
-                                  }
-                                }}
-                                onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                placeholder="MM / YY"
-                                maxLength={5}
-                                autoComplete="cc-exp"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
-                              <input
-                                ref={cardCvvRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardCvv}
-                                onChange={(e) => {
-                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
-                                  setFormState((prev) => ({ ...prev, cardCvv: digits }));
-                                }}
-                                onKeyDown={(e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    submitRef.current?.focus();
-                                  }
-                                }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                placeholder="CVV"
-                                maxLength={4}
-                                autoComplete="cc-csc"
-                              />
-                            </div>
-                          </div>
-                          <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
-                            <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                            <span>Your payment is encrypted and secure.</span>
-                          </div>
-                        </div>
-                      </motion.div>
+                          </motion.div>
                         )}
                       </AnimatePresence>
 
