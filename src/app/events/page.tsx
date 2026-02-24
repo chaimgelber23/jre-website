@@ -82,10 +82,11 @@ const standalonePast: DisplayEvent[] = [
     time: "",
     location: "",
     price: 0,
-    image: "/images/events/Purim25.jpg",
-    hasImage: true,
+    image: "",
+    hasImage: false,
     description: "",
     featured: false,
+    themeColor: "black",
   },
   {
     id: "staying-serene-2026",
