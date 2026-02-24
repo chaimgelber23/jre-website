@@ -18,6 +18,7 @@ import {
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { FadeUp } from "@/components/ui/motion";
+import EventPlaceholder from "@/components/events/EventPlaceholder";
 import type { Event } from "@/types/database";
 
 interface DisplayEvent {
@@ -28,6 +29,7 @@ interface DisplayEvent {
   location: string;
   price: number;
   image: string;
+  hasImage: boolean;
   description: string;
   featured: boolean;
 }
@@ -67,7 +69,8 @@ function eventToDisplay(event: Event, isFeatured: boolean): DisplayEvent {
     time: formatEventTime(event.start_time, event.end_time),
     location: event.location || "See event details",
     price: event.price_per_adult,
-    image: event.image_url || "/images/events/Dinner.jpg",
+    image: event.image_url || "",
+    hasImage: !!event.image_url,
     description: event.description || "",
     featured: isFeatured,
   };
@@ -117,20 +120,25 @@ function EventCard({
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EF8046] via-[#f59e0b] to-[#EF8046] opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm scale-[1.02]" />
 
           <div className="relative h-52 overflow-hidden bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
-            {/* Fallback pattern when image is missing */}
-            <div className="absolute inset-0 flex items-center justify-center">
-              <div className="w-16 h-16 rounded-full bg-[#EF8046]/20 flex items-center justify-center">
-                <Calendar className="w-8 h-8 text-[#EF8046]/60" />
-              </div>
-            </div>
-            <Image
-              src={event.image}
-              alt={event.title}
-              fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
-            />
-            {/* Overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
+            {event.hasImage ? (
+              <>
+                <Image
+                  src={event.image}
+                  alt={event.title}
+                  fill
+                  className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
+                />
+                {/* Overlay gradient */}
+                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
+              </>
+            ) : (
+              <EventPlaceholder
+                title={event.title}
+                date={event.date}
+                variant="card"
+                className="absolute inset-0"
+              />
+            )}
 
             {event.featured && (
               <motion.div
@@ -232,24 +240,28 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               className="relative"
             >
               <div className="relative h-[400px] rounded-2xl overflow-hidden group bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
-                {/* Fallback pattern when image is missing */}
-                <div className="absolute inset-0 flex items-center justify-center">
-                  <div className="w-20 h-20 rounded-full bg-[#EF8046]/20 flex items-center justify-center">
-                    <Calendar className="w-10 h-10 text-[#EF8046]/60" />
-                  </div>
-                </div>
-                <Image
-                  src={event.image}
-                  alt={event.title}
-                  fill
-                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
-                />
-                {/* Animated border */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors z-[2]" />
-
-                {/* Corner accents */}
-                <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
-                <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
+                {event.hasImage ? (
+                  <>
+                    <Image
+                      src={event.image}
+                      alt={event.title}
+                      fill
+                      className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
+                    />
+                    {/* Animated border */}
+                    <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors z-[2]" />
+                    {/* Corner accents */}
+                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
+                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
+                  </>
+                ) : (
+                  <EventPlaceholder
+                    title={event.title}
+                    date={event.date}
+                    variant="featured"
+                    className="absolute inset-0 rounded-2xl"
+                  />
+                )}
               </div>
             </motion.div>
 
@@ -437,22 +449,31 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                 transition={{ duration: 0.2 }}
                 className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-[#2d3748] to-[#1a202c]"
               >
-                <Image
-                  src={event.image}
-                  alt={event.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
-                  draggable={false}
-                />
+                {event.hasImage ? (
+                  <Image
+                    src={event.image}
+                    alt={event.title}
+                    fill
+                    className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
+                    draggable={false}
+                  />
+                ) : (
+                  <EventPlaceholder
+                    title={event.title}
+                    date={event.date}
+                    variant="card"
+                    className="absolute inset-0"
+                  />
+                )}
 
                 {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent z-[2]" />
 
                 {/* Subtle border on hover */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-[#EF8046]/40 transition-colors duration-300" />
+                <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-[#EF8046]/40 transition-colors duration-300 z-[3]" />
 
                 {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
+                <div className="absolute bottom-0 left-0 right-0 p-5 z-[4]">
                   <span className="inline-block bg-[#EF8046] text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide">
                     {event.date}
                   </span>
@@ -479,6 +500,7 @@ const standaloneUpcoming: DisplayEvent[] = [
     location: "Life, The Place To Be - Ardsley, NY",
     price: 40,
     image: "/images/events/purim-2026-banner.jpg",
+    hasImage: true,
     description:
       "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $110.",
     featured: false,
@@ -494,6 +516,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/Purim25.jpg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -505,6 +528,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/staying-serene-2026.jpeg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -516,6 +540,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/brush-blossom-2026.jpeg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -527,6 +552,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/chanukah-2025.jpeg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -538,6 +564,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/JREBensoussan.jpeg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -549,6 +576,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/women2.jpg",
+    hasImage: true,
     description: "",
     featured: false,
   },
@@ -560,6 +588,7 @@ const standalonePast: DisplayEvent[] = [
     location: "",
     price: 0,
     image: "/images/events/Dinner.jpg",
+    hasImage: true,
     description: "",
     featured: false,
   },

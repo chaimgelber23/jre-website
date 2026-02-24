@@ -27,6 +27,7 @@ import Footer from "@/components/layout/Footer";
 // import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { Lock } from "lucide-react";
 import confetti from "canvas-confetti";
+import EventPlaceholder from "@/components/events/EventPlaceholder";
 import type { Event, EventSponsorship } from "@/types/database";
 
 export default function EventDetailClient({
@@ -382,7 +383,8 @@ export default function EventDetailClient({
 
   const eventDate = formatDate(event.date);
   const eventTime = formatTime(event.start_time, event.end_time);
-  const eventImage = event.image_url || "/images/events/Dinner.jpg";
+  const hasEventImage = !!event.image_url;
+  const eventImage = event.image_url || "";
 
   // Success State
   if (isSubmitted) {
@@ -422,12 +424,16 @@ export default function EventDetailClient({
             >
               <div className="flex items-start gap-4 mb-4">
                 <div className="w-16 h-16 rounded-xl overflow-hidden relative flex-shrink-0">
-                  <Image
-                    src={eventImage}
-                    alt={event.title}
-                    fill
-                    className="object-cover"
-                  />
+                  {hasEventImage ? (
+                    <Image
+                      src={eventImage}
+                      alt={event.title}
+                      fill
+                      className="object-cover"
+                    />
+                  ) : (
+                    <EventPlaceholder title={event.title} variant="card" className="absolute inset-0" />
+                  )}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{event.title}</h3>
@@ -500,14 +506,29 @@ export default function EventDetailClient({
           className="relative h-[50vh] min-h-[400px] cursor-pointer group"
           onClick={scrollToRegistration}
         >
-          <Image
-            src={eventImage}
-            alt={event.title}
-            fill
-            className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-            priority
-          />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+          {hasEventImage ? (
+            <>
+              <Image
+                src={eventImage}
+                alt={event.title}
+                fill
+                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
+            </>
+          ) : (
+            <>
+              <EventPlaceholder
+                title={event.title}
+                date={eventDate}
+                variant="hero"
+                className="absolute inset-0"
+              />
+              {/* Gradient overlay for text at bottom */}
+              <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent z-[1]" />
+            </>
+          )}
 
           {/* Decorative corner accents */}
           <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-[#EF8046]/50 rounded-tl-3xl" />
