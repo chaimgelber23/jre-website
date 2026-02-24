@@ -1006,7 +1006,7 @@ export default function PurimEventPage() {
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod("online")}
+                          onClick={() => setPaymentMethod(paymentMethod === "online" ? null : "online")}
                           className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "online"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
@@ -1017,7 +1017,7 @@ export default function PurimEventPage() {
                         </button>
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod("check")}
+                          onClick={() => setPaymentMethod(paymentMethod === "check" ? null : "check")}
                           className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "check"
                               ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
                               : "border-gray-200 hover:border-gray-300 text-gray-500"
@@ -1028,9 +1028,15 @@ export default function PurimEventPage() {
                         </button>
                       </div>
 
-                      {/* Card form (hidden until Credit Card selected) */}
-                      {/* Direct card input - matches old working site (thejre.org/donation) pattern */}
-                      <div className={paymentMethod === "online" ? "mt-4" : "hidden"}>
+                      {/* Card form - expands/collapses with animation */}
+                      <AnimatePresence>
+                        {paymentMethod === "online" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 overflow-hidden"
+                      >
                         <div className="bg-[#FBFBFB] rounded-xl p-4 space-y-3 border border-gray-100">
                           {/* Name on Card */}
                           <div>
@@ -1131,7 +1137,9 @@ export default function PurimEventPage() {
                             <span>Your payment is encrypted and secure.</span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       {/* KEPT FOR FALLBACK: Banquest Hosted Tokenization (has expiry bug)
                       <div className={paymentMethod === "online" ? "mt-4 space-y-3" : "hidden"}>

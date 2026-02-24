@@ -47,7 +47,7 @@ export default function EventDetailClient({
   const [kids, setKids] = useState(0);
   const [selectedSponsorship, setSelectedSponsorship] = useState<string | null>(null);
   const [showSponsorship, setShowSponsorship] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "check">("online");
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>(null);
   // Payment processor: "banquest" (primary) or "square" (backup)
   // To switch to Square: change to "square" and uncomment Square imports above
   const paymentProcessor = "banquest" as const;
@@ -274,6 +274,12 @@ export default function EventDetailClient({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
+
+    // Validate payment method selected
+    if (!paymentMethod) {
+      setError("Please select a payment method.");
+      return;
+    }
 
     // Validate card fields for online payment
     if (paymentMethod === "online") {
@@ -692,7 +698,7 @@ export default function EventDetailClient({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <div ref={formContainerRef} className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-8rem)]">
+                <div ref={formContainerRef} className="bg-white rounded-2xl shadow-xl border border-gray-100">
                   {/* Form Header */}
                   <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-7 text-white">
                     <h3 className="text-2xl font-bold flex items-center gap-2">
@@ -1026,7 +1032,7 @@ export default function EventDetailClient({
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod("online")}
+                          onClick={() => setPaymentMethod(paymentMethod === "online" ? null : "online")}
                           className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "online"
                             ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
                             : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
@@ -1042,7 +1048,7 @@ export default function EventDetailClient({
                         </button>
                         <button
                           type="button"
-                          onClick={() => setPaymentMethod("check")}
+                          onClick={() => setPaymentMethod(paymentMethod === "check" ? null : "check")}
                           className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "check"
                             ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
                             : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
@@ -1058,8 +1064,15 @@ export default function EventDetailClient({
                         </button>
                       </div>
 
-                      {/* Card form (hidden until Credit Card selected) */}
-                      <div className={paymentMethod === "online" ? "mt-4" : "hidden"}>
+                      {/* Card form - expands/collapses with animation */}
+                      <AnimatePresence>
+                        {paymentMethod === "online" && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="mt-4 overflow-hidden"
+                      >
                         <div className="bg-[#FBFBFB] rounded-xl p-4 space-y-3 border border-gray-100">
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
@@ -1150,7 +1163,9 @@ export default function EventDetailClient({
                             <span>Your payment is encrypted and secure.</span>
                           </div>
                         </div>
-                      </div>
+                      </motion.div>
+                        )}
+                      </AnimatePresence>
 
                       <AnimatePresence>
                         {paymentMethod === "check" && (
