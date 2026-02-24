@@ -1028,7 +1028,7 @@ export default function EventDetailClient({
                                       name="honoreeEmail"
                                       value={formState.honoreeEmail}
                                       onChange={handleChange}
-                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all shadow-sm"
+                                      className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                                       placeholder="Honoree's email (optional - we'll notify them)"
                                     />
                                   </motion.div>
@@ -1111,7 +1111,7 @@ export default function EventDetailClient({
                         exit={{ opacity: 0, height: 0 }}
                         className="mt-4 overflow-hidden"
                       >
-                        <div className="bg-[#FBFBFB] rounded-xl p-4 space-y-3 border border-gray-100">
+                        <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
                           <div>
                             <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
                             <input
