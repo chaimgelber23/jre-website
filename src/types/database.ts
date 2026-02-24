@@ -118,6 +118,7 @@ export interface Database {
           location: string | null;
           location_url: string | null;
           image_url: string | null;
+          theme_color: string | null;
           price_per_adult: number;
           kids_price: number;
           is_active: boolean;
@@ -135,6 +136,7 @@ export interface Database {
           location?: string | null;
           location_url?: string | null;
           image_url?: string | null;
+          theme_color?: string | null;
           price_per_adult?: number;
           kids_price?: number;
           is_active?: boolean;
@@ -152,6 +154,7 @@ export interface Database {
           location?: string | null;
           location_url?: string | null;
           image_url?: string | null;
+          theme_color?: string | null;
           price_per_adult?: number;
           kids_price?: number;
           is_active?: boolean;
