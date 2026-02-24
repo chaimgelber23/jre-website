@@ -518,37 +518,32 @@ export default function EventDetailClient({
 
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
+        {/* Image / Placeholder area */}
         <div
-          className="relative h-[60vh] min-h-[500px] cursor-pointer group"
+          className={`relative h-[80vh] min-h-[500px] cursor-pointer group ${hasEventImage ? "bg-black" : ""}`}
           onClick={scrollToRegistration}
         >
           {hasEventImage ? (
-            <>
-              <Image
-                src={eventImage}
-                alt={event.title}
-                fill
-                className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
-                priority
-                onError={() => setImageError(true)}
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
-            </>
+            <Image
+              src={eventImage}
+              alt={event.title}
+              fill
+              className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+              priority
+              onError={() => setImageError(true)}
+            />
           ) : (
-            <>
-              <EventPlaceholder
-                title={event.title}
-                variant="hero"
-                themeColor={event.theme_color}
-                backgroundOnly
-                className="absolute inset-0"
-              />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent z-[1]" />
-            </>
+            <EventPlaceholder
+              title={event.title}
+              date={eventDate}
+              variant="hero"
+              themeColor={event.theme_color}
+              className="absolute inset-0"
+            />
           )}
 
           {/* Back to Events - top left */}
-          <div className="absolute top-6 left-0 right-0 container mx-auto px-6 z-10">
+          <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
               className="inline-flex items-center gap-2 text-gray-800 hover:text-[var(--theme-primary)] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg transition-colors text-sm border border-white/20"
@@ -559,7 +554,7 @@ export default function EventDetailClient({
           </div>
 
           {/* Scroll hint */}
-          <div className="absolute bottom-24 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
+          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
             <span className="text-white/90 text-sm font-medium">Click to Register</span>
             <motion.div
               animate={{ y: [0, 8, 0] }}
@@ -570,43 +565,27 @@ export default function EventDetailClient({
               </svg>
             </motion.div>
           </div>
+        </div>
 
-          {/* Hero content at bottom */}
-          <div className="absolute bottom-0 left-0 right-0 z-10">
-            <div className="container mx-auto px-6 pb-8">
-              <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.5 }}
-              >
-                <h1 className="text-3xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight max-w-4xl">
-                  {event.title}
-                </h1>
-                {event.description && (
-                  <p className="text-white/80 text-sm md:text-base mb-4 max-w-2xl leading-relaxed">
-                    {event.description}
-                  </p>
-                )}
-                <div className="flex flex-wrap items-center gap-4 text-white/90 text-sm">
-                  <span className="flex items-center gap-2">
-                    <Calendar className="w-4 h-4" />
-                    {eventDate}
-                  </span>
-                  {eventTime && (
-                    <span className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
-                      {eventTime}
-                    </span>
-                  )}
-                  {event.location && (
-                    <span className="flex items-center gap-2">
-                      <MapPin className="w-4 h-4" />
-                      {event.location}
-                    </span>
-                  )}
-                </div>
-              </motion.div>
-            </div>
+        {/* Title band below hero */}
+        <div style={{ background: hasEventImage ? "#000" : theme.darkBg }} className="py-6">
+          <div className="container mx-auto px-6">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+            >
+              <p className="text-[var(--theme-primary)] font-medium tracking-wider uppercase text-sm mb-1">
+                {eventDate}{eventTime ? ` \u00B7 ${eventTime}` : ""}
+              </p>
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+                {event.title}
+              </h1>
+              {event.description && (
+                <p className="text-lg text-white/80 max-w-2xl">
+                  {event.description.split("\n\n")[0]}
+                </p>
+              )}
+            </motion.div>
           </div>
         </div>
       </section>
