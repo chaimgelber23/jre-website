@@ -398,8 +398,8 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
 
                   {/* Subtle border on hover */}
                   <div
-                    className="absolute inset-0 rounded-2xl border-2 border-transparent transition-colors duration-300"
-                    style={{ ["--hover-border" as string]: `${cardTheme.primary}66` }}
+                    className="absolute inset-0 rounded-2xl border-2 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none"
+                    style={{ borderColor: `${cardTheme.primary}66` }}
                   />
 
                   {/* Content */}
