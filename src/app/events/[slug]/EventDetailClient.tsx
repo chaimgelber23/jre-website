@@ -71,6 +71,7 @@ export default function EventDetailClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [imageError, setImageError] = useState(false);
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
@@ -388,7 +389,7 @@ export default function EventDetailClient({
 
   const eventDate = formatDate(event.date);
   const eventTime = formatTime(event.start_time, event.end_time);
-  const hasEventImage = !!event.image_url;
+  const hasEventImage = !!event.image_url && !imageError;
   const eventImage = event.image_url || "";
 
   // CSS custom properties for theming - applied to main wrapper
@@ -444,6 +445,7 @@ export default function EventDetailClient({
                       alt={event.title}
                       fill
                       className="object-cover"
+                      onError={() => setImageError(true)}
                     />
                   ) : (
                     <EventPlaceholder title={event.title} variant="card" themeColor={event.theme_color} className="absolute inset-0" />
@@ -528,6 +530,7 @@ export default function EventDetailClient({
                 fill
                 className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                 priority
+                onError={() => setImageError(true)}
               />
               <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/50 to-black/30" />
             </>

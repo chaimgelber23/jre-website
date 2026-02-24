@@ -32,6 +32,41 @@ export interface DisplayEvent {
   featured: boolean;
 }
 
+// Event image with error fallback to placeholder
+function EventImage({ event, variant = "card", className, priority, draggable }: {
+  event: DisplayEvent;
+  variant?: "card" | "featured" | "hero";
+  className?: string;
+  priority?: boolean;
+  draggable?: boolean;
+}) {
+  const [error, setError] = useState(false);
+  const showImage = event.hasImage && !error;
+
+  if (showImage) {
+    return (
+      <Image
+        src={event.image}
+        alt={event.title}
+        fill
+        className={className}
+        priority={priority}
+        draggable={draggable}
+        onError={() => setError(true)}
+      />
+    );
+  }
+
+  return (
+    <EventPlaceholder
+      title={event.title}
+      date={event.date}
+      variant={variant}
+      className="absolute inset-0"
+    />
+  );
+}
+
 // Event Card Component with enhanced animations
 function EventCard({
   event,
@@ -58,18 +93,13 @@ function EventCard({
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EF8046] via-[#f59e0b] to-[#EF8046] opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm scale-[1.02]" />
 
           <div className="relative h-52 overflow-hidden bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
-            {event.hasImage ? (
-              <>
-                <Image
-                  src={event.image}
-                  alt={event.title}
-                  fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
-                />
-                <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
-              </>
-            ) : (
-              <EventPlaceholder title={event.title} date={event.date} variant="card" className="absolute inset-0" />
+            <EventImage
+              event={event}
+              variant="card"
+              className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
+            />
+            {event.hasImage && (
+              <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
             )}
 
             {event.featured && (
@@ -170,20 +200,17 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               className="relative"
             >
               <div className="relative h-[400px] rounded-2xl overflow-hidden group bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
-                {event.hasImage ? (
+                <EventImage
+                  event={event}
+                  variant="featured"
+                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
+                />
+                {event.hasImage && (
                   <>
-                    <Image
-                      src={event.image}
-                      alt={event.title}
-                      fill
-                      className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
-                    />
                     <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors z-[2]" />
                     <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
                     <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
                   </>
-                ) : (
-                  <EventPlaceholder title={event.title} date={event.date} variant="featured" className="absolute inset-0 rounded-2xl" />
                 )}
               </div>
             </motion.div>
@@ -372,17 +399,12 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                 transition={{ duration: 0.2 }}
                 className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-[#2d3748] to-[#1a202c]"
               >
-                {event.hasImage ? (
-                  <Image
-                    src={event.image}
-                    alt={event.title}
-                    fill
-                    className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
-                    draggable={false}
-                  />
-                ) : (
-                  <EventPlaceholder title={event.title} date={event.date} variant="card" className="absolute inset-0" />
-                )}
+                <EventImage
+                  event={event}
+                  variant="card"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
+                  draggable={false}
+                />
 
                 {/* Gradient overlay */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
