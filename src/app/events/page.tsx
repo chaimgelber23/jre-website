@@ -116,21 +116,27 @@ function EventCard({
           {/* Gradient border effect on hover */}
           <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EF8046] via-[#f59e0b] to-[#EF8046] opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm scale-[1.02]" />
 
-          <div className="relative h-52 overflow-hidden">
+          <div className="relative h-52 overflow-hidden bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
+            {/* Fallback pattern when image is missing */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <div className="w-16 h-16 rounded-full bg-[#EF8046]/20 flex items-center justify-center">
+                <Calendar className="w-8 h-8 text-[#EF8046]/60" />
+              </div>
+            </div>
             <Image
               src={event.image}
               alt={event.title}
               fill
-              className="object-cover transition-transform duration-500 group-hover:scale-110"
+              className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
             />
             {/* Overlay gradient */}
-            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
 
             {event.featured && (
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="absolute top-4 left-0 bg-[#EF8046] text-white px-4 py-2 rounded-r-full text-sm font-bold uppercase tracking-wide shadow-lg flex items-center gap-2"
+                className="absolute top-4 left-0 bg-[#EF8046] text-white px-4 py-2 rounded-r-full text-sm font-bold uppercase tracking-wide shadow-lg flex items-center gap-2 z-[3]"
               >
                 <Star className="w-4 h-4 fill-current" />
                 Next Event
@@ -225,15 +231,21 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               transition={{ duration: 0.6 }}
               className="relative"
             >
-              <div className="relative h-[400px] rounded-2xl overflow-hidden group">
+              <div className="relative h-[400px] rounded-2xl overflow-hidden group bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
+                {/* Fallback pattern when image is missing */}
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className="w-20 h-20 rounded-full bg-[#EF8046]/20 flex items-center justify-center">
+                    <Calendar className="w-10 h-10 text-[#EF8046]/60" />
+                  </div>
+                </div>
                 <Image
                   src={event.image}
                   alt={event.title}
                   fill
-                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105"
+                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
                 />
                 {/* Animated border */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors" />
+                <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors z-[2]" />
 
                 {/* Corner accents */}
                 <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
@@ -423,13 +435,13 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                 key={event.id}
                 whileHover={{ y: -8 }}
                 transition={{ duration: 0.2 }}
-                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300"
+                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-[#2d3748] to-[#1a202c]"
               >
                 <Image
                   src={event.image}
                   alt={event.title}
                   fill
-                  className="object-cover transition-transform duration-500 group-hover:scale-105"
+                  className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
                   draggable={false}
                 />
 
