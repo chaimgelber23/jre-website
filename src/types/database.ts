@@ -247,6 +247,47 @@ export interface Database {
           updated_at?: string;
         };
       };
+      gallery_photos: {
+        Row: {
+          id: string;
+          title: string;
+          caption: string | null;
+          image_url: string;
+          category: string;
+          event_slug: string | null;
+          drive_file_id: string | null;
+          date_taken: string | null;
+          sort_order: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          title: string;
+          caption?: string | null;
+          image_url: string;
+          category?: string;
+          event_slug?: string | null;
+          drive_file_id?: string | null;
+          date_taken?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          title?: string;
+          caption?: string | null;
+          image_url?: string;
+          category?: string;
+          event_slug?: string | null;
+          drive_file_id?: string | null;
+          date_taken?: string | null;
+          sort_order?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
       parsha_content: {
         Row: {
           id: string;
@@ -313,3 +354,6 @@ export type EventRegistrationInsert = Database["public"]["Tables"]["event_regist
 
 export type ParshaContent = Database["public"]["Tables"]["parsha_content"]["Row"];
 export type ParshaContentInsert = Database["public"]["Tables"]["parsha_content"]["Insert"];
+
+export type GalleryPhoto = Database["public"]["Tables"]["gallery_photos"]["Row"];
+export type GalleryPhotoInsert = Database["public"]["Tables"]["gallery_photos"]["Insert"];

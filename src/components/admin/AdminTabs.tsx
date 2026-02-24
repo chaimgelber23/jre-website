@@ -2,13 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { DollarSign, Calendar, Users } from "lucide-react";
+import { DollarSign, Calendar, Users, ImageIcon } from "lucide-react";
 import { motion } from "framer-motion";
 
 const tabs = [
   { name: "Events", href: "/admin/events", icon: Calendar },
   { name: "Donations", href: "/admin", icon: DollarSign },
   { name: "People", href: "/admin/people", icon: Users },
+  { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },
 ];
 
 export default function AdminTabs() {
