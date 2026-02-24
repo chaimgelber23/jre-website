@@ -15,8 +15,15 @@ const quickLinks = [
   { href: "/donate", label: "Donate" },
 ];
 
-export default function Footer({ bgColor }: { bgColor?: string }) {
+interface FooterProps {
+  bgColor?: string;
+  /** Override accent color for themed pages (e.g. women's events use dusty rose) */
+  accentColor?: string;
+}
+
+export default function Footer({ bgColor, accentColor }: FooterProps) {
   const currentYear = new Date().getFullYear();
+  const accent = accentColor || "#EF8046";
 
   return (
     <footer className={`${bgColor || "bg-[#2d3748]"} text-white pt-8`}>
@@ -33,7 +40,7 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
                 height={47}
                 className="brightness-0 invert"
               />
-              {/* Torch/flame glow - matches header */}
+              {/* Torch/flame glow - uses accent color */}
               <div
                 className="absolute pointer-events-none"
                 style={{
@@ -41,7 +48,7 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
                   left: '3%',
                   width: '20px',
                   height: '24px',
-                  background: 'radial-gradient(ellipse at center, rgba(239, 128, 70, 0.55) 0%, rgba(239, 128, 70, 0.25) 45%, transparent 70%)',
+                  background: `radial-gradient(ellipse at center, ${accent}8C 0%, ${accent}40 45%, transparent 70%)`,
                   filter: 'blur(4px)',
                 }}
               />
@@ -51,7 +58,7 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
               the deep and meaningful wisdom of Judaism in a way that is
               relevant to their daily lives.
             </p>
-            <p className="text-[#EF8046] font-medium italic">
+            <p className="font-medium italic" style={{ color: accent }}>
               &quot;The Future of Ancient Wisdom&quot;
             </p>
           </FadeUp>
@@ -64,10 +71,16 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-gray-300 hover:text-[#EF8046] transition-colors inline-flex items-center gap-2 group"
+                    className="text-gray-300 transition-colors inline-flex items-center gap-2 group"
+                    style={{ ["--footer-accent" as string]: accent }}
                   >
-                    <span className="w-0 h-0.5 bg-[#EF8046] group-hover:w-3 transition-all duration-300" />
-                    {link.label}
+                    <span
+                      className="w-0 h-0.5 group-hover:w-3 transition-all duration-300"
+                      style={{ backgroundColor: accent }}
+                    />
+                    <span className="group-hover:text-[var(--footer-accent)]">
+                      {link.label}
+                    </span>
                   </Link>
                 </li>
               ))}
@@ -77,11 +90,11 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
           {/* Contact Info */}
           <FadeUp delay={0.2}>
             <h4 className="text-lg font-semibold mb-6">Contact Us</h4>
-            <ul className="space-y-4">
+            <ul className="space-y-4" style={{ ["--footer-accent" as string]: accent }}>
               <li>
                 <a
                   href="mailto:office@thejre.org"
-                  className="flex items-start gap-3 text-gray-300 hover:text-[#EF8046] transition-colors"
+                  className="flex items-start gap-3 text-gray-300 hover:text-[var(--footer-accent)] transition-colors"
                 >
                   <Mail className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <span>office@thejre.org</span>
@@ -90,7 +103,7 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
               <li>
                 <a
                   href="tel:914-713-4355"
-                  className="flex items-start gap-3 text-gray-300 hover:text-[#EF8046] transition-colors"
+                  className="flex items-start gap-3 text-gray-300 hover:text-[var(--footer-accent)] transition-colors"
                 >
                   <Phone className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <span>914-713-4355</span>
@@ -101,7 +114,7 @@ export default function Footer({ bgColor }: { bgColor?: string }) {
                   href="https://maps.google.com/?q=1495+Weaver+Street,+Scarsdale,+NY+10583"
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex items-start gap-3 text-gray-300 hover:text-[#EF8046] transition-colors"
+                  className="flex items-start gap-3 text-gray-300 hover:text-[var(--footer-accent)] transition-colors"
                 >
                   <MapPin className="w-5 h-5 mt-0.5 flex-shrink-0" />
                   <span>

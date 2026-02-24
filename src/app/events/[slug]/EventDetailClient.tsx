@@ -28,6 +28,8 @@ import Footer from "@/components/layout/Footer";
 import { Lock } from "lucide-react";
 import confetti from "canvas-confetti";
 import EventPlaceholder from "@/components/events/EventPlaceholder";
+import { getEventTheme } from "@/lib/event-theme";
+import type { EventTheme } from "@/lib/event-theme";
 import type { Event, EventSponsorship } from "@/types/database";
 
 export default function EventDetailClient({
@@ -42,6 +44,9 @@ export default function EventDetailClient({
   const [sponsorships, setSponsorships] = useState<EventSponsorship[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+
+  // Theme colors (defaults to orange when event not loaded yet)
+  const theme = getEventTheme(event?.theme_color);
 
   // Form state
   const [adults, setAdults] = useState(1);
@@ -173,7 +178,7 @@ export default function EventDetailClient({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: ["#EF8046", "#f59e0b", "#10b981"],
+        colors: theme.confettiColors,
       });
     }
   }, [isSubmitted]);
@@ -343,7 +348,7 @@ export default function EventDetailClient({
           <motion.div
             animate={{ rotate: 360 }}
             transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-            className="w-10 h-10 border-3 border-[#EF8046] border-t-transparent rounded-full"
+            className="w-10 h-10 border-3 border-[var(--theme-primary)] border-t-transparent rounded-full"
           />
         </div>
         <Footer />
@@ -369,7 +374,7 @@ export default function EventDetailClient({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="bg-[#EF8046] text-white px-8 py-3 rounded font-medium hover:bg-[#d96a2f] transition-colors"
+                className="bg-[var(--theme-primary)] text-white px-8 py-3 rounded font-medium hover:bg-[var(--theme-hover)] transition-colors"
               >
                 View All Events
               </motion.button>
@@ -385,6 +390,15 @@ export default function EventDetailClient({
   const eventTime = formatTime(event.start_time, event.end_time);
   const hasEventImage = !!event.image_url;
   const eventImage = event.image_url || "";
+
+  // CSS custom properties for theming - applied to main wrapper
+  const themeVars = {
+    "--theme-primary": theme.primary,
+    "--theme-hover": theme.primaryHover,
+    "--theme-dark": theme.darkBg,
+    "--theme-darker": theme.darkerBg,
+    "--theme-rgb": theme.primaryRgb,
+  } as React.CSSProperties;
 
   // Success State
   if (isSubmitted) {
@@ -432,12 +446,12 @@ export default function EventDetailClient({
                       className="object-cover"
                     />
                   ) : (
-                    <EventPlaceholder title={event.title} variant="card" className="absolute inset-0" />
+                    <EventPlaceholder title={event.title} variant="card" themeColor={event.theme_color} className="absolute inset-0" />
                   )}
                 </div>
                 <div>
                   <h3 className="font-bold text-gray-900">{event.title}</h3>
-                  <p className="text-sm text-[#EF8046]">
+                  <p className="text-sm text-[var(--theme-primary)]">
                     {adults} adult{adults > 1 ? "s" : ""}
                     {kids > 0 ? ` + ${kids} kid${kids > 1 ? "s" : ""}` : ""}
                   </p>
@@ -445,30 +459,30 @@ export default function EventDetailClient({
               </div>
               <div className="space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
                 <div className="flex items-center gap-3">
-                  <div className="w-8 h-8 bg-[#EF8046]/10 rounded-lg flex items-center justify-center">
-                    <Calendar className="w-4 h-4 text-[#EF8046]" />
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
                   </div>
                   <span>{eventDate}</span>
                 </div>
                 {eventTime && (
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#EF8046]/10 rounded-lg flex items-center justify-center">
-                      <Clock className="w-4 h-4 text-[#EF8046]" />
+                    <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
                     </div>
                     <span>{eventTime}</span>
                   </div>
                 )}
                 {event.location && (
                   <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 bg-[#EF8046]/10 rounded-lg flex items-center justify-center">
-                      <MapPin className="w-4 h-4 text-[#EF8046]" />
+                    <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
                     </div>
                     {event.location_url ? (
                       <a
                         href={event.location_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="text-[#EF8046] hover:underline"
+                        className="text-[var(--theme-primary)] hover:underline"
                       >
                         {event.location}
                       </a>
@@ -484,7 +498,7 @@ export default function EventDetailClient({
               <motion.button
                 whileHover={{ scale: 1.02 }}
                 whileTap={{ scale: 0.98 }}
-                className="bg-[#EF8046] text-white px-8 py-3 rounded font-medium hover:bg-[#d96a2f] transition-colors"
+                className="bg-[var(--theme-primary)] text-white px-8 py-3 rounded font-medium hover:bg-[var(--theme-hover)] transition-colors"
               >
                 Back to Events
               </motion.button>
@@ -497,7 +511,7 @@ export default function EventDetailClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#FBFBFB]">
+    <main className="min-h-screen bg-[#FBFBFB]" style={themeVars}>
       <Header />
 
       {/* Hero Section */}
@@ -523,6 +537,7 @@ export default function EventDetailClient({
                 title={event.title}
                 date={eventDate}
                 variant="hero"
+                themeColor={event.theme_color}
                 className="absolute inset-0"
               />
               {/* Gradient overlay for text at bottom */}
@@ -531,8 +546,8 @@ export default function EventDetailClient({
           )}
 
           {/* Decorative corner accents */}
-          <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-[#EF8046]/50 rounded-tl-3xl" />
-          <div className="absolute bottom-4 right-4 w-20 h-20 border-b-4 border-r-4 border-[#EF8046]/50 rounded-br-3xl" />
+          <div className="absolute top-4 left-4 w-20 h-20 border-t-4 border-l-4 border-[var(--theme-primary)]/50 rounded-tl-3xl" />
+          <div className="absolute bottom-4 right-4 w-20 h-20 border-b-4 border-r-4 border-[var(--theme-primary)]/50 rounded-br-3xl" />
 
           {/* Scroll hint */}
           <div className="absolute bottom-20 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none">
@@ -550,7 +565,7 @@ export default function EventDetailClient({
           <div className="absolute bottom-0 left-0 right-0 container mx-auto px-6 pb-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-gray-800 hover:text-[#EF8046] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm border border-white/20"
+              className="inline-flex items-center gap-2 text-gray-800 hover:text-[var(--theme-primary)] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg mb-4 transition-colors text-sm border border-white/20"
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
@@ -561,7 +576,7 @@ export default function EventDetailClient({
               transition={{ duration: 0.5 }}
             >
               <div className="flex items-center gap-2 mb-3">
-                <span className="bg-[#EF8046] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
+                <span className="bg-[var(--theme-primary)] text-white text-xs font-bold uppercase tracking-wider px-3 py-1 rounded-full">
                   Upcoming Event
                 </span>
               </div>
@@ -597,10 +612,10 @@ export default function EventDetailClient({
                 transition={{ duration: 0.5 }}
               >
                 {/* Quick Info Bar */}
-                <div className="bg-gradient-to-r from-[#2d3748] to-[#1a202c] rounded-2xl p-8 mb-10 text-white">
+                <div className="bg-gradient-to-r from-[var(--theme-dark)] to-[var(--theme-darker)] rounded-2xl p-8 mb-10 text-white">
                   <div className="grid sm:grid-cols-3 gap-6">
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
                         <Calendar className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -609,7 +624,7 @@ export default function EventDetailClient({
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
                         <Clock className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -618,7 +633,7 @@ export default function EventDetailClient({
                       </div>
                     </div>
                     <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
+                      <div className="w-12 h-12 bg-[var(--theme-primary)] rounded-xl flex items-center justify-center">
                         <MapPin className="w-6 h-6 text-white" />
                       </div>
                       <div>
@@ -628,7 +643,7 @@ export default function EventDetailClient({
                             href={event.location_url}
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="font-semibold text-[#EF8046] hover:underline"
+                            className="font-semibold text-[var(--theme-primary)] hover:underline"
                           >
                             View Map
                           </a>
@@ -688,7 +703,7 @@ export default function EventDetailClient({
                 {sponsorships.length > 0 && (
                   <div className="bg-[#FBFBFB] rounded-2xl p-6">
                     <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
-                      <Award className="w-5 h-5 text-[#EF8046]" />
+                      <Award className="w-5 h-5 text-[var(--theme-primary)]" />
                       Sponsorship Opportunities
                     </h3>
                     <div className="grid sm:grid-cols-2 gap-3">
@@ -703,7 +718,7 @@ export default function EventDetailClient({
                               <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>
                             )}
                           </div>
-                          <span className="text-[#EF8046] font-bold ml-4">${s.price}</span>
+                          <span className="text-[var(--theme-primary)] font-bold ml-4">${s.price}</span>
                         </div>
                       ))}
                     </div>
@@ -719,19 +734,22 @@ export default function EventDetailClient({
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5, delay: 0.2 }}
               >
-                <div ref={formContainerRef} className="bg-white rounded-2xl shadow-xl border border-gray-100">
+                <div ref={formContainerRef} className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-gray-100/80 overflow-hidden">
                   {/* Form Header */}
-                  <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-7 text-white">
-                    <h3 className="text-2xl font-bold flex items-center gap-2">
-                      <Users className="w-6 h-6" />
-                      Register Now
-                    </h3>
-                    <p className="text-white/80 text-sm mt-1">
-                      Secure your spot for this event
-                    </p>
+                  <div className="relative bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] p-8 text-white overflow-hidden">
+                    {/* Subtle shine sweep */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-200%] animate-[shimmer_6s_ease-in-out_infinite]" />
+                    <div className="relative">
+                      <p className="text-white/70 text-xs font-medium tracking-[0.2em] uppercase mb-2">
+                        Reserve Your Spot
+                      </p>
+                      <h3 className="text-2xl font-bold">
+                        Register Now
+                      </h3>
+                    </div>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="p-7 space-y-6">
+                  <form onSubmit={handleSubmit} className="p-8 space-y-7">
                     {/* Error Message */}
                     {error && (
                       <div ref={errorRef} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -741,18 +759,17 @@ export default function EventDetailClient({
 
                     {/* Your Details */}
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-base">
-                        <Users className="w-4 h-4 text-[#EF8046]" />
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-4">
                         Your Details
                       </h4>
-                      <div className="space-y-3">
+                      <div className="space-y-3.5">
                         <input
                           type="text"
                           name="name"
                           value={formState.name}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
+                          className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                           placeholder="Full Name *"
                         />
                         <input
@@ -761,7 +778,7 @@ export default function EventDetailClient({
                           value={formState.email}
                           onChange={handleChange}
                           required
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
+                          className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                           placeholder="Email Address *"
                         />
                         <input
@@ -769,62 +786,62 @@ export default function EventDetailClient({
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
+                          className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                           placeholder="Phone (optional)"
                         />
                       </div>
                     </div>
 
                     {/* Attendees */}
-                    <div className="pt-5 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-4 text-base">Attendees</h4>
+                    <div className="pt-6 border-t border-gray-100/80">
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Attendees</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                           <div>
-                            <span className="text-gray-700 text-sm">Adults</span>
-                            <span className="text-gray-400 text-xs ml-1">(${event.price_per_adult}/person)</span>
+                            <span className="text-gray-800 text-sm font-medium">Adults</span>
+                            <span className="text-gray-400 text-xs ml-1.5">${event.price_per_adult} each</span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <button
                               type="button"
                               onClick={() => setAdults(Math.max(1, adults - 1))}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              <Minus className="w-4 h-4" />
+                              <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="w-6 text-center font-bold text-gray-900">{adults}</span>
+                            <span className="w-6 text-center font-bold text-gray-900 text-lg tabular-nums">{adults}</span>
                             <button
                               type="button"
                               onClick={() => setAdults(adults + 1)}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              <Plus className="w-4 h-4" />
+                              <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
                         {event.kids_price > 0 && (
-                          <div className="flex items-center justify-between">
+                          <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                             <div>
-                              <span className="text-gray-700 text-sm">Kids</span>
-                              <span className="text-gray-400 text-xs ml-1">
-                                (${event.kids_price}/child)
+                              <span className="text-gray-800 text-sm font-medium">Kids</span>
+                              <span className="text-gray-400 text-xs ml-1.5">
+                                ${event.kids_price} each
                               </span>
                             </div>
-                            <div className="flex items-center gap-3">
+                            <div className="flex items-center gap-4">
                               <button
                                 type="button"
                                 onClick={() => setKids(Math.max(0, kids - 1))}
-                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                                className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                               >
-                                <Minus className="w-4 h-4" />
+                                <Minus className="w-3.5 h-3.5" />
                               </button>
-                              <span className="w-6 text-center font-bold text-gray-900">{kids}</span>
+                              <span className="w-6 text-center font-bold text-gray-900 text-lg tabular-nums">{kids}</span>
                               <button
                                 type="button"
                                 onClick={() => setKids(kids + 1)}
-                                className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors"
+                                className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                               >
-                                <Plus className="w-4 h-4" />
+                                <Plus className="w-3.5 h-3.5" />
                               </button>
                             </div>
                           </div>
@@ -834,7 +851,7 @@ export default function EventDetailClient({
 
                     {/* Sponsorship Toggle */}
                     {sponsorships.length > 0 && (
-                      <div className="pt-4 border-t border-gray-100">
+                      <div className="pt-5 border-t border-gray-100/80">
                         <motion.button
                           type="button"
                           onClick={() => {
@@ -845,7 +862,7 @@ export default function EventDetailClient({
                           }}
                           className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
                             ? "bg-gray-50 text-gray-500 border border-transparent hover:bg-gray-100"
-                            : "border-2 border-[#EF8046] text-[#EF8046] hover:bg-[#EF8046]/5 shadow-sm"
+                            : "border-2 border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 shadow-sm"
                             }`}
                           whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                           whileTap={{ scale: 0.98 }}
@@ -922,11 +939,11 @@ export default function EventDetailClient({
                                         whileHover={{ y: -3, scale: 1.02 }}
                                         whileTap={{ scale: 0.97 }}
                                         className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${isSelected
-                                          ? "border-[#EF8046] bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5"
+                                          ? "border-[var(--theme-primary)] bg-gradient-to-r from-[var(--theme-primary)]/10 to-[var(--theme-primary)]/5"
                                           : isTop
-                                            ? "border-[#EF8046]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
+                                            ? "border-[var(--theme-primary)]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
                                             : isHigh
-                                              ? "border-[#EF8046]/20 bg-white hover:border-[#EF8046]/40"
+                                              ? "border-[var(--theme-primary)]/20 bg-white hover:border-[var(--theme-primary)]/40"
                                               : "border-gray-200 bg-white hover:border-gray-300"
                                           }`}
                                       >
@@ -952,15 +969,15 @@ export default function EventDetailClient({
                                                   animate={{ rotate: [0, 15, -15, 0] }}
                                                   transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
                                                 >
-                                                  <Star className="w-4 h-4 text-[#EF8046] fill-[#EF8046]" />
+                                                  <Star className="w-4 h-4 text-[var(--theme-primary)] fill-[var(--theme-primary)]" />
                                                 </motion.div>
                                               ) : (
-                                                <Award className={`w-4 h-4 transition-colors duration-200 ${isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/60" : "text-gray-300"
+                                                <Award className={`w-4 h-4 transition-colors duration-200 ${isSelected ? "text-[var(--theme-primary)]" : isHigh ? "text-[var(--theme-primary)]/60" : "text-gray-300"
                                                   }`} />
                                               )}
-                                              <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
+                                              <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[var(--theme-primary)]" : "text-gray-900"}`}>{s.name}</p>
                                               {isTop && !isSelected && (
-                                                <span className="text-[10px] font-bold uppercase tracking-wider bg-[#EF8046] text-white px-2 py-0.5 rounded-full">
+                                                <span className="text-[10px] font-bold uppercase tracking-wider bg-[var(--theme-primary)] text-white px-2 py-0.5 rounded-full">
                                                   Popular
                                                 </span>
                                               )}
@@ -970,12 +987,12 @@ export default function EventDetailClient({
                                             )}
                                           </div>
                                           <div className="flex items-center gap-3 ml-4">
-                                            <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${isSelected || isTop ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/80" : "text-gray-700"
+                                            <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${isSelected || isTop ? "text-[var(--theme-primary)]" : isHigh ? "text-[var(--theme-primary)]/80" : "text-gray-700"
                                               }`}>
                                               ${s.price}
                                             </span>
                                             <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${isSelected
-                                              ? "border-[#EF8046] bg-[#EF8046]"
+                                              ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]"
                                               : "border-gray-300"
                                               }`}>
                                               {isSelected && (
@@ -1003,7 +1020,7 @@ export default function EventDetailClient({
                                       value={formState.message}
                                       onChange={handleChange}
                                       rows={2}
-                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm resize-none transition-all shadow-sm"
+                                      className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm resize-none transition-all duration-200 placeholder:text-gray-400"
                                       placeholder="In honor of... (optional)"
                                     />
                                     <input
@@ -1011,7 +1028,7 @@ export default function EventDetailClient({
                                       name="honoreeEmail"
                                       value={formState.honoreeEmail}
                                       onChange={handleChange}
-                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all shadow-sm"
+                                      className="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all shadow-sm"
                                       placeholder="Honoree's email (optional - we'll notify them)"
                                     />
                                   </motion.div>
@@ -1024,13 +1041,13 @@ export default function EventDetailClient({
                     )}
 
                     {/* Total */}
-                    <div ref={totalRef} className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-xl p-5">
+                    <div ref={totalRef} className="bg-gradient-to-br from-[var(--theme-primary)]/8 via-[var(--theme-primary)]/5 to-transparent rounded-2xl p-6 border border-[var(--theme-primary)]/10">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 font-medium">Total</span>
                         <motion.span
                           key={total}
-                          initial={{ scale: 1.2, color: "#EF8046" }}
-                          animate={{ scale: 1, color: "#EF8046" }}
+                          initial={{ scale: 1.2, color: "var(--theme-primary)" }}
+                          animate={{ scale: 1, color: "var(--theme-primary)" }}
                           className="text-3xl font-bold"
                         >
                           ${total}
@@ -1048,14 +1065,14 @@ export default function EventDetailClient({
                     </div>
 
                     {/* Payment Method */}
-                    <div className="pt-5 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-4 text-base">Payment Method</h4>
+                    <div className="pt-6 border-t border-gray-100/80">
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Payment Method</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setPaymentMethod(paymentMethod === "online" ? null : "online")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "online"
-                            ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
+                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "online"
+                            ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
                             : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
@@ -1063,15 +1080,15 @@ export default function EventDetailClient({
                           <span className="text-sm font-medium">Credit Card</span>
                           {paymentMethod === "online" && (
                             <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
-                              <Check className="w-4 h-4 text-[#EF8046]" />
+                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
                             </div>
                           )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setPaymentMethod(paymentMethod === "check" ? null : "check")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all relative ${paymentMethod === "check"
-                            ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046] shadow-sm"
+                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "check"
+                            ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
                             : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
@@ -1079,7 +1096,7 @@ export default function EventDetailClient({
                           <span className="text-sm font-medium">Send a Check</span>
                           {paymentMethod === "check" && (
                             <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
-                              <Check className="w-4 h-4 text-[#EF8046]" />
+                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
                             </div>
                           )}
                         </button>
@@ -1104,7 +1121,7 @@ export default function EventDetailClient({
                               value={formState.cardName}
                               onChange={handleChange}
                               onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors"
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
                               placeholder="Name on Card"
                               autoComplete="cc-name"
                             />
@@ -1125,7 +1142,7 @@ export default function EventDetailClient({
                                   }
                                 }}
                                 onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
                                 placeholder="Card Number"
                                 maxLength={19}
                                 autoComplete="cc-number"
@@ -1149,7 +1166,7 @@ export default function EventDetailClient({
                                   }
                                 }}
                                 onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
                                 placeholder="MM / YY"
                                 maxLength={5}
                                 autoComplete="cc-exp"
@@ -1172,7 +1189,7 @@ export default function EventDetailClient({
                                     submitRef.current?.focus();
                                   }
                                 }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
                                 placeholder="CVV"
                                 maxLength={4}
                                 autoComplete="cc-csc"
@@ -1215,7 +1232,7 @@ export default function EventDetailClient({
                       disabled={isSubmitting}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full bg-[#EF8046] text-white py-5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-70 shadow-lg"
+                      className="w-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2.5 hover:shadow-[0_8px_30px_rgba(var(--theme-rgb),0.35)] transition-all duration-300 disabled:opacity-70 shadow-lg relative overflow-hidden"
                     >
                       {isSubmitting ? (
                         <>
@@ -1249,7 +1266,7 @@ export default function EventDetailClient({
         </div>
       </section>
 
-      <Footer />
+      <Footer bgColor={`bg-[${theme.darkBg}]`} accentColor={theme.primary} />
     </main >
   );
 }

@@ -177,6 +177,12 @@ a {
   box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
 }
 
+/* Shimmer animation for premium elements */
+@keyframes shimmer {
+  0% { transform: translateX(-200%) skewX(-12deg); }
+  100% { transform: translateX(200%) skewX(-12deg); }
+}
+
 /* Reduce motion for accessibility */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

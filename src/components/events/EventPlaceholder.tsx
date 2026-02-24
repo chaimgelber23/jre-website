@@ -2,26 +2,32 @@
 
 import { motion } from "framer-motion";
 import { Sparkles } from "lucide-react";
+import { getEventTheme } from "@/lib/event-theme";
 
 interface EventPlaceholderProps {
   title: string;
   date?: string;
   /** "card" = small card thumbnail, "featured" = featured spotlight, "hero" = full event detail hero */
   variant?: "card" | "featured" | "hero";
+  /** Event theme_color value (e.g. "womens") - colors the placeholder accents */
+  themeColor?: string | null;
   className?: string;
 }
 
 /**
  * Professional text-based placeholder for events without a photo.
  * Designed to look like an elegant event poster/invitation using typography,
- * geometric accents, and brand colors.
+ * geometric accents, and brand colors. Supports per-event theming.
  */
 export default function EventPlaceholder({
   title,
   date,
   variant = "card",
+  themeColor,
   className = "",
 }: EventPlaceholderProps) {
+  const theme = getEventTheme(themeColor);
+
   // Split title for elegant two-line display if it's long
   const words = title.split(" ");
   const midpoint = Math.ceil(words.length / 2);
@@ -54,9 +60,9 @@ export default function EventPlaceholder({
   };
 
   const cornerSize = {
-    card: "w-8 h-8 border-2",
-    featured: "w-12 h-12 border-2",
-    hero: "w-16 h-16 border-[3px]",
+    card: "w-8 h-8",
+    featured: "w-12 h-12",
+    hero: "w-16 h-16",
   };
 
   const padding = {
@@ -65,11 +71,14 @@ export default function EventPlaceholder({
     hero: "p-10 md:p-16",
   };
 
+  const borderWidth = variant === "hero" ? "3px" : "2px";
+  const cornerBorder = `${borderWidth} solid rgba(${theme.primaryRgb}, 0.4)`;
+
   return (
     <div
       className={`relative overflow-hidden ${className}`}
       style={{
-        background: "linear-gradient(135deg, #1a202c 0%, #2d3748 40%, #1a202c 100%)",
+        background: `linear-gradient(135deg, ${theme.darkerBg} 0%, ${theme.darkBg} 40%, ${theme.darkerBg} 100%)`,
       }}
     >
       {/* Dot pattern overlay */}
@@ -85,7 +94,7 @@ export default function EventPlaceholder({
       <div
         className="absolute inset-0"
         style={{
-          background: "radial-gradient(ellipse at center, rgba(239, 128, 70, 0.08) 0%, transparent 70%)",
+          background: `radial-gradient(ellipse at center, rgba(${theme.primaryRgb}, 0.08) 0%, transparent 70%)`,
         }}
       />
 
@@ -104,23 +113,23 @@ export default function EventPlaceholder({
       />
 
       {/* Corner accents */}
-      <div className={`absolute top-3 left-3 ${cornerSize[variant]} border-t border-l border-[#EF8046]/40 rounded-tl-lg`} />
-      <div className={`absolute top-3 right-3 ${cornerSize[variant]} border-t border-r border-[#EF8046]/40 rounded-tr-lg`} />
-      <div className={`absolute bottom-3 left-3 ${cornerSize[variant]} border-b border-l border-[#EF8046]/40 rounded-bl-lg`} />
-      <div className={`absolute bottom-3 right-3 ${cornerSize[variant]} border-b border-r border-[#EF8046]/40 rounded-br-lg`} />
+      <div className={`absolute top-3 left-3 ${cornerSize[variant]} rounded-tl-lg`} style={{ borderTop: cornerBorder, borderLeft: cornerBorder }} />
+      <div className={`absolute top-3 right-3 ${cornerSize[variant]} rounded-tr-lg`} style={{ borderTop: cornerBorder, borderRight: cornerBorder }} />
+      <div className={`absolute bottom-3 left-3 ${cornerSize[variant]} rounded-bl-lg`} style={{ borderBottom: cornerBorder, borderLeft: cornerBorder }} />
+      <div className={`absolute bottom-3 right-3 ${cornerSize[variant]} rounded-br-lg`} style={{ borderBottom: cornerBorder, borderRight: cornerBorder }} />
 
       {/* Content */}
       <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${padding[variant]}`}>
         {/* "THE JRE PRESENTS" header */}
         <div className="flex items-center gap-2 mb-3">
           {variant !== "card" && (
-            <div className="w-6 h-px bg-gradient-to-r from-transparent to-[#EF8046]/50" />
+            <div className="w-6 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
           )}
-          <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase text-[#EF8046]/70`}>
+          <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.7)` }}>
             The JRE Presents
           </span>
           {variant !== "card" && (
-            <div className="w-6 h-px bg-gradient-to-l from-transparent to-[#EF8046]/50" />
+            <div className="w-6 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
           )}
         </div>
 
@@ -132,7 +141,7 @@ export default function EventPlaceholder({
             transition={{ delay: 0.3, type: "spring" }}
             className="mb-3"
           >
-            <Sparkles className="w-5 h-5 text-[#EF8046]/40" />
+            <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.4)` }} />
           </motion.div>
         )}
 
@@ -143,13 +152,13 @@ export default function EventPlaceholder({
           ) : (
             <>
               <span className="block">{line1}</span>
-              <span className="block text-[#EF8046]">{line2}</span>
+              <span className="block" style={{ color: theme.primary }}>{line2}</span>
             </>
           )}
         </div>
 
         {/* Accent line */}
-        <div className={`${accentLineWidth[variant]} h-0.5 bg-gradient-to-r from-transparent via-[#EF8046] to-transparent my-3`} />
+        <div className={`${accentLineWidth[variant]} h-0.5 my-3`} style={{ background: `linear-gradient(to right, transparent, ${theme.primary}, transparent)` }} />
 
         {/* Date */}
         {date && (
