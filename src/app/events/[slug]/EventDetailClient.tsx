@@ -574,17 +574,21 @@ export default function EventDetailClient({
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
             >
-              <p className="text-[var(--theme-primary)] font-medium tracking-wider uppercase text-sm mb-1">
-                {eventDate}{eventTime ? ` \u00B7 ${eventTime}` : ""}
-              </p>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
+              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-3">
                 {event.title}
               </h1>
-              {event.description && (
-                <p className="text-lg text-white/80 max-w-2xl">
-                  {event.description.split("\n\n")[0]}
-                </p>
-              )}
+              <div className="flex flex-wrap items-center gap-x-5 gap-y-2 text-white/80 text-sm">
+                <span className="flex items-center gap-2">
+                  <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+                  {eventDate}
+                </span>
+                {eventTime && (
+                  <span className="flex items-center gap-2">
+                    <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                    {eventTime}
+                  </span>
+                )}
+              </div>
             </motion.div>
           </div>
         </div>
