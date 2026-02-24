@@ -525,7 +525,7 @@ export default function EventDetailClient({
         <h1 className="sr-only">{event.title}</h1>
 
         {/* Image / Placeholder area */}
-        <div className={`relative h-[85vh] min-h-[600px] ${hasEventImage ? "bg-black" : ""}`}>
+        <div className={`relative ${hasEventImage ? "h-[85vh] min-h-[600px] bg-black" : "h-[65vh] min-h-[480px]"}`}>
           {hasEventImage ? (
             <Image
               src={eventImage}
@@ -561,7 +561,7 @@ export default function EventDetailClient({
           <div className="absolute bottom-0 left-0 right-0 z-10">
             {/* Gradient fade from transparent to dark */}
             <div
-              className="h-32"
+              className="h-24"
               style={{
                 background: hasEventImage
                   ? "linear-gradient(to bottom, transparent, rgba(0,0,0,0.85))"
