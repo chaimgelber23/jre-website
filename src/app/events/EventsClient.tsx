@@ -18,6 +18,7 @@ import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { FadeUp } from "@/components/ui/motion";
 import EventPlaceholder from "@/components/events/EventPlaceholder";
+import { getEventTheme } from "@/lib/event-theme";
 
 export interface DisplayEvent {
   id: string;
@@ -30,6 +31,7 @@ export interface DisplayEvent {
   hasImage: boolean;
   description: string;
   featured: boolean;
+  themeColor?: string | null;
 }
 
 // Event image with error fallback to placeholder
@@ -62,6 +64,7 @@ function EventImage({ event, variant = "card", className, priority, draggable }:
       title={event.title}
       date={event.date}
       variant={variant}
+      themeColor={event.themeColor}
       className="absolute inset-0"
     />
   );
@@ -75,6 +78,8 @@ function EventCard({
   event: DisplayEvent;
   index: number;
 }) {
+  const theme = getEventTheme(event.themeColor);
+
   return (
     <motion.div
       initial={{ opacity: 0, y: 30 }}
@@ -90,9 +95,12 @@ function EventCard({
           className="bg-white rounded-2xl overflow-hidden shadow-lg hover:shadow-2xl transition-shadow cursor-pointer w-[350px] flex flex-col relative"
         >
           {/* Gradient border effect on hover */}
-          <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-[#EF8046] via-[#f59e0b] to-[#EF8046] opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm scale-[1.02]" />
+          <div
+            className="absolute inset-0 rounded-2xl opacity-0 group-hover:opacity-100 transition-opacity duration-300 -z-10 blur-sm scale-[1.02]"
+            style={{ background: `linear-gradient(to bottom right, ${theme.primary}, ${theme.primaryHover}, ${theme.primary})` }}
+          />
 
-          <div className="relative h-52 overflow-hidden bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
+          <div className="relative h-52 overflow-hidden" style={{ background: `linear-gradient(to bottom right, ${theme.darkBg}, ${theme.darkerBg})` }}>
             <EventImage
               event={event}
               variant="card"
@@ -106,7 +114,8 @@ function EventCard({
               <motion.div
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
-                className="absolute top-4 left-0 bg-[#EF8046] text-white px-4 py-2 rounded-r-full text-sm font-bold uppercase tracking-wide shadow-lg flex items-center gap-2 z-[3]"
+                className="absolute top-4 left-0 text-white px-4 py-2 rounded-r-full text-sm font-bold uppercase tracking-wide shadow-lg flex items-center gap-2 z-[3]"
+                style={{ backgroundColor: theme.primary }}
               >
                 <Star className="w-4 h-4 fill-current" />
                 Next Event
@@ -115,35 +124,36 @@ function EventCard({
           </div>
 
           <div className="p-6 flex-grow flex flex-col bg-white relative">
-            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#EF8046] transition-colors line-clamp-2">
-              {event.title}
+            <h3 className="text-xl font-bold text-gray-900 mb-3 transition-colors line-clamp-2" style={{ ["--card-accent" as string]: theme.primary }}>
+              <span className="group-hover:text-[var(--card-accent)]">{event.title}</span>
             </h3>
             <p className="text-gray-600 mb-4 line-clamp-2">
               {event.description}
             </p>
             <div className="mt-auto space-y-2 text-sm text-gray-500">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
-                  <Calendar className="w-4 h-4 text-[#EF8046]" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `rgba(${theme.primaryRgb}, 0.1)` }}>
+                  <Calendar className="w-4 h-4" style={{ color: theme.primary }} />
                 </div>
                 <span>{event.date}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
-                  <Clock className="w-4 h-4 text-[#EF8046]" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `rgba(${theme.primaryRgb}, 0.1)` }}>
+                  <Clock className="w-4 h-4" style={{ color: theme.primary }} />
                 </div>
                 <span>{event.time}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
-                  <MapPin className="w-4 h-4 text-[#EF8046]" />
+                <div className="w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0" style={{ backgroundColor: `rgba(${theme.primaryRgb}, 0.1)` }}>
+                  <MapPin className="w-4 h-4" style={{ color: theme.primary }} />
                 </div>
                 <span className="truncate">{event.location}</span>
               </div>
             </div>
             <div className="mt-6 pt-4 border-t border-gray-100">
               <motion.span
-                className="text-[#EF8046] font-semibold flex items-center gap-2"
+                className="font-semibold flex items-center gap-2"
+                style={{ color: theme.primary }}
                 whileHover={{ x: 5 }}
               >
                 Register Now
@@ -159,10 +169,12 @@ function EventCard({
 
 // Featured Event Spotlight Component
 function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
+  const theme = getEventTheme(event.themeColor);
+
   return (
     <section className="relative py-20 overflow-hidden">
       {/* Background */}
-      <div className="absolute inset-0 bg-[#2d3748]" />
+      <div className="absolute inset-0" style={{ backgroundColor: theme.darkBg }} />
 
       <div className="container mx-auto px-6 relative z-10">
         <motion.div
@@ -176,7 +188,8 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
             whileInView={{ scale: 1 }}
             viewport={{ once: true }}
             transition={{ type: "spring", delay: 0.2 }}
-            className="inline-flex items-center gap-2 bg-[#EF8046]/20 text-[#EF8046] px-4 py-2 rounded-full mb-4"
+            className="inline-flex items-center gap-2 px-4 py-2 rounded-full mb-4"
+            style={{ backgroundColor: `rgba(${theme.primaryRgb}, 0.2)`, color: theme.primary }}
           >
             <Star className="w-4 h-4 fill-current" />
             <span className="font-semibold text-sm uppercase tracking-wider">
@@ -199,7 +212,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               transition={{ duration: 0.6 }}
               className="relative"
             >
-              <div className="relative h-[400px] rounded-2xl overflow-hidden group bg-gradient-to-br from-[#2d3748] to-[#1a202c]">
+              <div className="relative h-[400px] rounded-2xl overflow-hidden group" style={{ background: `linear-gradient(to bottom right, ${theme.darkBg}, ${theme.darkerBg})` }}>
                 <EventImage
                   event={event}
                   variant="featured"
@@ -207,9 +220,9 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                 />
                 {event.hasImage && (
                   <>
-                    <div className="absolute inset-0 rounded-2xl border-2 border-[#EF8046]/50 group-hover:border-[#EF8046] transition-colors z-[2]" />
-                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 border-[#EF8046] rounded-tl-2xl" />
-                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 border-[#EF8046] rounded-br-2xl" />
+                    <div className="absolute inset-0 rounded-2xl border-2 transition-colors z-[2]" style={{ borderColor: `rgba(${theme.primaryRgb}, 0.5)` }} />
+                    <div className="absolute top-0 left-0 w-16 h-16 border-t-4 border-l-4 rounded-tl-2xl" style={{ borderColor: theme.primary }} />
+                    <div className="absolute bottom-0 right-0 w-16 h-16 border-b-4 border-r-4 rounded-br-2xl" style={{ borderColor: theme.primary }} />
                   </>
                 )}
               </div>
@@ -231,62 +244,33 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               </p>
 
               <div className="space-y-4 mb-8">
-                <motion.div
-                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                  whileHover={{
-                    x: 10,
-                    backgroundColor: "rgba(255,255,255,0.15)",
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                    <Calendar className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Date</p>
-                    <p className="font-semibold">{event.date}</p>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                  whileHover={{
-                    x: 10,
-                    backgroundColor: "rgba(255,255,255,0.15)",
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                    <Clock className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Time</p>
-                    <p className="font-semibold">{event.time}</p>
-                  </div>
-                </motion.div>
-
-                <motion.div
-                  className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                  whileHover={{
-                    x: 10,
-                    backgroundColor: "rgba(255,255,255,0.15)",
-                  }}
-                  transition={{ duration: 0.2 }}
-                >
-                  <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
-                    <MapPin className="w-6 h-6 text-white" />
-                  </div>
-                  <div>
-                    <p className="text-sm text-gray-400">Location</p>
-                    <p className="font-semibold">{event.location}</p>
-                  </div>
-                </motion.div>
+                {[
+                  { icon: Calendar, label: "Date", value: event.date },
+                  { icon: Clock, label: "Time", value: event.time },
+                  { icon: MapPin, label: "Location", value: event.location },
+                ].map(({ icon: Icon, label, value }) => (
+                  <motion.div
+                    key={label}
+                    className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
+                    whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.15)" }}
+                    transition={{ duration: 0.2 }}
+                  >
+                    <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: theme.primary }}>
+                      <Icon className="w-6 h-6 text-white" />
+                    </div>
+                    <div>
+                      <p className="text-sm text-gray-400">{label}</p>
+                      <p className="font-semibold">{value}</p>
+                    </div>
+                  </motion.div>
+                ))}
               </div>
 
               <motion.span
                 whileHover={{ scale: 1.05 }}
                 whileTap={{ scale: 0.95 }}
-                className="inline-flex bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg shadow-[#EF8046]/30 items-center gap-3"
+                className="inline-flex text-white px-8 py-4 rounded-xl font-semibold text-lg shadow-lg items-center gap-3"
+                style={{ background: `linear-gradient(to right, ${theme.primary}, ${theme.primaryHover})`, boxShadow: `0 10px 25px rgba(${theme.primaryRgb}, 0.3)` }}
               >
                 Register Now
                 <motion.span
@@ -392,37 +376,50 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
             }}
             onScroll={checkPosition}
           >
-            {events.map((event) => (
-              <motion.div
-                key={event.id}
-                whileHover={{ y: -8 }}
-                transition={{ duration: 0.2 }}
-                className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300 bg-gradient-to-br from-[#2d3748] to-[#1a202c]"
-              >
-                <EventImage
-                  event={event}
-                  variant="card"
-                  className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
-                  draggable={false}
-                />
+            {events.map((event) => {
+              const cardTheme = getEventTheme(event.themeColor);
+              return (
+                <motion.div
+                  key={event.id}
+                  whileHover={{ y: -8 }}
+                  transition={{ duration: 0.2 }}
+                  className="relative h-72 min-w-[300px] md:min-w-[350px] rounded-2xl overflow-hidden group flex-shrink-0 shadow-lg hover:shadow-2xl transition-shadow duration-300"
+                  style={{ background: `linear-gradient(to bottom right, ${cardTheme.darkBg}, ${cardTheme.darkerBg})` }}
+                >
+                  <EventImage
+                    event={event}
+                    variant="card"
+                    className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
+                    draggable={false}
+                  />
 
-                {/* Gradient overlay */}
-                <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
+                  {/* Gradient overlay */}
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
 
-                {/* Subtle border on hover */}
-                <div className="absolute inset-0 rounded-2xl border-2 border-transparent group-hover:border-[#EF8046]/40 transition-colors duration-300" />
+                  {/* Subtle border on hover */}
+                  <div
+                    className="absolute inset-0 rounded-2xl border-2 border-transparent transition-colors duration-300"
+                    style={{ ["--hover-border" as string]: `${cardTheme.primary}66` }}
+                  />
 
-                {/* Content */}
-                <div className="absolute bottom-0 left-0 right-0 p-5">
-                  <span className="inline-block bg-[#EF8046] text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide">
-                    {event.date}
-                  </span>
-                  <h3 className="text-lg md:text-xl font-bold text-white group-hover:text-[#EF8046] transition-colors duration-300 leading-tight">
-                    {event.title}
-                  </h3>
-                </div>
-              </motion.div>
-            ))}
+                  {/* Content */}
+                  <div className="absolute bottom-0 left-0 right-0 p-5">
+                    <span
+                      className="inline-block text-white text-xs font-bold px-3 py-1 rounded-full mb-2 uppercase tracking-wide"
+                      style={{ backgroundColor: cardTheme.primary }}
+                    >
+                      {event.date}
+                    </span>
+                    <h3
+                      className="text-lg md:text-xl font-bold text-white transition-colors duration-300 leading-tight"
+                      style={{ ["--card-accent" as string]: cardTheme.primary }}
+                    >
+                      <span className="group-hover:text-[var(--card-accent)]">{event.title}</span>
+                    </h3>
+                  </div>
+                </motion.div>
+              );
+            })}
           </div>
         </div>
       </div>

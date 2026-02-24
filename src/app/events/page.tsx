@@ -52,6 +52,7 @@ function eventToDisplay(event: Event, isFeatured: boolean): DisplayEvent {
     hasImage: !!event.image_url,
     description: event.description || "",
     featured: isFeatured,
+    themeColor: event.theme_color,
   };
 }
 
@@ -96,6 +97,7 @@ const standalonePast: DisplayEvent[] = [
     hasImage: true,
     description: "",
     featured: false,
+    themeColor: "womens",
   },
   {
     id: "brush-blossom-2026",
@@ -108,6 +110,7 @@ const standalonePast: DisplayEvent[] = [
     hasImage: true,
     description: "",
     featured: false,
+    themeColor: "womens",
   },
   {
     id: "chanukah-2025",
@@ -144,6 +147,7 @@ const standalonePast: DisplayEvent[] = [
     hasImage: true,
     description: "",
     featured: false,
+    themeColor: "womens",
   },
   {
     id: "summer-bbq-2024",
