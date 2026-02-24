@@ -491,7 +491,7 @@ export default function EventDetailClient({
       {/* Hero Section */}
       <section className="relative pt-24 pb-0">
         <div
-          className="relative h-[45vh] min-h-[350px] cursor-pointer group"
+          className="relative h-[50vh] min-h-[400px] cursor-pointer group"
           onClick={scrollToRegistration}
         >
           <Image
@@ -538,7 +538,7 @@ export default function EventDetailClient({
                   Upcoming Event
                 </span>
               </div>
-              <h1 className="text-4xl md:text-5xl font-bold text-white mb-3">
+              <h1 className="text-4xl md:text-6xl font-bold text-white mb-4">
                 {event.title}
               </h1>
               <div className="flex flex-wrap gap-4 text-white/90 text-sm">
@@ -561,16 +561,16 @@ export default function EventDetailClient({
       {/* Content */}
       <section className="pt-12 pb-24 bg-white relative">
         <div className="container mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-3 gap-10">
+          <div className="grid lg:grid-cols-5 gap-10">
             {/* Event Details - Left Column */}
-            <div className="lg:col-span-2">
+            <div className="lg:col-span-3">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
                 {/* Quick Info Bar */}
-                <div className="bg-gradient-to-r from-[#2d3748] to-[#1a202c] rounded-2xl p-6 mb-8 text-white">
+                <div className="bg-gradient-to-r from-[#2d3748] to-[#1a202c] rounded-2xl p-8 mb-10 text-white">
                   <div className="grid sm:grid-cols-3 gap-6">
                     <div className="flex items-center gap-4">
                       <div className="w-12 h-12 bg-[#EF8046] rounded-xl flex items-center justify-center">
@@ -615,13 +615,13 @@ export default function EventDetailClient({
 
                 {/* Description */}
                 {event.description && (
-                  <div className="mb-8">
-                    <h2 className="text-2xl font-bold text-gray-900 mb-4">
+                  <div className="mb-10">
+                    <h2 className="text-3xl font-bold text-gray-900 mb-5">
                       About This Event
                     </h2>
-                    <div className="prose prose-lg max-w-prose text-gray-600">
+                    <div className="prose prose-lg max-w-prose text-gray-600 text-lg leading-relaxed">
                       {event.description.split("\n\n").map((paragraph, index) => (
-                        <p key={index} className="mb-4">
+                        <p key={index} className="mb-5">
                           {paragraph}
                         </p>
                       ))}
@@ -630,21 +630,21 @@ export default function EventDetailClient({
                 )}
 
                 {/* Pricing */}
-                <div className="bg-[#FBFBFB] rounded-2xl p-6 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">
+                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-10">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-5">
                     Pricing
                   </h3>
                   <div className="space-y-3">
-                    <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
-                      <span className="text-gray-600">Per person</span>
-                      <span className="font-semibold text-gray-900">
+                    <div className={`flex justify-between items-center py-3${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
+                      <span className="text-gray-600 text-lg">Per person</span>
+                      <span className="font-semibold text-gray-900 text-lg">
                         ${event.price_per_adult}
                       </span>
                     </div>
                     {event.kids_price > 0 && (
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600">Per child</span>
-                        <span className="font-semibold text-gray-900">
+                      <div className="flex justify-between items-center py-3">
+                        <span className="text-gray-600 text-lg">Per child</span>
+                        <span className="font-semibold text-gray-900 text-lg">
                           ${event.kids_price}
                         </span>
                       </div>
@@ -686,7 +686,7 @@ export default function EventDetailClient({
             </div>
 
             {/* Registration Form - Right Column */}
-            <div ref={registrationRef} className="lg:col-span-1 scroll-mt-28">
+            <div ref={registrationRef} className="lg:col-span-2 scroll-mt-28">
               <motion.div
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -694,9 +694,9 @@ export default function EventDetailClient({
               >
                 <div ref={formContainerRef} className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28 overflow-x-hidden overflow-y-auto max-h-[calc(100vh-8rem)]">
                   {/* Form Header */}
-                  <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-6 text-white">
-                    <h3 className="text-xl font-bold flex items-center gap-2">
-                      <Users className="w-5 h-5" />
+                  <div className="bg-gradient-to-r from-[#EF8046] to-[#d96a2f] p-7 text-white">
+                    <h3 className="text-2xl font-bold flex items-center gap-2">
+                      <Users className="w-6 h-6" />
                       Register Now
                     </h3>
                     <p className="text-white/80 text-sm mt-1">
@@ -704,7 +704,7 @@ export default function EventDetailClient({
                     </p>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                  <form onSubmit={handleSubmit} className="p-7 space-y-6">
                     {/* Error Message */}
                     {error && (
                       <div ref={errorRef} className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
@@ -714,7 +714,7 @@ export default function EventDetailClient({
 
                     {/* Your Details */}
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
+                      <h4 className="font-semibold text-gray-900 mb-4 flex items-center gap-2 text-base">
                         <Users className="w-4 h-4 text-[#EF8046]" />
                         Your Details
                       </h4>
@@ -749,8 +749,8 @@ export default function EventDetailClient({
                     </div>
 
                     {/* Attendees */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-4">Attendees</h4>
+                    <div className="pt-5 border-t border-gray-100">
+                      <h4 className="font-semibold text-gray-900 mb-4 text-base">Attendees</h4>
                       <div className="space-y-3">
                         <div className="flex items-center justify-between">
                           <div>
@@ -997,7 +997,7 @@ export default function EventDetailClient({
                     )}
 
                     {/* Total */}
-                    <div ref={totalRef} className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
+                    <div ref={totalRef} className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-xl p-5">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 font-medium">Total</span>
                         <motion.span
@@ -1021,8 +1021,8 @@ export default function EventDetailClient({
                     </div>
 
                     {/* Payment Method */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-3">Payment Method</h4>
+                    <div className="pt-5 border-t border-gray-100">
+                      <h4 className="font-semibold text-gray-900 mb-4 text-base">Payment Method</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
@@ -1179,7 +1179,7 @@ export default function EventDetailClient({
                       disabled={isSubmitting}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full bg-[#EF8046] text-white py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-70 shadow-lg"
+                      className="w-full bg-[#EF8046] text-white py-5 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-70 shadow-lg"
                     >
                       {isSubmitting ? (
                         <>
