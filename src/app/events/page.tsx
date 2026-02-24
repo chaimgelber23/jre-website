@@ -139,27 +139,27 @@ function EventCard({
           </div>
 
           <div className="p-6 flex-grow flex flex-col bg-white relative">
-            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#EF8046] transition-colors">
+            <h3 className="text-xl font-bold text-gray-900 mb-3 group-hover:text-[#EF8046] transition-colors line-clamp-2">
               {event.title}
             </h3>
-            <p className="text-gray-600 mb-4 flex-grow line-clamp-2">
+            <p className="text-gray-600 mb-4 line-clamp-2">
               {event.description}
             </p>
-            <div className="space-y-2 text-sm text-gray-500">
+            <div className="mt-auto space-y-2 text-sm text-gray-500">
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
                   <Calendar className="w-4 h-4 text-[#EF8046]" />
                 </div>
                 <span>{event.date}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
                   <Clock className="w-4 h-4 text-[#EF8046]" />
                 </div>
                 <span>{event.time}</span>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center">
+                <div className="w-8 h-8 rounded-full bg-[#EF8046]/10 flex items-center justify-center flex-shrink-0">
                   <MapPin className="w-4 h-4 text-[#EF8046]" />
                 </div>
                 <span className="truncate">{event.location}</span>
@@ -170,7 +170,7 @@ function EventCard({
                 className="text-[#EF8046] font-semibold flex items-center gap-2"
                 whileHover={{ x: 5 }}
               >
-                Register Now
+                Learn More
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
               </motion.span>
             </div>
@@ -809,11 +809,8 @@ export default function EventsPage() {
                     <Star className="w-4 h-4 fill-current" />
                   </motion.div>
                   <h2 className="text-4xl md:text-5xl font-bold text-gray-900">
-                    Happening Soon
+                    Coming Up
                   </h2>
-                  <p className="text-gray-600 text-lg mt-4 max-w-xl mx-auto">
-                    We&apos;ve got {upcomingEvents.length} events coming up — pick one (or join them all!)
-                  </p>
                 </FadeUp>
 
                 <div className="flex flex-wrap justify-center gap-8">
