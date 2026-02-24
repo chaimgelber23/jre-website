@@ -70,6 +70,7 @@ const standaloneUpcoming: DisplayEvent[] = [
     description:
       "Megillah, live music, open bar, festive banquet, and kids activities! $40/adult, $10/child, Family max $110.",
     featured: false,
+    themeColor: "black",
   },
 ];
 

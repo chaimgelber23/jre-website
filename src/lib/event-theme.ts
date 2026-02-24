@@ -37,10 +37,21 @@ const womensTheme: EventTheme = {
   confettiColors: ["#B5838D", "#D4A5AD", "#9B6B75"],
 };
 
+const blackOrangeTheme: EventTheme = {
+  primary: "#EF8046",
+  primaryHover: "#d96a2f",
+  darkBg: "#000000",
+  darkerBg: "#000000",
+  primaryRgb: "239, 128, 70",
+  confettiColors: ["#EF8046", "#F5A623", "#FFD700", "#FFA500"],
+};
+
 export function getEventTheme(themeColor: string | null | undefined): EventTheme {
   switch (themeColor) {
     case "womens":
       return womensTheme;
+    case "black":
+      return blackOrangeTheme;
     default:
       return defaultTheme;
   }
