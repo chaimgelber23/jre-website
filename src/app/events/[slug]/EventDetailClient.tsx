@@ -517,11 +517,15 @@ export default function EventDetailClient({
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-0" style={{ background: hasEventImage ? "#000" : theme.darkBg }}>
-        <div
-          className={`relative h-[80vh] min-h-[500px] cursor-pointer group ${hasEventImage ? "bg-black" : ""}`}
-          onClick={scrollToRegistration}
-        >
+      <section
+        className="relative pt-24 cursor-pointer group"
+        style={{ background: hasEventImage ? "#000" : theme.darkBg }}
+        onClick={scrollToRegistration}
+      >
+        <h1 className="sr-only">{event.title}</h1>
+
+        {/* Image / Placeholder area */}
+        <div className={`relative h-[85vh] min-h-[600px] ${hasEventImage ? "bg-black" : ""}`}>
           {hasEventImage ? (
             <Image
               src={eventImage}
@@ -545,67 +549,78 @@ export default function EventDetailClient({
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-gray-800 hover:text-[var(--theme-primary)] bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg transition-colors text-sm border border-white/20"
+              className="inline-flex items-center gap-2 text-white/80 hover:text-white bg-black/30 hover:bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg transition-colors text-sm"
+              onClick={(e) => e.stopPropagation()}
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
             </Link>
           </div>
 
-          {/* Scroll hint */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-60 group-hover:opacity-100 transition-opacity pointer-events-none z-10">
-            <span className="text-white/90 text-sm font-medium">Click to Register</span>
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </motion.div>
+          {/* Bottom overlay: info bar + click to register */}
+          <div className="absolute bottom-0 left-0 right-0 z-10">
+            {/* Gradient fade from transparent to dark */}
+            <div
+              className="h-32"
+              style={{
+                background: hasEventImage
+                  ? "linear-gradient(to bottom, transparent, rgba(0,0,0,0.85))"
+                  : `linear-gradient(to bottom, transparent, ${theme.darkerBg})`,
+              }}
+            />
+            <div style={{ background: hasEventImage ? "rgba(0,0,0,0.85)" : theme.darkerBg }} className="pb-6 pt-1">
+              <div className="container mx-auto px-6">
+                {/* Info icons row */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-5"
+                >
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">{eventDate}</span>
+                  </span>
+                  {eventTime && (
+                    <span className="flex items-center gap-2 text-white/90 text-sm">
+                      <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                        <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                      </div>
+                      <span className="font-medium">{eventTime}</span>
+                    </span>
+                  )}
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <Users className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
+                  </span>
+                </motion.div>
+
+                {/* Click to Register */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                >
+                  <span className="text-white text-sm font-medium tracking-wide">Click to Register</span>
+                  <motion.div
+                    animate={{ y: [0, 6, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <svg className="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                  </motion.div>
+                </motion.div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
-
-      {/* Title band below hero */}
-      <div style={{ background: hasEventImage ? "#000" : theme.darkBg }} className="py-4">
-        <div className="container mx-auto px-6">
-          <motion.div
-            initial={{ opacity: 0, y: 10 }}
-            animate={{ opacity: 1, y: 0 }}
-          >
-            {hasEventImage ? (
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
-                {event.title}
-              </h1>
-            ) : (
-              <h1 className="sr-only">{event.title}</h1>
-            )}
-            <div className="flex flex-wrap items-center gap-x-5 gap-y-1.5 text-white/90 text-xs">
-              <span className="flex items-center gap-1.5">
-                <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                  <Calendar className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                </div>
-                <span className="font-medium">{eventDate}</span>
-              </span>
-              {eventTime && (
-                <span className="flex items-center gap-1.5">
-                  <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                    <Clock className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                  </div>
-                  <span className="font-medium">{eventTime}</span>
-                </span>
-              )}
-              <span className="flex items-center gap-1.5">
-                <div className="w-6 h-6 bg-[var(--theme-primary)]/20 rounded-md flex items-center justify-center">
-                  <Users className="w-3.5 h-3.5 text-[var(--theme-primary)]" />
-                </div>
-                <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
-              </span>
-            </div>
-          </motion.div>
-        </div>
-      </div>
 
       {/* Content */}
       <section className="pt-12 pb-24 bg-white relative">
