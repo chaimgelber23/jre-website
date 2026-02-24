@@ -170,7 +170,7 @@ function EventCard({
                 className="text-[#EF8046] font-semibold flex items-center gap-2"
                 whileHover={{ x: 5 }}
               >
-                Learn More
+                Register Now
                 <ArrowRight className="w-4 h-4 group-hover:translate-x-2 transition-transform" />
               </motion.span>
             </div>
