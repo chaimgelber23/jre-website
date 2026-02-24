@@ -591,12 +591,14 @@ export default function EventDetailClient({
                       <span className="font-medium">{eventTime}</span>
                     </span>
                   )}
-                  <span className="flex items-center gap-2 text-white/90 text-sm">
-                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
-                      <Users className="w-4 h-4 text-[var(--theme-primary)]" />
-                    </div>
-                    <span className="font-medium">{event.speaker || "Mrs. Mizrahi"}</span>
-                  </span>
+                  {event.speaker && (
+                    <span className="flex items-center gap-2 text-white/90 text-sm">
+                      <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                        <Users className="w-4 h-4 text-[var(--theme-primary)]" />
+                      </div>
+                      <span className="font-medium">{event.speaker}</span>
+                    </span>
+                  )}
                 </motion.div>
 
                 {/* Click to Register */}
