@@ -68,6 +68,25 @@ export default function EventDetailClient({
     cardExpiry: "",
     cardCvv: "",
   });
+  // Guest details for additional adults (beyond the registrant)
+  const [guestDetails, setGuestDetails] = useState<{ name: string; email: string }[]>([]);
+
+  // Sync guest details array when adults changes
+  useEffect(() => {
+    const additionalGuests = Math.max(0, adults - 1);
+    setGuestDetails((prev) => {
+      if (prev.length === additionalGuests) return prev;
+      if (prev.length < additionalGuests) {
+        return [...prev, ...Array(additionalGuests - prev.length).fill(null).map(() => ({ name: "", email: "" }))];
+      }
+      return prev.slice(0, additionalGuests);
+    });
+  }, [adults]);
+
+  const updateGuest = (index: number, field: "name" | "email", value: string) => {
+    setGuestDetails((prev) => prev.map((g, i) => (i === index ? { ...g, [field]: value } : g)));
+  };
+
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
@@ -242,6 +261,7 @@ export default function EventDetailClient({
         name: formState.name,
         email: formState.email,
         phone: formState.phone,
+        guests: guestDetails.filter((g) => g.name.trim()),
         sponsorshipId: selectedSponsorship || null,
         message: formState.message || null,
         honoreeEmail: formState.honoreeEmail || null,
@@ -276,7 +296,7 @@ export default function EventDetailClient({
     } finally {
       setIsSubmitting(false);
     }
-  }, [adults, kids, formState, selectedSponsorship, paymentMethod, paymentProcessor, slug]);
+  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -829,6 +849,32 @@ export default function EventDetailClient({
                           </div>
                         )}
                       </div>
+
+                      {/* Guest details for additional adults */}
+                      {guestDetails.length > 0 && (
+                        <div className="mt-4 space-y-4">
+                          <p className="text-xs text-gray-400 font-medium tracking-wide uppercase">Guest Details</p>
+                          {guestDetails.map((guest, index) => (
+                            <div key={index} className="space-y-2 bg-[#FAFAFA] rounded-xl p-4">
+                              <p className="text-xs text-gray-400 font-medium">Guest {index + 1}</p>
+                              <input
+                                type="text"
+                                value={guest.name}
+                                onChange={(e) => updateGuest(index, "name", e.target.value)}
+                                className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
+                                placeholder="Guest name (recommended)"
+                              />
+                              <input
+                                type="email"
+                                value={guest.email}
+                                onChange={(e) => updateGuest(index, "email", e.target.value)}
+                                className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
+                                placeholder="Guest email (recommended)"
+                              />
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
 
                     {/* Sponsorship Toggle */}

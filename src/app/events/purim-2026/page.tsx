@@ -12,6 +12,7 @@ import {
   Users,
   ArrowLeft,
   Plus,
+  Minus,
   Check,
   CreditCard,
   PartyPopper,
@@ -29,7 +30,6 @@ import Footer from "@/components/layout/Footer";
 // Square kept for backup - uncomment to switch processors
 // import SquarePayment, { useSquarePayment } from "@/components/payment/SquarePayment";
 import { Lock } from "lucide-react";
-import { SlideInLeft, SlideInRight } from "@/components/ui/motion";
 
 // Purim Event Data
 const purimEvent = {
@@ -61,6 +61,23 @@ $40 per adult, $10 per child. Family max $110!`,
     { name: "\"Because I'm Happy\" Sponsorship - Any Amount", price: 0 },
   ],
 };
+
+// Theme colors (Purim uses black/orange theme)
+const theme = {
+  primary: "#EF8046",
+  primaryHover: "#d96a2f",
+  darkBg: "#000000",
+  darkerBg: "#000000",
+  primaryRgb: "239, 128, 70",
+};
+
+const themeVars = {
+  "--theme-primary": theme.primary,
+  "--theme-hover": theme.primaryHover,
+  "--theme-dark": theme.darkBg,
+  "--theme-darker": theme.darkerBg,
+  "--theme-rgb": theme.primaryRgb,
+} as React.CSSProperties;
 
 export default function PurimEventPage() {
   const [numAdults, setNumAdults] = useState(1);
@@ -119,6 +136,7 @@ export default function PurimEventPage() {
   const totalRef = useRef<HTMLDivElement>(null);
   const submitRef = useRef<HTMLButtonElement>(null);
   const registrationRef = useRef<HTMLDivElement>(null);
+  const formContainerRef = useRef<HTMLDivElement>(null);
   const cardNameRef = useRef<HTMLInputElement>(null);
   const cardNumberRef = useRef<HTMLInputElement>(null);
   const cardExpiryRef = useRef<HTMLInputElement>(null);
@@ -391,47 +409,73 @@ export default function PurimEventPage() {
     doSubmit();
   };
 
+  // ---------- Success State ----------
   if (isSubmitted) {
     return (
       <main className="min-h-screen">
         <Header />
-        <section className="pt-32 pb-20 min-h-[80vh] flex items-center justify-center bg-[#FBFBFB]">
+        <section className="pt-32 pb-20 min-h-[80vh] flex items-center justify-center bg-gradient-to-b from-[#FBFBFB] to-white relative overflow-hidden">
           <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            className="text-center max-w-md mx-auto px-6"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className="text-center max-w-lg mx-auto px-6 relative z-10"
           >
-            <div className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <motion.div
+              initial={{ scale: 0 }}
+              animate={{ scale: 1 }}
+              transition={{ type: "spring", delay: 0.2 }}
+              className="w-24 h-24 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6"
+            >
               <Check className="w-12 h-12 text-green-500" />
-            </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-4">Thank You!</h1>
+            </motion.div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-4">You&apos;re All Set!</h1>
             <p className="text-xl text-gray-600 mb-2">
               Your registration has been submitted.
             </p>
             <p className="text-gray-500 mb-8">
               We&apos;re thrilled you&apos;ll be joining us for Purim! You will receive a confirmation email shortly.
             </p>
-            <div className="bg-white rounded-xl p-6 shadow-md text-left mb-8">
-              <h3 className="font-bold text-gray-900 mb-3">{purimEvent.title}</h3>
-              <div className="space-y-2 text-sm text-gray-600">
-                <div className="flex items-center gap-2">
-                  <Calendar className="w-4 h-4 text-[#EF8046]" />
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ delay: 0.3 }}
+              className="bg-white rounded-2xl p-6 shadow-lg border border-gray-100 text-left mb-8"
+            >
+              <h3 className="font-bold text-gray-900 mb-4">{purimEvent.title}</h3>
+              <div className="space-y-3 text-sm text-gray-600 border-t border-gray-100 pt-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                    <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+                  </div>
                   <span>{purimEvent.date}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <Clock className="w-4 h-4 text-[#EF8046]" />
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                    <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                  </div>
                   <span>{purimEvent.time}</span>
                 </div>
-                <div className="flex items-center gap-2">
-                  <MapPin className="w-4 h-4 text-[#EF8046]" />
-                  <span>{purimEvent.location}</span>
+                <div className="flex items-center gap-3">
+                  <div className="w-8 h-8 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
+                    <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
+                  </div>
+                  <a
+                    href={purimEvent.locationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[var(--theme-primary)] hover:underline"
+                  >
+                    {purimEvent.location}
+                  </a>
                 </div>
               </div>
-            </div>
+            </motion.div>
             <Link href="/events">
               <motion.button
-                whileHover={{ scale: 1.05 }}
-                className="bg-[#EF8046] text-white px-8 py-3 rounded-lg font-medium"
+                whileHover={{ scale: 1.02 }}
+                whileTap={{ scale: 0.98 }}
+                className="bg-[var(--theme-primary)] text-white px-8 py-3 rounded font-medium hover:bg-[var(--theme-hover)] transition-colors"
               >
                 Back to Events
               </motion.button>
@@ -443,17 +487,21 @@ export default function PurimEventPage() {
     );
   }
 
+  // ---------- Main Page ----------
   return (
-    <main className="min-h-screen">
+    <main className="min-h-screen bg-[#FBFBFB]" style={themeVars}>
       <Header />
 
       {/* Hero Section */}
-      <section className="relative pt-24 pb-0">
-        {/* Event flyer/banner image - shows full image */}
-        <div
-          className="relative h-[80vh] min-h-[500px] bg-black cursor-pointer group"
-          onClick={scrollToRegistration}
-        >
+      <section
+        className="relative pt-24 cursor-pointer group"
+        style={{ background: "#000" }}
+        onClick={scrollToRegistration}
+      >
+        <h1 className="sr-only">{purimEvent.title}</h1>
+
+        {/* Image area */}
+        <div className="relative h-[85vh] min-h-[600px] bg-black">
           <Image
             src={purimEvent.image}
             alt={purimEvent.title}
@@ -461,98 +509,93 @@ export default function PurimEventPage() {
             className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
             priority
           />
-          {/* Scroll hint */}
-          <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex flex-col items-center gap-2 opacity-70 group-hover:opacity-100 transition-opacity">
-            <span className="text-white/80 text-sm font-medium">Click to Register</span>
-            <motion.div
-              animate={{ y: [0, 8, 0] }}
-              transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
-            >
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-              </svg>
-            </motion.div>
-          </div>
-          {/* Back button overlay */}
+
+          {/* Back to Events - top left */}
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-gray-800 hover:text-[#EF8046] transition-colors bg-white/90 hover:bg-white backdrop-blur-sm px-4 py-2 rounded-lg shadow-lg border border-white/20"
+              className="inline-flex items-center gap-2 text-white/80 hover:text-white bg-black/30 hover:bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg transition-colors text-sm"
+              onClick={(e) => e.stopPropagation()}
             >
               <ArrowLeft className="w-4 h-4" />
               Back to Events
             </Link>
           </div>
-        </div>
 
-        {/* Event title below image */}
-        <div className="bg-black py-6">
-          <div className="container mx-auto px-6">
-            <motion.div
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-            >
-              <p className="text-[#EF8046] font-medium tracking-wider uppercase text-sm mb-1">
-                We&apos;re thrilled you&apos;ll be joining us!
-              </p>
-              <h1 className="text-3xl md:text-4xl lg:text-5xl font-bold text-white mb-2">
-                {purimEvent.title}
-              </h1>
-              <p className="text-lg text-white/80 max-w-2xl">
-                {purimEvent.subtitle}
-              </p>
-            </motion.div>
+          {/* Bottom overlay: info bar + click to register */}
+          <div className="absolute bottom-0 left-0 right-0 z-10">
+            {/* Gradient fade from transparent to dark */}
+            <div
+              className="h-24"
+              style={{
+                background: "linear-gradient(to bottom, transparent, rgba(0,0,0,0.85))",
+              }}
+            />
+            <div style={{ background: "rgba(0,0,0,0.85)" }} className="pb-6 pt-1">
+              <div className="container mx-auto px-6">
+                {/* Info icons row */}
+                <motion.div
+                  initial={{ opacity: 0, y: 15 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: 0.2 }}
+                  className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-5"
+                >
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">{purimEvent.date}</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">{purimEvent.time}</span>
+                  </span>
+                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
+                    </div>
+                    <span className="font-medium">Ardsley, NY</span>
+                  </span>
+                </motion.div>
+
+                {/* Click to Register */}
+                <motion.div
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.5 }}
+                  className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                >
+                  <span className="text-white text-sm font-medium tracking-wide">Click to Register</span>
+                  <motion.div
+                    animate={{ y: [0, 6, 0] }}
+                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                  >
+                    <svg className="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                    </svg>
+                  </motion.div>
+                </motion.div>
+              </div>
+            </div>
           </div>
         </div>
       </section>
 
       {/* Content */}
-      <section className="py-12 bg-white">
-        <div className="container mx-auto px-6">
-          <div className="grid lg:grid-cols-3 gap-12">
-            {/* Event Details */}
-            <div className="lg:col-span-2">
-              <SlideInLeft>
-                {/* Event Info Cards */}
-                <div className="grid sm:grid-cols-2 gap-4 mb-8">
-                  <div className="bg-[#FBFBFB] rounded-xl p-6 flex items-start gap-4">
-                    <div className="w-12 h-12 bg-[#EF8046]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Calendar className="w-6 h-6 text-[#EF8046]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Date</p>
-                      <p className="font-bold text-gray-900">{purimEvent.date}</p>
-                    </div>
-                  </div>
-                  <div className="bg-[#FBFBFB] rounded-xl p-6 flex items-start gap-4">
-                    <div className="w-12 h-12 bg-[#EF8046]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <Clock className="w-6 h-6 text-[#EF8046]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Time</p>
-                      <p className="font-bold text-gray-900">{purimEvent.time}</p>
-                    </div>
-                  </div>
-                  <div className="bg-[#FBFBFB] rounded-xl p-6 flex items-start gap-4 sm:col-span-2">
-                    <div className="w-12 h-12 bg-[#EF8046]/10 rounded-lg flex items-center justify-center flex-shrink-0">
-                      <MapPin className="w-6 h-6 text-[#EF8046]" />
-                    </div>
-                    <div>
-                      <p className="text-sm text-gray-500">Location</p>
-                      <a
-                        href={purimEvent.locationUrl}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="font-bold text-[#EF8046] hover:underline"
-                      >
-                        {purimEvent.location}
-                      </a>
-                    </div>
-                  </div>
-                </div>
-
+      <section className="pt-12 pb-24 bg-white relative">
+        <div className="container mx-auto px-6 relative z-10">
+          <div className="grid lg:grid-cols-5 gap-10">
+            {/* Event Details - Left Column */}
+            <div className="lg:col-span-3">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5 }}
+              >
                 {/* Event Features */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-8">
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
                   {[
                     { icon: PartyPopper, label: "Megillah Reading" },
                     { icon: Music, label: "Live Music" },
@@ -561,29 +604,41 @@ export default function PurimEventPage() {
                   ].map((feature, index) => (
                     <div
                       key={index}
-                      className="bg-gradient-to-br from-[#EF8046]/10 to-[#EF8046]/5 rounded-xl p-4 text-center"
+                      className="bg-gradient-to-br from-[var(--theme-primary)]/10 to-[var(--theme-primary)]/5 rounded-xl p-4 text-center"
                     >
-                      <feature.icon className="w-8 h-8 text-[#EF8046] mx-auto mb-2" />
+                      <feature.icon className="w-8 h-8 text-[var(--theme-primary)] mx-auto mb-2" />
                       <p className="text-sm font-medium text-gray-700">{feature.label}</p>
                     </div>
                   ))}
                 </div>
 
-                {/* Pricing Info */}
-                <div className="bg-[#FBFBFB] rounded-xl p-6 mb-8">
-                  <h3 className="text-xl font-bold text-gray-900 mb-4">Pricing</h3>
+                {/* Description */}
+                <div className="mb-10">
+                  <h2 className="text-3xl font-bold text-gray-900 mb-5">About This Event</h2>
+                  <div className="prose prose-lg max-w-prose text-gray-600 text-lg leading-relaxed">
+                    {purimEvent.description.split("\n\n").map((paragraph, index) => (
+                      <p key={index} className="mb-5">
+                        {paragraph}
+                      </p>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Pricing */}
+                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-10">
+                  <h3 className="text-2xl font-bold text-gray-900 mb-5">Pricing</h3>
                   <div className="space-y-3">
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Adults</span>
-                      <span className="font-medium">${purimEvent.pricePerAdult} per person</span>
+                    <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                      <span className="text-gray-600 text-lg">Adults</span>
+                      <span className="font-semibold text-gray-900 text-lg">${purimEvent.pricePerAdult} per person</span>
                     </div>
-                    <div className="flex justify-between items-center">
-                      <span className="text-gray-600">Kids</span>
-                      <span className="font-medium">${purimEvent.kidsPrice} per child</span>
+                    <div className="flex justify-between items-center py-3 border-b border-gray-200">
+                      <span className="text-gray-600 text-lg">Kids</span>
+                      <span className="font-semibold text-gray-900 text-lg">${purimEvent.kidsPrice} per child</span>
                     </div>
-                    <div className="flex justify-between items-center pt-3 border-t border-gray-200">
-                      <span className="text-gray-900 font-semibold">Family Maximum</span>
-                      <span className="font-bold text-[#EF8046]">${purimEvent.familyMax}</span>
+                    <div className="flex justify-between items-center py-3">
+                      <span className="text-gray-900 font-semibold text-lg">Family Maximum</span>
+                      <span className="font-bold text-[var(--theme-primary)] text-lg">${purimEvent.familyMax}</span>
                     </div>
                   </div>
                   <p className="text-sm text-gray-500 mt-4">
@@ -591,30 +646,52 @@ export default function PurimEventPage() {
                   </p>
                 </div>
 
-                {/* Description */}
-                <div className="prose prose-lg max-w-none">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-4">About This Event</h2>
-                  {purimEvent.description.split("\n\n").map((paragraph, index) => (
-                    <p key={index} className="text-gray-600">
-                      {paragraph}
-                    </p>
-                  ))}
+                {/* Sponsorship Tiers Preview */}
+                <div className="bg-[#FBFBFB] rounded-2xl p-6">
+                  <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <Award className="w-5 h-5 text-[var(--theme-primary)]" />
+                    Sponsorship Opportunities
+                  </h3>
+                  <div className="grid sm:grid-cols-2 gap-3">
+                    {purimEvent.sponsorships.map((s, i) => (
+                      <div
+                        key={i}
+                        className="flex items-center justify-between bg-white rounded-xl p-4 border border-gray-100"
+                      >
+                        <p className="font-medium text-gray-900 text-sm">{s.name}</p>
+                        <span className="text-[var(--theme-primary)] font-bold ml-4">
+                          {s.price > 0 ? `$${s.price}` : "Any $"}
+                        </span>
+                      </div>
+                    ))}
+                  </div>
                 </div>
-              </SlideInLeft>
+              </motion.div>
             </div>
 
-            {/* Registration Form */}
-            <div ref={registrationRef} className="lg:col-span-1 scroll-mt-28">
-              <SlideInRight>
-                <div className="bg-white rounded-2xl shadow-xl border border-gray-100 sticky top-28">
-                  <div className="p-6 border-b border-gray-100 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] rounded-t-2xl">
-                    <h3 className="text-xl font-bold text-white">Register Now</h3>
-                    <p className="text-white/80 text-sm mt-1">
-                      Secure your spot for Purim!
-                    </p>
+            {/* Registration Form - Right Column */}
+            <div ref={registrationRef} className="lg:col-span-2 scroll-mt-28">
+              <motion.div
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.5, delay: 0.2 }}
+              >
+                <div ref={formContainerRef} className="bg-white rounded-3xl shadow-[0_8px_40px_rgba(0,0,0,0.08)] border border-gray-100/80 overflow-hidden sticky top-28">
+                  {/* Form Header */}
+                  <div className="relative bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] px-8 py-5 text-white overflow-hidden">
+                    {/* Subtle shine sweep */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -skew-x-12 translate-x-[-200%] animate-[shimmer_6s_ease-in-out_infinite]" />
+                    <div className="relative">
+                      <p className="text-white/70 text-[10px] font-medium tracking-[0.2em] uppercase mb-1">
+                        Reserve Your Spot
+                      </p>
+                      <h3 className="text-xl font-bold">
+                        Register Now
+                      </h3>
+                    </div>
                   </div>
 
-                  <form onSubmit={handleSubmit} className="p-6 space-y-5">
+                  <form onSubmit={handleSubmit} className="p-8 space-y-7">
                     {/* Error Message */}
                     {error && (
                       <motion.div
@@ -632,11 +709,10 @@ export default function PurimEventPage() {
 
                     {/* Your Details */}
                     <div>
-                      <h4 className="font-semibold text-gray-900 mb-3 flex items-center gap-2">
-                        <Users className="w-4 h-4 text-[#EF8046]" />
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-4">
                         Your Details
                       </h4>
-                      <div className="space-y-3">
+                      <div className="space-y-3.5">
                         <div>
                           <input
                             type="text"
@@ -646,10 +722,10 @@ export default function PurimEventPage() {
                               handleChange(e);
                               if (fieldErrors.name && e.target.value.trim()) setFieldErrors((prev) => ({ ...prev, name: false }));
                             }}
-                            className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                            className={`w-full px-5 py-3.5 rounded-xl border outline-none text-sm transition-all duration-200 placeholder:text-gray-400 ${
                               fieldErrors.name
-                                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-                                : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                                ? "border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-4 focus:ring-red-200/50"
+                                : "border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10"
                             }`}
                             placeholder="Full Name *"
                           />
@@ -666,10 +742,10 @@ export default function PurimEventPage() {
                               handleChange(e);
                               if (fieldErrors.email && e.target.value.trim()) setFieldErrors((prev) => ({ ...prev, email: false }));
                             }}
-                            className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                            className={`w-full px-5 py-3.5 rounded-xl border outline-none text-sm transition-all duration-200 placeholder:text-gray-400 ${
                               fieldErrors.email
-                                ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-                                : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                                ? "border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-4 focus:ring-red-200/50"
+                                : "border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10"
                             }`}
                             placeholder="Email Address *"
                           />
@@ -682,64 +758,64 @@ export default function PurimEventPage() {
                           name="phone"
                           value={formState.phone}
                           onChange={handleChange}
-                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                          className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                           placeholder="Phone (optional)"
                         />
                       </div>
                     </div>
 
                     {/* Attendees */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-4">Attendees</h4>
+                    <div className="pt-6 border-t border-gray-100/80">
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Attendees</h4>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                           <div>
-                            <span className="text-gray-700 text-sm">Adults</span>
-                            <span className="text-gray-400 text-xs ml-1">(${purimEvent.pricePerAdult}/person)</span>
+                            <span className="text-gray-800 text-sm font-medium">Adults</span>
+                            <span className="text-gray-400 text-xs ml-1.5">${purimEvent.pricePerAdult} each</span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <button
                               type="button"
                               onClick={() => setNumAdults(Math.max(1, numAdults - 1))}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              &minus;
+                              <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="w-6 text-center font-bold text-gray-900">{numAdults}</span>
+                            <span className="w-6 text-center font-bold text-gray-900 text-lg tabular-nums">{numAdults}</span>
                             <button
                               type="button"
                               onClick={() => setNumAdults(numAdults + 1)}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              +
+                              <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between">
+                        <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                           <div>
-                            <span className="text-gray-700 text-sm">Children</span>
-                            <span className="text-gray-400 text-xs ml-1">(${purimEvent.kidsPrice}/child)</span>
+                            <span className="text-gray-800 text-sm font-medium">Children</span>
+                            <span className="text-gray-400 text-xs ml-1.5">${purimEvent.kidsPrice} each</span>
                           </div>
-                          <div className="flex items-center gap-3">
+                          <div className="flex items-center gap-4">
                             <button
                               type="button"
                               onClick={() => setNumKids(Math.max(0, numKids - 1))}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              &minus;
+                              <Minus className="w-3.5 h-3.5" />
                             </button>
-                            <span className="w-6 text-center font-bold text-gray-900">{numKids}</span>
+                            <span className="w-6 text-center font-bold text-gray-900 text-lg tabular-nums">{numKids}</span>
                             <button
                               type="button"
                               onClick={() => setNumKids(numKids + 1)}
-                              className="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-500 hover:border-[#EF8046] hover:text-[#EF8046] transition-colors text-lg"
+                              className="w-9 h-9 rounded-full border-2 border-gray-200 flex items-center justify-center text-gray-400 hover:border-[var(--theme-primary)] hover:text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 transition-all duration-200 cursor-pointer"
                             >
-                              +
+                              <Plus className="w-3.5 h-3.5" />
                             </button>
                           </div>
                         </div>
                         {calculatedTotal > purimEvent.familyMax && (
-                          <p className="text-sm text-[#EF8046] font-medium">
+                          <p className="text-sm text-[var(--theme-primary)] font-medium">
                             Family max ${purimEvent.familyMax} applied!
                           </p>
                         )}
@@ -748,9 +824,9 @@ export default function PurimEventPage() {
                       {/* Guest details for additional adults */}
                       {guestDetails.length > 0 && (
                         <div className="mt-4 space-y-4">
-                          <p className="text-sm text-gray-500 font-medium">Guest Details</p>
+                          <p className="text-xs text-gray-400 font-medium tracking-wide uppercase">Guest Details</p>
                           {guestDetails.map((guest, index) => (
-                            <div key={index} className="space-y-2 bg-[#FBFBFB] rounded-lg p-3">
+                            <div key={index} className="space-y-2 bg-[#FAFAFA] rounded-xl p-4">
                               <p className="text-xs text-gray-400 font-medium">Guest {index + 1}</p>
                               <div>
                                 <input
@@ -763,10 +839,10 @@ export default function PurimEventPage() {
                                       setGuestErrors((prev) => prev.map((err, i) => (i === index ? false : err)));
                                     }
                                   }}
-                                  className={`w-full px-4 py-2.5 rounded-lg border outline-none text-sm transition-colors ${
+                                  className={`w-full px-5 py-3.5 rounded-xl border outline-none text-sm transition-all duration-200 placeholder:text-gray-400 ${
                                     guestErrors[index]
-                                      ? "border-red-400 focus:border-red-500 focus:ring-2 focus:ring-red-200"
-                                      : "border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20"
+                                      ? "border-red-400 bg-red-50/50 focus:border-red-500 focus:ring-4 focus:ring-red-200/50"
+                                      : "border-gray-200/80 bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10"
                                   }`}
                                   placeholder="Guest name *"
                                 />
@@ -778,7 +854,7 @@ export default function PurimEventPage() {
                                 type="email"
                                 value={guest.email}
                                 onChange={(e) => updateGuest(index, "email", e.target.value)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                                 placeholder="Guest email (optional)"
                               />
                             </div>
@@ -788,7 +864,7 @@ export default function PurimEventPage() {
                     </div>
 
                     {/* Sponsorship Toggle */}
-                    <div className="pt-4 border-t border-gray-100">
+                    <div className="pt-5 border-t border-gray-100/80">
                       <motion.button
                         type="button"
                         onClick={() => {
@@ -799,19 +875,12 @@ export default function PurimEventPage() {
                           }
                         }}
                         className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
-                            ? "bg-gray-50 text-gray-500 border border-gray-200"
-                            : "bg-gradient-to-r from-[#EF8046] to-[#f59e0b] text-white shadow-lg shadow-[#EF8046]/25"
+                            ? "bg-gray-50 text-gray-500 border border-transparent hover:bg-gray-100"
+                            : "border-2 border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 shadow-sm"
                           }`}
                         whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                         whileTap={{ scale: 0.98 }}
                       >
-                        {!showSponsorship && (
-                          <motion.div
-                            className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent"
-                            animate={{ x: ["-100%", "200%"] }}
-                            transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 2, ease: "easeInOut" }}
-                          />
-                        )}
                         <span className="relative flex items-center gap-2">
                           {showSponsorship ? (
                             <>
@@ -845,43 +914,65 @@ export default function PurimEventPage() {
                                   const ratio = s.price / maxPrice;
                                   const isTop = ratio > 0.8;
                                   const isHigh = ratio > 0.5;
-                                  const glowSpread = Math.round(ratio * 18);
-                                  const glowAlpha = (ratio * 0.35).toFixed(2);
                                   const isSelected = selectedSponsorship === s.name;
 
                                   return (
                                     <motion.button
                                       key={s.name}
                                       type="button"
-                                      initial={{ opacity: 0, y: 10 }}
-                                      animate={isSelected ? { opacity: 1, y: 0 } : {
+                                      initial={{ opacity: 0, x: -20 }}
+                                      animate={{
                                         opacity: 1,
-                                        y: 0,
-                                        boxShadow: isHigh ? [
-                                          `0 0 0px rgba(239, 128, 70, 0)`,
-                                          `0 0 ${glowSpread}px rgba(239, 128, 70, ${glowAlpha})`,
-                                          `0 0 0px rgba(239, 128, 70, 0)`,
-                                        ] : "0 0 0px rgba(239, 128, 70, 0)",
-                                      }}
-                                      transition={isSelected ? { delay: 0 } : isHigh ? {
-                                        opacity: { delay: i * 0.06, duration: 0.3 },
-                                        y: { delay: i * 0.06, duration: 0.3 },
-                                        boxShadow: { duration: 2.5, repeat: Infinity, repeatDelay: isTop ? 0.5 : 1.5, ease: "easeInOut" },
-                                      } : { delay: i * 0.06 }}
-                                      onClick={() => setSelectedSponsorship(isSelected ? null : s.name)}
-                                      className={`w-full text-left rounded-xl p-4 border-2 transition-all duration-300 relative overflow-hidden group ${isSelected
-                                          ? "border-[#EF8046] bg-[#EF8046]/5"
+                                        x: 0,
+                                        scale: isTop && !isSelected ? [1, 1.015, 1] : 1,
+                                        boxShadow: isSelected
+                                          ? `0 4px 20px rgba(${theme.primaryRgb}, 0.25)`
                                           : isTop
-                                            ? "border-[#EF8046]/30 bg-gradient-to-r from-[#EF8046]/[0.03] to-white hover:border-[#EF8046]/60"
-                                            : "border-gray-100 bg-white hover:border-[#EF8046]/40 hover:shadow-sm"
+                                            ? [
+                                              `0 2px 8px rgba(${theme.primaryRgb}, 0.1)`,
+                                              `0 4px 24px rgba(${theme.primaryRgb}, 0.3)`,
+                                              `0 2px 8px rgba(${theme.primaryRgb}, 0.1)`,
+                                            ]
+                                            : isHigh
+                                              ? [
+                                                `0 1px 4px rgba(${theme.primaryRgb}, 0.05)`,
+                                                `0 2px 12px rgba(${theme.primaryRgb}, 0.15)`,
+                                                `0 1px 4px rgba(${theme.primaryRgb}, 0.05)`,
+                                              ]
+                                              : "0 1px 3px rgba(0,0,0,0.05)",
+                                      }}
+                                      transition={{
+                                        opacity: { delay: i * 0.08, duration: 0.3 },
+                                        x: { delay: i * 0.08, duration: 0.3, type: "spring", stiffness: 200 },
+                                        scale: isTop && !isSelected ? { duration: 3, repeat: Infinity, ease: "easeInOut" } : { duration: 0.2 },
+                                        boxShadow: (isTop || isHigh) && !isSelected
+                                          ? { duration: 2.5, repeat: Infinity, ease: "easeInOut" }
+                                          : { duration: 0.2 },
+                                      }}
+                                      onClick={() => setSelectedSponsorship(isSelected ? null : s.name)}
+                                      whileHover={{ y: -3, scale: 1.02 }}
+                                      whileTap={{ scale: 0.97 }}
+                                      className={`w-full text-left rounded-xl p-4 border-2 transition-colors duration-200 relative overflow-hidden ${isSelected
+                                          ? "border-[var(--theme-primary)] bg-gradient-to-r from-[var(--theme-primary)]/10 to-[var(--theme-primary)]/5"
+                                          : isTop
+                                            ? "border-[var(--theme-primary)]/40 bg-gradient-to-r from-[#FFF7ED] to-white"
+                                            : isHigh
+                                              ? "border-[var(--theme-primary)]/20 bg-white hover:border-[var(--theme-primary)]/40"
+                                              : "border-gray-200 bg-white hover:border-gray-300"
                                         }`}
                                     >
-                                      {/* Shimmer for top-tier sponsorships */}
-                                      {isHigh && !isSelected && (
+                                      {/* Shine sweep for top/high tiers */}
+                                      {(isTop || isHigh) && !isSelected && (
                                         <motion.div
-                                          className="absolute inset-0 bg-gradient-to-r from-transparent via-[#EF8046]/[0.07] to-transparent"
+                                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/60 to-transparent"
+                                          initial={{ x: "-100%" }}
                                           animate={{ x: ["-100%", "200%"] }}
-                                          transition={{ duration: 3, repeat: Infinity, repeatDelay: isTop ? 2 : 4, ease: "easeInOut" }}
+                                          transition={{
+                                            duration: 1.5,
+                                            repeat: Infinity,
+                                            repeatDelay: isTop ? 3 : 5,
+                                            ease: "easeInOut",
+                                          }}
                                         />
                                       )}
                                       <div className="relative flex items-center justify-between">
@@ -889,26 +980,31 @@ export default function PurimEventPage() {
                                           <div className="flex items-center gap-2">
                                             {isTop ? (
                                               <motion.div
-                                                animate={{ rotate: [0, 10, -10, 0] }}
-                                                transition={{ duration: 2, repeat: Infinity, repeatDelay: 3 }}
+                                                animate={{ rotate: [0, 15, -15, 0] }}
+                                                transition={{ duration: 1.5, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
                                               >
-                                                <Star className="w-4 h-4 flex-shrink-0 text-[#EF8046] fill-[#EF8046]" />
+                                                <Star className="w-4 h-4 text-[var(--theme-primary)] fill-[var(--theme-primary)]" />
                                               </motion.div>
                                             ) : (
-                                              <Award className={`w-4 h-4 flex-shrink-0 transition-colors duration-300 ${isSelected ? "text-[#EF8046]" : isHigh ? "text-[#EF8046]/50" : "text-gray-300 group-hover:text-[#EF8046]/60"
+                                              <Award className={`w-4 h-4 transition-colors duration-200 ${isSelected ? "text-[var(--theme-primary)]" : isHigh ? "text-[var(--theme-primary)]/60" : "text-gray-300"
                                                 }`} />
                                             )}
-                                            <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[#EF8046]" : "text-gray-900"}`}>{s.name}</p>
+                                            <p className={`font-semibold text-sm ${isTop && !isSelected ? "text-[var(--theme-primary)]" : "text-gray-900"}`}>{s.name}</p>
+                                            {isTop && !isSelected && (
+                                              <span className="text-[10px] font-bold uppercase tracking-wider bg-[var(--theme-primary)] text-white px-2 py-0.5 rounded-full">
+                                                Popular
+                                              </span>
+                                            )}
                                           </div>
                                         </div>
                                         <div className="flex items-center gap-3 ml-4">
-                                          <span className={`text-lg font-bold transition-colors duration-300 whitespace-nowrap ${isSelected ? "text-[#EF8046]" : isTop ? "text-[#EF8046]" : "text-gray-700"
+                                          <span className={`text-lg font-bold whitespace-nowrap transition-colors duration-200 ${isSelected || isTop ? "text-[var(--theme-primary)]" : isHigh ? "text-[var(--theme-primary)]/80" : "text-gray-700"
                                             }`}>
                                             {s.price > 0 ? `$${s.price}` : "Any $"}
                                           </span>
-                                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-300 ${isSelected
-                                              ? "border-[#EF8046] bg-[#EF8046]"
-                                              : "border-gray-300 group-hover:border-[#EF8046]/40"
+                                          <div className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-all duration-200 ${isSelected
+                                              ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]"
+                                              : "border-gray-300"
                                             }`}>
                                             {isSelected && (
                                               <motion.div initial={{ scale: 0 }} animate={{ scale: 1 }} transition={{ type: "spring", stiffness: 500, damping: 15 }}>
@@ -929,8 +1025,8 @@ export default function PurimEventPage() {
                                   animate={{ opacity: 1, y: 0 }}
                                 >
                                   <label className="text-xs text-gray-500 mb-1 block">Enter your amount:</label>
-                                  <div className="flex items-center border border-gray-200 rounded-lg overflow-hidden focus-within:border-[#EF8046] focus-within:ring-2 focus-within:ring-[#EF8046]/20">
-                                    <span className="px-3 py-2 bg-gray-50 text-gray-500 border-r">$</span>
+                                  <div className="flex items-center border border-gray-200/80 rounded-xl overflow-hidden focus-within:border-[var(--theme-primary)] focus-within:ring-4 focus-within:ring-[var(--theme-primary)]/10">
+                                    <span className="px-4 py-3 bg-[#FAFAFA] text-gray-500 border-r border-gray-200/80">$</span>
                                     <input
                                       type="text"
                                       inputMode="numeric"
@@ -939,7 +1035,7 @@ export default function PurimEventPage() {
                                         const digits = e.target.value.replace(/\D/g, "");
                                         setCustomAmount(digits ? Number(digits) : 0);
                                       }}
-                                      className="w-full px-3 py-2 outline-none text-sm"
+                                      className="w-full px-4 py-3 outline-none text-sm bg-white"
                                       placeholder="Enter amount"
                                     />
                                   </div>
@@ -957,7 +1053,7 @@ export default function PurimEventPage() {
                                     value={formState.message}
                                     onChange={handleChange}
                                     rows={2}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm resize-none"
+                                    className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm resize-none transition-all duration-200 placeholder:text-gray-400"
                                     placeholder="In honor of... (optional)"
                                   />
                                   <input
@@ -965,7 +1061,7 @@ export default function PurimEventPage() {
                                     name="honoreeEmail"
                                     value={formState.honoreeEmail}
                                     onChange={handleChange}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm"
+                                    className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
                                     placeholder="Honoree's email (optional - we'll notify them)"
                                   />
                                 </motion.div>
@@ -977,13 +1073,13 @@ export default function PurimEventPage() {
                     </div>
 
                     {/* Total */}
-                    <div ref={totalRef} className="bg-gradient-to-r from-[#EF8046]/10 to-[#EF8046]/5 rounded-lg p-4">
+                    <div ref={totalRef} className="bg-gradient-to-br from-[var(--theme-primary)]/8 via-[var(--theme-primary)]/5 to-transparent rounded-2xl p-6 border border-[var(--theme-primary)]/10">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 font-medium">Total</span>
                         <motion.span
                           key={total}
-                          initial={{ scale: 1.2, color: "#EF8046" }}
-                          animate={{ scale: 1, color: "#EF8046" }}
+                          initial={{ scale: 1.2, color: theme.primary }}
+                          animate={{ scale: 1, color: theme.primary }}
                           className="text-3xl font-bold"
                         >
                           ${total}
@@ -1001,143 +1097,153 @@ export default function PurimEventPage() {
                     </div>
 
                     {/* Payment Method */}
-                    <div className="pt-4 border-t border-gray-100">
-                      <h4 className="font-semibold text-gray-900 mb-3">Payment Method</h4>
+                    <div className="pt-6 border-t border-gray-100/80">
+                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Payment Method</h4>
                       <div className="grid grid-cols-2 gap-3">
                         <button
                           type="button"
                           onClick={() => setPaymentMethod(paymentMethod === "online" ? null : "online")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "online"
-                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
-                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "online"
+                              ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
                           <CreditCard className="w-5 h-5 mx-auto mb-1" />
                           <span className="text-sm font-medium">Credit Card</span>
+                          {paymentMethod === "online" && (
+                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
+                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
+                            </div>
+                          )}
                         </button>
                         <button
                           type="button"
                           onClick={() => setPaymentMethod(paymentMethod === "check" ? null : "check")}
-                          className={`p-4 rounded-xl border-2 text-center transition-all ${paymentMethod === "check"
-                              ? "border-[#EF8046] bg-[#EF8046]/5 text-[#EF8046]"
-                              : "border-gray-200 hover:border-gray-300 text-gray-500"
+                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "check"
+                              ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
+                              : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
                             }`}
                         >
                           <span className="text-lg block mb-1">&#9993;</span>
                           <span className="text-sm font-medium">Send a Check</span>
+                          {paymentMethod === "check" && (
+                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
+                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
+                            </div>
+                          )}
                         </button>
                       </div>
 
                       {/* Card form - expands/collapses with animation */}
                       <AnimatePresence>
                         {paymentMethod === "online" && (
-                      <motion.div
-                        initial={{ opacity: 0, height: 0 }}
-                        animate={{ opacity: 1, height: "auto" }}
-                        exit={{ opacity: 0, height: 0 }}
-                        className="mt-4 overflow-hidden"
-                      >
-                        <div className="bg-[#FBFBFB] rounded-xl p-4 space-y-3 border border-gray-100">
-                          {/* Name on Card */}
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
-                            <input
-                              ref={cardNameRef}
-                              type="text"
-                              name="cardName"
-                              value={formState.cardName}
-                              onChange={handleChange}
-                              onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
-                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors"
-                              placeholder="Name on Card"
-                              autoComplete="cc-name"
-                            />
-                          </div>
+                          <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: "auto" }}
+                            exit={{ opacity: 0, height: 0 }}
+                            className="mt-4 overflow-hidden"
+                          >
+                            <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
+                              {/* Name on Card */}
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
+                                <input
+                                  ref={cardNameRef}
+                                  type="text"
+                                  name="cardName"
+                                  value={formState.cardName}
+                                  onChange={handleChange}
+                                  onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
+                                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
+                                  placeholder="Name on Card"
+                                  autoComplete="cc-name"
+                                />
+                              </div>
 
-                          {/* Card Number */}
-                          <div>
-                            <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
-                            <div className="relative">
-                              <input
-                                ref={cardNumberRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardNumber}
-                                onChange={(e) => {
-                                  const formatted = formatCardNumber(e.target.value);
-                                  setFormState((prev) => ({ ...prev, cardNumber: formatted }));
-                                  // Auto-jump to expiry when 16 digits entered
-                                  if (formatted.replace(/\s/g, "").length === 16) {
-                                    cardExpiryRef.current?.focus();
-                                  }
-                                }}
-                                onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
-                                placeholder="Card Number"
-                                maxLength={19}
-                                autoComplete="cc-number"
-                              />
-                              <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
-                            </div>
-                          </div>
+                              {/* Card Number */}
+                              <div>
+                                <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
+                                <div className="relative">
+                                  <input
+                                    ref={cardNumberRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardNumber}
+                                    onChange={(e) => {
+                                      const formatted = formatCardNumber(e.target.value);
+                                      setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                                      // Auto-jump to expiry when 16 digits entered
+                                      if (formatted.replace(/\s/g, "").length === 16) {
+                                        cardExpiryRef.current?.focus();
+                                      }
+                                    }}
+                                    onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                                    placeholder="Card Number"
+                                    maxLength={19}
+                                    autoComplete="cc-number"
+                                  />
+                                  <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                                </div>
+                              </div>
 
-                          {/* Expiry + CVV row */}
-                          <div className="grid grid-cols-2 gap-3">
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
-                              <input
-                                ref={cardExpiryRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardExpiry}
-                                onChange={(e) => {
-                                  const formatted = formatExpiry(e.target.value, formState.cardExpiry);
-                                  setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
-                                  // Auto-jump to CVV when full expiry entered (MM/YY = 5 chars)
-                                  if (formatted.length === 5) {
-                                    cardCvvRef.current?.focus();
-                                  }
-                                }}
-                                onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                placeholder="MM / YY"
-                                maxLength={5}
-                                autoComplete="cc-exp"
-                              />
-                            </div>
-                            <div>
-                              <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
-                              <input
-                                ref={cardCvvRef}
-                                type="text"
-                                inputMode="numeric"
-                                value={formState.cardCvv}
-                                onChange={(e) => {
-                                  const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
-                                  setFormState((prev) => ({ ...prev, cardCvv: digits }));
-                                }}
-                                onKeyDown={(e) => {
-                                  // Enter on last card field moves focus to submit button
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
-                                    submitRef.current?.focus();
-                                  }
-                                }}
-                                className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                placeholder="CVV"
-                                maxLength={4}
-                                autoComplete="cc-csc"
-                              />
-                            </div>
-                          </div>
+                              {/* Expiry + CVV row */}
+                              <div className="grid grid-cols-2 gap-3">
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
+                                  <input
+                                    ref={cardExpiryRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardExpiry}
+                                    onChange={(e) => {
+                                      const formatted = formatExpiry(e.target.value, formState.cardExpiry);
+                                      setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                                      // Auto-jump to CVV when full expiry entered (MM/YY = 5 chars)
+                                      if (formatted.length === 5) {
+                                        cardCvvRef.current?.focus();
+                                      }
+                                    }}
+                                    onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                    placeholder="MM / YY"
+                                    maxLength={5}
+                                    autoComplete="cc-exp"
+                                  />
+                                </div>
+                                <div>
+                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
+                                  <input
+                                    ref={cardCvvRef}
+                                    type="text"
+                                    inputMode="numeric"
+                                    value={formState.cardCvv}
+                                    onChange={(e) => {
+                                      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                      setFormState((prev) => ({ ...prev, cardCvv: digits }));
+                                    }}
+                                    onKeyDown={(e) => {
+                                      // Enter on last card field moves focus to submit button
+                                      if (e.key === "Enter") {
+                                        e.preventDefault();
+                                        submitRef.current?.focus();
+                                      }
+                                    }}
+                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                                    placeholder="CVV"
+                                    maxLength={4}
+                                    autoComplete="cc-csc"
+                                  />
+                                </div>
+                              </div>
 
-                          {/* Security Badge */}
-                          <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
-                            <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                            <span>Your payment is encrypted and secure.</span>
-                          </div>
-                        </div>
-                      </motion.div>
+                              {/* Security Badge */}
+                              <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
+                                <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
+                                <span>Your payment is encrypted and secure.</span>
+                              </div>
+                            </div>
+                          </motion.div>
                         )}
                       </AnimatePresence>
 
@@ -1162,7 +1268,7 @@ export default function PurimEventPage() {
                             exit={{ opacity: 0, height: 0 }}
                             className="mt-4 overflow-hidden"
                           >
-                            <div className="bg-[#FBFBFB] rounded-lg p-4 text-sm text-gray-600 space-y-2">
+                            <div className="bg-[#FAFAFA] rounded-2xl p-5 text-sm text-gray-600 space-y-2 border border-gray-100/80">
                               <p className="font-medium text-gray-900">Check Instructions:</p>
                               <p>Make check payable to: <strong>The JRE</strong></p>
                               <p>Please bring your check to the event or mail to:</p>
@@ -1180,7 +1286,7 @@ export default function PurimEventPage() {
                       disabled={isSubmitting}
                       whileHover={{ scale: 1.02 }}
                       whileTap={{ scale: 0.98 }}
-                      className="w-full bg-[#EF8046] text-white py-4 rounded-lg font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-70 shadow-lg"
+                      className="w-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2.5 hover:shadow-[0_8px_30px_rgba(var(--theme-rgb),0.35)] transition-all duration-300 disabled:opacity-70 shadow-lg relative overflow-hidden"
                     >
                       {isSubmitting ? (
                         <>
@@ -1204,7 +1310,7 @@ export default function PurimEventPage() {
                     </motion.button>
                   </form>
                 </div>
-              </SlideInRight>
+              </motion.div>
             </div>
           </div>
         </div>

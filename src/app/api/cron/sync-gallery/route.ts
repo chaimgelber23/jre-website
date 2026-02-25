@@ -3,20 +3,27 @@ import { google } from "googleapis";
 import { createServerClient } from "@/lib/supabase/server";
 
 /**
- * Gallery Auto-Sync Cron
+ * Gallery Auto-Sync
  *
- * Scans a parent Google Drive folder for subfolders (each = a gallery category).
- * For each subfolder, lists image files and inserts new ones into Supabase
- * gallery_photos table using Google's CDN URL.
+ * Scans a Google Drive folder tree and syncs all images to Supabase.
+ * Handles nested structures like:
+ *   JRE Pictures/
+ *     random-photo.jpg          → category: "Community"
+ *     Pictures 2025/
+ *       Purim/
+ *         photo1.jpg            → category: "Purim 2025"
+ *       Chanukah/
+ *         photo2.jpg            → category: "Chanukah 2025"
+ *     Pictures 2026/
+ *       Serene Event/
+ *         photo3.jpg            → category: "Serene Event 2026"
+ *     Scotch Night/
+ *       photo4.jpg              → category: "Scotch Night"
  *
  * Setup:
- *   1. Enable Google Drive API: https://console.cloud.google.com/apis/library/drive.googleapis.com
- *   2. Create a parent Google Drive folder
- *   3. Share it with: jresignuptosheets@jresignuptosheets.iam.gserviceaccount.com (Viewer)
- *   4. Set GALLERY_DRIVE_FOLDER_ID env var to the parent folder ID
- *   5. Create subfolders inside it (e.g., "Purim 2025", "Chanukah 2025")
- *   6. Upload photos to those subfolders
- *   7. Photos appear on /gallery automatically after next cron run
+ *   1. Enable Google Drive API in Google Cloud Console
+ *   2. Share the parent folder with: jresignuptosheets@jresignuptosheets.iam.gserviceaccount.com
+ *   3. Set GALLERY_DRIVE_FOLDER_ID env var to the parent folder ID
  */
 
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -29,6 +36,9 @@ const IMAGE_MIMES = [
   "image/gif",
 ];
 
+// Year-like folder names (e.g., "Pictures 2025", "2025", "Photos 2026")
+const YEAR_PATTERN = /(?:^|\D)(20\d{2})(?:\D|$)/;
+
 function getDriveClient() {
   const auth = new google.auth.GoogleAuth({
     credentials: {
@@ -40,16 +50,13 @@ function getDriveClient() {
   return google.drive({ version: "v3", auth });
 }
 
-/** Google CDN URL for publicly shared Drive files */
 function driveImageUrl(fileId: string): string {
   return `https://lh3.googleusercontent.com/d/${fileId}`;
 }
 
-/** List subfolders in a parent folder */
-async function listSubfolders(
-  drive: ReturnType<typeof google.drive>,
-  parentId: string
-) {
+type DriveClient = ReturnType<typeof google.drive>;
+
+async function listSubfolders(drive: DriveClient, parentId: string) {
   const folders: { id: string; name: string }[] = [];
   let pageToken: string | undefined;
 
@@ -71,11 +78,7 @@ async function listSubfolders(
   return folders;
 }
 
-/** List image files in a folder */
-async function listImages(
-  drive: ReturnType<typeof google.drive>,
-  folderId: string
-) {
+async function listImages(drive: DriveClient, folderId: string) {
   const images: { id: string; name: string; createdTime: string | null }[] = [];
   let pageToken: string | undefined;
 
@@ -103,8 +106,52 @@ async function listImages(
   return images;
 }
 
+/** Check if a folder name looks like a year grouping (e.g., "Pictures 2025", "2025 Photos") */
+function extractYear(folderName: string): string | null {
+  const match = folderName.match(YEAR_PATTERN);
+  return match ? match[1] : null;
+}
+
+/**
+ * Walk the folder tree and collect all leaf folders with their category names.
+ * - If a folder contains images directly, it's a leaf (category = folder name)
+ * - If a folder looks like a year (e.g., "Pictures 2025"), its subfolders get " 2025" appended
+ * - Recurses up to 3 levels deep
+ */
+async function discoverCategories(
+  drive: DriveClient,
+  parentId: string,
+  depth = 0,
+  yearSuffix = ""
+): Promise<{ folderId: string; category: string }[]> {
+  if (depth > 3) return []; // safety limit
+
+  const subfolders = await listSubfolders(drive, parentId);
+  const results: { folderId: string; category: string }[] = [];
+
+  for (const folder of subfolders) {
+    const year = extractYear(folder.name);
+
+    if (year) {
+      // This is a year folder — recurse into it, passing the year as suffix
+      const nested = await discoverCategories(drive, folder.id, depth + 1, ` ${year}`);
+      if (nested.length > 0) {
+        results.push(...nested);
+      } else {
+        // Year folder has no subfolders, treat its images as a category
+        results.push({ folderId: folder.id, category: folder.name });
+      }
+    } else {
+      // Regular event folder — use its name + any year suffix from parent
+      const category = folder.name + yearSuffix;
+      results.push({ folderId: folder.id, category });
+    }
+  }
+
+  return results;
+}
+
 export async function GET(request: NextRequest) {
-  // Auth
   const authHeader = request.headers.get("authorization");
   if (CRON_SECRET && authHeader !== `Bearer ${CRON_SECRET}`) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
@@ -121,33 +168,28 @@ export async function GET(request: NextRequest) {
     const drive = getDriveClient();
     const supabase = createServerClient();
 
-    // 1. Get existing drive_file_ids to skip duplicates
+    // 1. Get existing drive_file_ids
     const { data: existing } = await supabase
       .from("gallery_photos")
       .select("drive_file_id");
 
     const existingIds = new Set(
-      (existing || []).map((r: { drive_file_id: string | null }) => r.drive_file_id).filter(Boolean)
+      (existing || [])
+        .map((r: { drive_file_id: string | null }) => r.drive_file_id)
+        .filter(Boolean)
     );
 
-    // 2. List subfolders (each = a category)
-    const folders = await listSubfolders(drive, PARENT_FOLDER_ID);
+    // 2. Discover all categories by walking the folder tree
+    const categories = await discoverCategories(drive, PARENT_FOLDER_ID);
 
-    // 3. Also check for images directly in the parent folder (category = "Community")
-    const topLevelImages = await listImages(drive, PARENT_FOLDER_ID);
-    if (topLevelImages.length > 0) {
-      folders.unshift({ id: PARENT_FOLDER_ID, name: "Community" });
-    }
+    // Skip random photos in the root folder — only sync photos inside event folders
 
     let totalInserted = 0;
     let totalSkipped = 0;
     const categoryStats: Record<string, { added: number; skipped: number }> = {};
 
-    for (const folder of folders) {
-      const images =
-        folder.id === PARENT_FOLDER_ID
-          ? topLevelImages
-          : await listImages(drive, folder.id);
+    for (const cat of categories) {
+      const images = await listImages(drive, cat.folderId);
 
       let added = 0;
       let skipped = 0;
@@ -174,48 +216,44 @@ export async function GET(request: NextRequest) {
         newRows.push({
           title,
           image_url: driveImageUrl(img.id),
-          category: folder.name,
+          category: cat.category,
           drive_file_id: img.id,
           date_taken: img.createdTime ? img.createdTime.split("T")[0] : null,
           sort_order: i,
           is_active: true,
         });
 
-        existingIds.add(img.id); // prevent duplicates within this run
+        existingIds.add(img.id);
         added++;
       }
 
-      // Batch insert
       if (newRows.length > 0) {
         const { error } = await supabase
           .from("gallery_photos")
           .insert(newRows as never);
 
         if (error) {
-          console.error(
-            `Gallery sync error for "${folder.name}":`,
-            error.message
-          );
-          // Continue with other folders
+          console.error(`Gallery sync error for "${cat.category}":`, error.message);
         }
       }
 
       totalInserted += added;
       totalSkipped += skipped;
-      categoryStats[folder.name] = { added, skipped };
+      if (added > 0 || skipped > 0) {
+        categoryStats[cat.category] = { added, skipped };
+      }
     }
 
     return NextResponse.json({
       success: true,
-      folders: folders.length,
+      folders: categories.length,
       totalInserted,
       totalSkipped,
       categories: categoryStats,
     });
   } catch (error) {
-    console.error("Gallery sync cron error:", error);
-    const message =
-      error instanceof Error ? error.message : "Unknown error";
+    console.error("Gallery sync error:", error);
+    const message = error instanceof Error ? error.message : "Unknown error";
     return NextResponse.json(
       { success: false, error: message },
       { status: 500 }
