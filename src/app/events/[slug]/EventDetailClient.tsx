@@ -53,7 +53,7 @@ export default function EventDetailClient({
   const [kids, setKids] = useState(0);
   const [selectedSponsorship, setSelectedSponsorship] = useState<string | null>(null);
   const [showSponsorship, setShowSponsorship] = useState(false);
-  const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>(null);
+  const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>("online");
   // Payment processor: "banquest" (primary) or "square" (backup)
   // To switch to Square: change to "square" and uncomment Square imports above
   const paymentProcessor = "banquest" as const;
@@ -167,18 +167,7 @@ export default function EventDetailClient({
     }
   }, [selectedSponsorship]);
 
-  // When payment method changes, scroll to show payment fields + submit
-  useEffect(() => {
-    if (paymentRef.current) {
-      setTimeout(() => {
-        paymentRef.current?.scrollIntoView({
-          behavior: "smooth",
-          block: "center",
-          inline: "nearest"
-        });
-      }, 500);
-    }
-  }, [paymentMethod]);
+  // Payment method is always "online" (CC only) — no toggle needed
 
   // Scroll form to top when error appears so user sees it
   useEffect(() => {
@@ -198,7 +187,7 @@ export default function EventDetailClient({
         particleCount: 100,
         spread: 70,
         origin: { y: 0.6 },
-        colors: theme.confettiColors,
+        colors: (event?.confetti_colors && event.confetti_colors.length > 0) ? event.confetti_colors : theme.confettiColors,
       });
     }
   }, [isSubmitted]);
@@ -302,14 +291,8 @@ export default function EventDetailClient({
     e.preventDefault();
     setError("");
 
-    // Validate payment method selected
-    if (!paymentMethod) {
-      setError("Please select a payment method.");
-      return;
-    }
-
-    // Validate card fields for online payment
-    if (paymentMethod === "online") {
+    // Validate card fields (credit card only)
+    {
       const cardNum = formState.cardNumber.replace(/\s/g, "");
       if (cardNum.length < 14) {
         setError("Please enter a valid card number.");
@@ -941,7 +924,7 @@ export default function EventDetailClient({
                                 value={guest.name}
                                 onChange={(e) => updateGuest(index, "name", e.target.value)}
                                 className="w-full px-5 py-3.5 rounded-xl border border-gray-200/80 bg-white focus:border-[var(--theme-primary)] focus:ring-4 focus:ring-[var(--theme-primary)]/10 outline-none text-sm transition-all duration-200 placeholder:text-gray-400"
-                                placeholder="Guest name (recommended)"
+                                placeholder="Guest name *"
                               />
                               <input
                                 type="email"
@@ -974,18 +957,22 @@ export default function EventDetailClient({
                           whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
                           whileTap={{ scale: 0.98 }}
                         >
-                          <span className="relative flex items-center gap-2">
+                          {/* Shimmer sweep */}
+                          {!showSponsorship && (
+                            <motion.span
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12"
+                              animate={{ x: ["-150%", "250%"] }}
+                              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
+                            />
+                          )}
+                          <span className="relative">
                             {showSponsorship ? (
                               <>
-                                <Plus className="w-4 h-4 rotate-45" />
+                                <Plus className="w-4 h-4 rotate-45 inline mr-1.5" />
                                 Remove Sponsorship
                               </>
                             ) : (
-                              <>
-                                <Sparkles className="w-4 h-4" />
-                                Become a Sponsor
-                                <Award className="w-4 h-4" />
-                              </>
+                              "Become a Sponsor"
                             )}
                           </span>
                         </motion.button>
@@ -1171,54 +1158,22 @@ export default function EventDetailClient({
                       )}
                     </div>
 
-                    {/* Payment Method */}
+                    {/* Payment — Credit Card Only */}
                     <div className="pt-6 border-t border-gray-100/80">
-                      <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Payment Method</h4>
-                      <div className="grid grid-cols-2 gap-3">
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod(paymentMethod === "online" ? null : "online")}
-                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "online"
-                            ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
-                            : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
-                            }`}
-                        >
-                          <CreditCard className="w-5 h-5 mx-auto mb-1" />
-                          <span className="text-sm font-medium">Credit Card</span>
-                          {paymentMethod === "online" && (
-                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
-                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
-                            </div>
-                          )}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => setPaymentMethod(paymentMethod === "check" ? null : "check")}
-                          className={`p-5 rounded-2xl border-2 text-center transition-all duration-200 relative cursor-pointer ${paymentMethod === "check"
-                            ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/5 text-[var(--theme-primary)] shadow-sm"
-                            : "border-gray-200 hover:border-gray-300 text-gray-500 hover:bg-gray-50"
-                            }`}
-                        >
-                          <span className="text-lg block mb-1">&#9993;</span>
-                          <span className="text-sm font-medium">Send a Check</span>
-                          {paymentMethod === "check" && (
-                            <div className="absolute top-2 right-2 mt-0.5 mr-0.5">
-                              <Check className="w-4 h-4 text-[var(--theme-primary)]" />
-                            </div>
-                          )}
-                        </button>
+                      <div className="flex items-center justify-between mb-5">
+                        <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase">Payment Details</h4>
+                        <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                          <Lock className="w-3 h-3 text-green-500" />
+                          <span>Secure</span>
+                        </div>
                       </div>
-
-                      {/* Card form - expands/collapses with animation */}
-                      <AnimatePresence>
-                        {paymentMethod === "online" && (
-                          <motion.div
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mt-4 overflow-hidden"
-                          >
-                            <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
+                      <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80 relative overflow-hidden">
+                        {/* Subtle shimmer on the card form border */}
+                        <motion.div
+                          className="absolute inset-0 rounded-2xl border border-[var(--theme-primary)]/20 pointer-events-none"
+                          animate={{ opacity: [0.3, 0.6, 0.3] }}
+                          transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                        />
                               <div>
                                 <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
                                 <input
@@ -1303,33 +1258,7 @@ export default function EventDetailClient({
                                   />
                                 </div>
                               </div>
-                              <div className="flex items-center gap-2 text-xs text-gray-400 pt-1">
-                                <Lock className="w-3.5 h-3.5 text-green-500 flex-shrink-0" />
-                                <span>Your payment is encrypted and secure.</span>
-                              </div>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
-
-                      <AnimatePresence>
-                        {paymentMethod === "check" && (
-                          <motion.div
-                            ref={paymentRef}
-                            initial={{ opacity: 0, height: 0 }}
-                            animate={{ opacity: 1, height: "auto" }}
-                            exit={{ opacity: 0, height: 0 }}
-                            className="mt-4 overflow-hidden"
-                          >
-                            <div className="bg-[#FBFBFB] rounded-lg p-4 text-sm text-gray-600 space-y-2">
-                              <p className="font-medium text-gray-900">Check Instructions:</p>
-                              <p>Make check payable to: <strong>The JRE</strong></p>
-                              <p>Please bring your check to the event or mail to:</p>
-                              <p className="font-medium text-gray-900">1495 Weaver Street, Scarsdale, NY 10583</p>
-                            </div>
-                          </motion.div>
-                        )}
-                      </AnimatePresence>
+                      </div>
                     </div>
 
                     {/* Submit */}
@@ -1341,6 +1270,14 @@ export default function EventDetailClient({
                       whileTap={{ scale: 0.98 }}
                       className="w-full bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2.5 hover:shadow-[0_8px_30px_rgba(var(--theme-rgb),0.35)] transition-all duration-300 disabled:opacity-70 shadow-lg relative overflow-hidden"
                     >
+                      {/* Shimmer sweep */}
+                      {!isSubmitting && (
+                        <motion.span
+                          className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                          animate={{ x: ["-150%", "250%"] }}
+                          transition={{ duration: 2, repeat: Infinity, repeatDelay: 4, ease: "easeInOut" }}
+                        />
+                      )}
                       {isSubmitting ? (
                         <>
                           <motion.div
@@ -1355,10 +1292,7 @@ export default function EventDetailClient({
                           Processing...
                         </>
                       ) : (
-                        <>
-                          <Ticket className="w-5 h-5" />
-                          Complete Registration
-                        </>
+                        <span className="relative">Complete Registration</span>
                       )}
                     </motion.button>
 

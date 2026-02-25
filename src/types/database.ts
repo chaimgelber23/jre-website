@@ -122,6 +122,7 @@ export interface Database {
           speaker: string | null;
           price_per_adult: number;
           kids_price: number;
+          confetti_colors: string[] | null;
           is_active: boolean;
           created_at: string;
           updated_at: string;
@@ -141,6 +142,7 @@ export interface Database {
           speaker?: string | null;
           price_per_adult?: number;
           kids_price?: number;
+          confetti_colors?: string[] | null;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;
@@ -160,6 +162,7 @@ export interface Database {
           speaker?: string | null;
           price_per_adult?: number;
           kids_price?: number;
+          confetti_colors?: string[] | null;
           is_active?: boolean;
           created_at?: string;
           updated_at?: string;

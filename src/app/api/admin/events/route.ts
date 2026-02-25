@@ -109,6 +109,7 @@ export async function POST(request: NextRequest) {
       kidsPrice,
       themeColor,
       speaker,
+      confettiColors,
       sponsorships,
     } = body;
 
@@ -136,6 +137,7 @@ export async function POST(request: NextRequest) {
       kids_price: kidsPrice || 0,
       theme_color: themeColor || null,
       speaker: speaker || null,
+      confetti_colors: confettiColors || null,
     };
 
     const { data: eventData, error: eventError } = await supabase
@@ -214,6 +216,7 @@ export async function PATCH(request: NextRequest) {
       kidsPrice: "kids_price",
       themeColor: "theme_color",
       speaker: "speaker",
+      confettiColors: "confetti_colors",
       isActive: "is_active",
     };
 
