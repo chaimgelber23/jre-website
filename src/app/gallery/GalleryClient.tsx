@@ -5,6 +5,8 @@ import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
 import { Camera, ChevronLeft, ChevronRight, X, ArrowRight } from "lucide-react";
+import Header from "@/components/layout/Header";
+import Footer from "@/components/layout/Footer";
 import { FadeUp } from "@/components/ui/motion";
 import type { GalleryPhoto } from "@/types/database";
 
@@ -185,7 +187,9 @@ export default function GalleryClient({ photos, categories }: GalleryClientProps
   }, [filteredPhotos.length]);
 
   return (
-    <>
+    <main className="min-h-screen">
+      <Header />
+
       {/* ------------------------------------------------------------------ */}
       {/* Hero */}
       {/* ------------------------------------------------------------------ */}
@@ -202,14 +206,16 @@ export default function GalleryClient({ photos, categories }: GalleryClientProps
         />
 
         <div className="relative container mx-auto px-6 text-center">
-          <motion.p
-            initial={{ opacity: 0, y: 20 }}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2 }}
-            className="text-[#EF8046] font-medium tracking-wider uppercase mb-4 text-sm"
+            className="inline-flex items-center gap-3 mb-4"
           >
-            Memories &amp; Moments
-          </motion.p>
+            <div className="w-8 h-px bg-[#EF8046]" />
+            <span className="text-xs font-semibold uppercase tracking-[0.2em] text-[#EF8046]">Memories &amp; Moments</span>
+            <div className="w-8 h-px bg-[#EF8046]" />
+          </motion.div>
           <motion.h1
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
@@ -384,6 +390,8 @@ export default function GalleryClient({ photos, categories }: GalleryClientProps
         </div>
       </section>
 
+      <Footer />
+
       {/* ------------------------------------------------------------------ */}
       {/* Lightbox */}
       {/* ------------------------------------------------------------------ */}
@@ -398,6 +406,6 @@ export default function GalleryClient({ photos, categories }: GalleryClientProps
           />
         )}
       </AnimatePresence>
-    </>
+    </main>
   );
 }
