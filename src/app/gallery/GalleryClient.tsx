@@ -247,7 +247,10 @@ export default function GalleryClient({ photos, categories }: GalleryClientProps
                   key={cat}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
-                  onClick={() => setActiveCategory(cat)}
+                  onClick={() => {
+                    setActiveCategory(cat);
+                    window.scrollTo({ top: 0, behavior: "smooth" });
+                  }}
                   className={`px-5 py-2 rounded-full text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
                     activeCategory === cat
                       ? "bg-[#EF8046] text-white shadow-md"
