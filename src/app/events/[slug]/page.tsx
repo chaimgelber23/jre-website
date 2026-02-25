@@ -30,7 +30,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
     };
   }
 
-  const eventDate = new Date(event.date).toLocaleDateString("en-US", {
+  const [y, m, d] = event.date.split("-").map(Number);
+  const eventDate = new Date(y, m - 1, d).toLocaleDateString("en-US", {
     weekday: "long",
     month: "long",
     day: "numeric",
@@ -70,37 +71,37 @@ export default async function EventDetailPage({ params }: Props) {
 
   const eventJsonLd = event
     ? {
-        "@context": "https://schema.org",
-        "@type": "Event",
-        name: event.title,
-        startDate: `${event.date}T${event.start_time || "19:00"}`,
-        ...(event.end_time && { endDate: `${event.date}T${event.end_time}` }),
-        eventStatus: "https://schema.org/EventScheduled",
-        eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
-        location: event.location
-          ? {
-              "@type": "Place",
-              name: event.location,
-              address: { "@type": "PostalAddress", addressRegion: "NY", addressCountry: "US" },
-            }
-          : undefined,
-        organizer: {
-          "@type": "Organization",
-          name: "The JRE - Jewish Renaissance Experience",
-          url: "https://thejre.org",
-        },
-        offers: {
-          "@type": "Offer",
-          price: String(event.price_per_adult),
-          priceCurrency: "USD",
-          availability: "https://schema.org/InStock",
-          url: `https://thejre.org/events/${slug}`,
-        },
-        image: event.image_url
-          ? `https://thejre.org${event.image_url}`
-          : undefined,
-        description: event.description || undefined,
-      }
+      "@context": "https://schema.org",
+      "@type": "Event",
+      name: event.title,
+      startDate: `${event.date}T${event.start_time || "19:00"}`,
+      ...(event.end_time && { endDate: `${event.date}T${event.end_time}` }),
+      eventStatus: "https://schema.org/EventScheduled",
+      eventAttendanceMode: "https://schema.org/OfflineEventAttendanceMode",
+      location: event.location
+        ? {
+          "@type": "Place",
+          name: event.location,
+          address: { "@type": "PostalAddress", addressRegion: "NY", addressCountry: "US" },
+        }
+        : undefined,
+      organizer: {
+        "@type": "Organization",
+        name: "The JRE - Jewish Renaissance Experience",
+        url: "https://thejre.org",
+      },
+      offers: {
+        "@type": "Offer",
+        price: String(event.price_per_adult),
+        priceCurrency: "USD",
+        availability: "https://schema.org/InStock",
+        url: `https://thejre.org/events/${slug}`,
+      },
+      image: event.image_url
+        ? `https://thejre.org${event.image_url}`
+        : undefined,
+      description: event.description || undefined,
+    }
     : null;
 
   const breadcrumbJsonLd = {

@@ -236,12 +236,15 @@ export async function POST(
         to: email,
         name,
         eventTitle: event.title,
-        eventDate: new Date(event.date).toLocaleDateString("en-US", {
-          weekday: "long",
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        }),
+        eventDate: (() => {
+          const [y, m, d] = event.date.split("-").map(Number);
+          return new Date(y, m - 1, d).toLocaleDateString("en-US", {
+            weekday: "long",
+            year: "numeric",
+            month: "long",
+            day: "numeric",
+          });
+        })(),
         eventTime: formatEventTime(event.start_time, event.end_time),
         eventLocation: event.location || "See event details",
         eventImageUrl: event.image_url || null,
