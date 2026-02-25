@@ -619,6 +619,29 @@ export default function EventDetailClient({
                       <span className="font-medium">{event.speaker}</span>
                     </span>
                   )}
+                  {event.location && (
+                    event.location_url ? (
+                      <a
+                        href={event.location_url}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-2 text-white/90 text-sm hover:text-white transition-colors"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
+                        </div>
+                        <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                      </a>
+                    ) : (
+                      <span className="flex items-center gap-2 text-white/90 text-sm">
+                        <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                          <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
+                        </div>
+                        <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                      </span>
+                    )
+                  )}
                 </motion.div>
 
                 {/* Click to Register */}
@@ -656,6 +679,59 @@ export default function EventDetailClient({
                 transition={{ duration: 0.5 }}
               >
 
+
+                {/* Event Details Card */}
+                {(eventDate || eventTime || event.location) && (
+                  <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-10">
+                    <h3 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Event Details</h3>
+                    <div className="space-y-4">
+                      {eventDate && (
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-[var(--theme-primary)]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <Calendar className="w-5 h-5 text-[var(--theme-primary)]" />
+                          </div>
+                          <div>
+                            <p className="text-sm font-semibold text-gray-900">{eventDate}</p>
+                            {eventTime && <p className="text-sm text-gray-500">{eventTime}</p>}
+                          </div>
+                        </div>
+                      )}
+                      {event.location && (
+                        <div className="flex items-start gap-4">
+                          <div className="w-10 h-10 bg-[var(--theme-primary)]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                            <MapPin className="w-5 h-5 text-[var(--theme-primary)]" />
+                          </div>
+                          <div>
+                            {event.location_url ? (
+                              <>
+                                <a
+                                  href={event.location_url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-sm font-semibold text-gray-900 hover:text-[var(--theme-primary)] transition-colors"
+                                >
+                                  {event.location.split(' - ')[0] || event.location}
+                                </a>
+                                {event.location.includes(' - ') && (
+                                  <a
+                                    href={event.location_url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="text-sm text-[var(--theme-primary)] hover:underline block mt-0.5"
+                                  >
+                                    {event.location.split(' - ').slice(1).join(' - ').trim()}
+                                  </a>
+                                )}
+                              </>
+                            ) : (
+                              <p className="text-sm font-semibold text-gray-900">{event.location}</p>
+                            )}
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Description */}
                 {event.description && (

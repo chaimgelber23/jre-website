@@ -15,10 +15,7 @@ import {
   Minus,
   Check,
   CreditCard,
-  PartyPopper,
-  Music,
-  Wine,
-  Baby,
+  Ticket,
   Sparkles,
   Award,
   Star,
@@ -552,12 +549,18 @@ export default function PurimEventPage() {
                     </div>
                     <span className="font-medium">{purimEvent.time}</span>
                   </span>
-                  <span className="flex items-center gap-2 text-white/90 text-sm">
+                  <a
+                    href={purimEvent.locationUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="flex items-center gap-2 text-white/90 text-sm hover:text-white transition-colors"
+                    onClick={(e) => e.stopPropagation()}
+                  >
                     <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
                       <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
                     </div>
-                    <span className="font-medium">Ardsley, NY</span>
-                  </span>
+                    <span className="font-medium">Life, The Place To Be &mdash; Ardsley, NY</span>
+                  </a>
                 </motion.div>
 
                 {/* Click to Register */}
@@ -594,19 +597,58 @@ export default function PurimEventPage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.5 }}
               >
-                {/* Event Features */}
+                {/* Event Details Card */}
+                <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-10">
+                  <h3 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase mb-5">Event Details</h3>
+                  <div className="space-y-4">
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-[var(--theme-primary)]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <Calendar className="w-5 h-5 text-[var(--theme-primary)]" />
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900">{purimEvent.date}</p>
+                        <p className="text-sm text-gray-500">{purimEvent.time}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-4">
+                      <div className="w-10 h-10 bg-[var(--theme-primary)]/10 rounded-xl flex items-center justify-center flex-shrink-0">
+                        <MapPin className="w-5 h-5 text-[var(--theme-primary)]" />
+                      </div>
+                      <div>
+                        <a
+                          href={purimEvent.locationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm font-semibold text-gray-900 hover:text-[var(--theme-primary)] transition-colors"
+                        >
+                          Life, The Place To Be
+                        </a>
+                        <a
+                          href={purimEvent.locationUrl}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="text-sm text-[var(--theme-primary)] hover:underline block mt-0.5"
+                        >
+                          2 Lawrence Street, Ardsley, NY 10502
+                        </a>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Event Highlights */}
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-10">
                   {[
-                    { icon: PartyPopper, label: "Megillah Reading" },
-                    { icon: Music, label: "Live Music" },
-                    { icon: Wine, label: "Open Bar" },
-                    { icon: Baby, label: "Kids Activities" },
+                    { icon: Star, label: "Megillah Reading" },
+                    { icon: Sparkles, label: "Live Music" },
+                    { icon: Award, label: "Open Bar" },
+                    { icon: Users, label: "Kids Activities" },
                   ].map((feature, index) => (
                     <div
                       key={index}
                       className="bg-gradient-to-br from-[var(--theme-primary)]/10 to-[var(--theme-primary)]/5 rounded-xl p-4 text-center"
                     >
-                      <feature.icon className="w-8 h-8 text-[var(--theme-primary)] mx-auto mb-2" />
+                      <feature.icon className="w-6 h-6 text-[var(--theme-primary)] mx-auto mb-2" />
                       <p className="text-sm font-medium text-gray-700">{feature.label}</p>
                     </div>
                   ))}
@@ -889,9 +931,8 @@ export default function PurimEventPage() {
                             </>
                           ) : (
                             <>
-                              <Sparkles className="w-4 h-4" />
+                              <Star className="w-4 h-4" />
                               Become a Sponsor
-                              <Award className="w-4 h-4" />
                             </>
                           )}
                         </span>
@@ -1303,8 +1344,8 @@ export default function PurimEventPage() {
                         </>
                       ) : (
                         <>
-                          <PartyPopper className="w-5 h-5" />
-                          Confirm Registration
+                          <Ticket className="w-5 h-5" />
+                          Complete Registration
                         </>
                       )}
                     </motion.button>
