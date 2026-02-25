@@ -582,12 +582,15 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
       expYear += 2000;
     }
 
+    const fullName = `${firstName} ${lastName}`.trim();
+
     const requestBody = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
+      cardholder: fullName,
       customer: {
         first_name: firstName,
         last_name: lastName,
@@ -606,8 +609,12 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
     };
 
     console.log("Processing direct card payment for amount:", data.amount.toFixed(2));
+    console.log("Cardholder name:", fullName);
+    console.log("Customer:", JSON.stringify(requestBody.customer));
+    console.log("Billing info:", JSON.stringify(requestBody.billing_info));
     console.log("Card:", data.cardNumber.substring(0, 6) + "***" + data.cardNumber.slice(-4));
     console.log("Using API URL:", BANQUEST_API_URL);
+    console.log("Full request body (redacted):", JSON.stringify({ ...requestBody, card: "***", cvv2: "***" }, null, 2));
 
     const response = await fetch(BANQUEST_API_URL, {
       method: "POST",
@@ -713,13 +720,18 @@ export async function setupRecurringPayment(data: RecurringPaymentSetupData): Pr
       expYear += 2000;
     }
 
+    const fullName = `${firstName} ${lastName}`.trim();
+
     const requestBody = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
+      cardholder: fullName,
       customer: {
+        first_name: firstName,
+        last_name: lastName,
         email: data.email,
         send_receipt: false,
       },

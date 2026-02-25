@@ -749,10 +749,10 @@ export default function EventDetailClient({
                   </div>
                 )}
 
-                {/* Pricing */}
+                {/* Cover */}
                 <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-10">
                   <h3 className="text-2xl font-bold text-gray-900 mb-5">
-                    Pricing
+                    Cover
                   </h3>
                   <div className="space-y-3">
                     <div className={`flex justify-between items-center py-3${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>

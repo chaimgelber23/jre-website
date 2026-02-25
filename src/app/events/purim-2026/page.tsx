@@ -666,9 +666,9 @@ export default function PurimEventPage() {
                   </div>
                 </div>
 
-                {/* Pricing */}
+                {/* Cover */}
                 <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-10">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-5">Pricing</h3>
+                  <h3 className="text-2xl font-bold text-gray-900 mb-5">Cover</h3>
                   <div className="space-y-3">
                     <div className="flex justify-between items-center py-3 border-b border-gray-200">
                       <span className="text-gray-600 text-lg">Adults</span>
