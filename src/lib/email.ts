@@ -351,7 +351,8 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                               </tr>
                             </table>
 
-                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 32px; line-height: 1.6;">If you have any questions, feel free to reach out. We look forward to seeing you!</p>
+                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px; line-height: 1.6;">If you have any questions, feel free to reach out to <a href="mailto:glevi@thejre.org" style="color: #EF8046; text-decoration: none; font-weight: 500;">glevi@thejre.org</a> or <a href="mailto:yoratz@thejre.org" style="color: #EF8046; text-decoration: none; font-weight: 500;">yoratz@thejre.org</a>.</p>
+                            <p style="color: #6b7280; font-size: 14px; margin: 0 0 32px; line-height: 1.6;">Looking forward to seeing you!</p>
 
                             <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">Best regards,<br><span style="color: #1a1a1a; font-weight: 500;">The JRE Team</span></p>
                           </td>
