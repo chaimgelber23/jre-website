@@ -182,8 +182,15 @@ function EventCard({
 function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   const theme = getEventTheme(event.themeColor);
 
+  const isLightTheme = theme.darkBg === "#ffffff" || theme.darkBg.toLowerCase() === "#fff" || theme.darkBg === "#FBFBFB";
+  const textColor = isLightTheme ? "text-gray-900" : "text-white";
+  const mutedTextColor = isLightTheme ? "text-gray-600" : "text-gray-300";
+  const labelTextColor = isLightTheme ? "text-gray-500" : "text-gray-400";
+  const cardBg = isLightTheme ? "bg-black/5" : "bg-white/10";
+  const cardHoverBg = isLightTheme ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)";
+
   return (
-    <section className="relative py-20 overflow-hidden">
+    <section className="relative py-12 md:py-16 overflow-hidden">
       {/* Background */}
       <div className="absolute inset-0" style={{ backgroundColor: theme.darkBg }} />
 
@@ -192,7 +199,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true }}
-          className="text-center mb-12"
+          className="text-center mb-10"
         >
           <div className="inline-flex items-center gap-3 mb-4">
             <div className="w-8 h-px" style={{ backgroundColor: theme.primary }} />
@@ -201,7 +208,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
             </span>
             <div className="w-8 h-px" style={{ backgroundColor: theme.primary }} />
           </div>
-          <h2 className="text-4xl md:text-5xl font-bold text-white">
+          <h2 className={`text-3xl md:text-5xl font-bold ${textColor}`}>
             Our Next Event
           </h2>
         </motion.div>
@@ -216,7 +223,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               transition={{ duration: 0.6 }}
               className="relative"
             >
-              <div className="relative h-[400px] rounded-2xl overflow-hidden group" style={{ background: `linear-gradient(to bottom right, ${theme.darkBg}, ${theme.darkerBg})` }}>
+              <div className="relative h-[350px] md:h-[400px] rounded-2xl overflow-hidden group" style={{ background: `linear-gradient(to bottom right, ${theme.darkBg}, ${theme.darkerBg})` }}>
                 <EventImage
                   event={event}
                   variant="featured"
@@ -238,12 +245,12 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
               whileInView={{ opacity: 1, x: 0 }}
               viewport={{ once: true }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="text-white"
+              className={textColor}
             >
-              <h3 className="text-3xl md:text-4xl font-bold mb-4">
+              <h3 className={`text-3xl md:text-4xl font-bold mb-4 ${textColor}`}>
                 {event.title}
               </h3>
-              <p className="text-gray-300 text-lg mb-8 leading-relaxed">
+              <p className={`${mutedTextColor} text-lg mb-8 leading-relaxed line-clamp-4`}>
                 {event.description}
               </p>
 
@@ -255,15 +262,15 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                 ].map(({ icon: Icon, label, value }) => (
                   <motion.div
                     key={label}
-                    className="flex items-center gap-4 bg-white/10 backdrop-blur-sm rounded-xl p-4"
-                    whileHover={{ x: 10, backgroundColor: "rgba(255,255,255,0.15)" }}
+                    className={`flex items-center gap-4 ${cardBg} backdrop-blur-sm rounded-xl p-4`}
+                    whileHover={{ x: 10, backgroundColor: cardHoverBg }}
                     transition={{ duration: 0.2 }}
                   >
                     <div className="w-12 h-12 rounded-xl flex items-center justify-center" style={{ backgroundColor: theme.primary }}>
                       <Icon className="w-6 h-6 text-white" />
                     </div>
                     <div>
-                      <p className="text-sm text-gray-400">{label}</p>
+                      <p className={`text-sm ${labelTextColor}`}>{label}</p>
                       <p className="font-semibold">{value}</p>
                     </div>
                   </motion.div>
