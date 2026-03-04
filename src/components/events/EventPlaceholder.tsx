@@ -77,6 +77,10 @@ export default function EventPlaceholder({
   const borderWidth = variant === "hero" ? "3px" : "2px";
   const cornerBorder = `${borderWidth} solid rgba(${theme.primaryRgb}, 0.4)`;
 
+  const isLightTheme = theme.darkBg === "#ffffff" || theme.darkBg.toLowerCase() === "#fff";
+  const textColor = isLightTheme ? "text-gray-900" : "text-white";
+  const mutedTextColor = isLightTheme ? "text-gray-500" : "text-gray-400";
+
   return (
     <div
       className={`relative overflow-hidden ${className}`}
@@ -86,9 +90,9 @@ export default function EventPlaceholder({
     >
       {/* Dot pattern overlay */}
       <div
-        className="absolute inset-0 opacity-[0.04]"
+        className={`absolute inset-0 flex transition-opacity duration-300 opacity-[0.04]`}
         style={{
-          backgroundImage: `radial-gradient(circle, #fff 1px, transparent 1px)`,
+          backgroundImage: `radial-gradient(circle, ${isLightTheme ? '#000' : '#fff'} 1px, transparent 1px)`,
           backgroundSize: variant === "card" ? "16px 16px" : "24px 24px",
         }}
       />
@@ -109,8 +113,8 @@ export default function EventPlaceholder({
             45deg,
             transparent,
             transparent 30px,
-            rgba(255,255,255,0.5) 30px,
-            rgba(255,255,255,0.5) 31px
+            rgba(${isLightTheme ? '0,0,0' : '255,255,255'},0.5) 30px,
+            rgba(${isLightTheme ? '0,0,0' : '255,255,255'},0.5) 31px
           )`,
         }}
       />
@@ -129,7 +133,7 @@ export default function EventPlaceholder({
             {variant !== "card" && (
               <div className="w-6 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
             )}
-            <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.7)` }}>
+            <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.8)` }}>
               The JRE Presents
             </span>
             {variant !== "card" && (
@@ -145,12 +149,12 @@ export default function EventPlaceholder({
               transition={{ delay: 0.3, type: "spring" }}
               className="mb-3"
             >
-              <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.4)` }} />
+              <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.6)` }} />
             </motion.div>
           )}
 
           {/* Event Title */}
-          <div className={`${titleSizes[variant]} font-bold text-white leading-tight max-w-[90%]`}>
+          <div className={`${titleSizes[variant]} font-bold ${textColor} leading-tight max-w-[90%]`}>
             {isShortTitle ? (
               <span>{title}</span>
             ) : (
@@ -166,7 +170,7 @@ export default function EventPlaceholder({
 
           {/* Date */}
           {date && (
-            <p className={`${dateSizes[variant]} text-gray-400 font-medium tracking-wide`}>
+            <p className={`${dateSizes[variant]} ${mutedTextColor} font-medium tracking-wide`}>
               {date}
             </p>
           )}

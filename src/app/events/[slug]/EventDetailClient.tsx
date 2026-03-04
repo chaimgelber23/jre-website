@@ -524,8 +524,7 @@ export default function EventDetailClient({
 
       {/* Hero Section */}
       <section
-        className="relative pt-24 cursor-pointer group"
-        style={{ background: hasEventImage ? "#000" : theme.darkBg }}
+        className="relative pt-24 cursor-pointer group bg-[#FBFBFB]"
         onClick={scrollToRegistration}
       >
         <h1 className="sr-only">{event.title}</h1>
@@ -540,19 +539,19 @@ export default function EventDetailClient({
                   src={eventImage}
                   alt=""
                   fill
-                  className="object-cover blur-[60px] opacity-60 scale-[1.2]"
+                  className="object-cover blur-[60px] opacity-40 scale-[1.2]"
                   priority
                 />
-                <div className="absolute inset-0 bg-black/40" />
+                <div className="absolute inset-0 bg-white/70" />
               </div>
               {/* Foreground flyer */}
               <div className="absolute inset-0 z-10 p-4 pt-16 pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                <div className="relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black/20 backdrop-blur-sm">
+                <div className="relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-white/40 backdrop-blur-md p-2">
                   <Image
                     src={eventImage}
                     alt={event.title}
                     fill
-                    className="object-contain transition-transform duration-300 group-hover:scale-[1.02] p-2"
+                    className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
                     priority
                     onError={() => setImageError(true)}
                   />
@@ -573,7 +572,7 @@ export default function EventDetailClient({
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white bg-black/30 hover:bg-black/50 backdrop-blur-sm px-4 py-2 rounded-lg transition-colors text-sm"
+              className="inline-flex items-center gap-2 text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm shadow-sm ring-1 ring-black/5"
               onClick={(e) => e.stopPropagation()}
             >
               <ArrowLeft className="w-4 h-4" />
@@ -583,16 +582,11 @@ export default function EventDetailClient({
 
           {/* Bottom overlay: info bar + click to register */}
           <div className="absolute bottom-0 left-0 right-0 z-10">
-            {/* Gradient fade from transparent to dark */}
+            {/* Gradient fade from transparent to solid white */}
             <div
-              className="h-24"
-              style={{
-                background: hasEventImage
-                  ? "linear-gradient(to bottom, transparent, rgba(0,0,0,0.85))"
-                  : `linear-gradient(to bottom, transparent, ${theme.darkerBg})`,
-              }}
+              className="h-32 bg-gradient-to-b from-transparent to-[#FBFBFB]"
             />
-            <div style={{ background: hasEventImage ? "rgba(0,0,0,0.85)" : theme.darkerBg }} className="pb-6 pt-1">
+            <div className="bg-[#FBFBFB] pb-6 pt-1">
               <div className="container mx-auto px-6">
                 {/* Info icons row */}
                 <motion.div
@@ -601,23 +595,23 @@ export default function EventDetailClient({
                   transition={{ delay: 0.2 }}
                   className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-5"
                 >
-                  <span className="flex items-center gap-2 text-white/90 text-sm">
-                    <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                  <span className="flex items-center gap-2 text-gray-800 text-sm">
+                    <div className="w-7 h-7 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
                       <Calendar className="w-4 h-4 text-[var(--theme-primary)]" />
                     </div>
                     <span className="font-medium">{eventDate}</span>
                   </span>
                   {eventTime && (
-                    <span className="flex items-center gap-2 text-white/90 text-sm">
-                      <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                    <span className="flex items-center gap-2 text-gray-800 text-sm">
+                      <div className="w-7 h-7 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
                         <Clock className="w-4 h-4 text-[var(--theme-primary)]" />
                       </div>
                       <span className="font-medium">{eventTime}</span>
                     </span>
                   )}
                   {event.speaker && (
-                    <span className="flex items-center gap-2 text-white/90 text-sm">
-                      <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                    <span className="flex items-center gap-2 text-gray-800 text-sm">
+                      <div className="w-7 h-7 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
                         <Users className="w-4 h-4 text-[var(--theme-primary)]" />
                       </div>
                       <span className="font-medium">{event.speaker}</span>
@@ -629,17 +623,17 @@ export default function EventDetailClient({
                         href={event.location_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-white/90 text-sm hover:text-white transition-colors"
+                        className="flex items-center gap-2 text-gray-800 text-sm hover:text-[var(--theme-primary)] transition-colors"
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                        <div className="w-7 h-7 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
                           <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
                         </div>
                         <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
                       </a>
                     ) : (
-                      <span className="flex items-center gap-2 text-white/90 text-sm">
-                        <div className="w-7 h-7 bg-[var(--theme-primary)]/20 rounded-lg flex items-center justify-center">
+                      <span className="flex items-center gap-2 text-gray-800 text-sm">
+                        <div className="w-7 h-7 bg-[var(--theme-primary)]/10 rounded-lg flex items-center justify-center">
                           <MapPin className="w-4 h-4 text-[var(--theme-primary)]" />
                         </div>
                         <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
@@ -655,7 +649,7 @@ export default function EventDetailClient({
                   transition={{ delay: 0.5 }}
                   className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
                 >
-                  <span className="text-white text-sm font-medium tracking-wide">Click to Register</span>
+                  <span className="text-gray-600 text-sm font-medium tracking-wide">Click to Register</span>
                   <motion.div
                     animate={{ y: [0, 6, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
