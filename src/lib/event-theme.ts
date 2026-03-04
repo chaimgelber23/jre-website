@@ -29,10 +29,10 @@ const defaultTheme: EventTheme = {
 };
 
 const womensTheme: EventTheme = {
-  primary: "#B5838D", // Restored rose pink accent
+  primary: "#B5838D", // Rose pink accent
   primaryHover: "#9B6B75",
-  darkBg: "#5A3D42", // Keep the dark rose background for differentiation
-  darkerBg: "#3D2A2E",
+  darkBg: "#ffffff", // Use white background for the individual womens event page hero
+  darkerBg: "#fafafa", // Very slight off-white gradient end
   primaryRgb: "181, 131, 141",
   confettiColors: ["#B5838D", "#D4A5AD", "#9B6B75"],
 };
