@@ -47,15 +47,26 @@ function EventImage({ event, variant = "card", className, priority, draggable }:
 
   if (showImage) {
     return (
-      <Image
-        src={event.image}
-        alt={event.title}
-        fill
-        className={className}
-        priority={priority}
-        draggable={draggable}
-        onError={() => setError(true)}
-      />
+      <>
+        <div className="absolute inset-0 overflow-hidden z-[0]">
+          <Image
+            src={event.image}
+            alt=""
+            fill
+            className="object-cover blur-xl opacity-40 scale-110"
+            draggable={false}
+          />
+        </div>
+        <Image
+          src={event.image}
+          alt={event.title}
+          fill
+          className={className}
+          priority={priority}
+          draggable={draggable}
+          onError={() => setError(true)}
+        />
+      </>
     );
   }
 
@@ -104,7 +115,7 @@ function EventCard({
             <EventImage
               event={event}
               variant="card"
-              className="object-cover transition-transform duration-500 group-hover:scale-110 relative z-[1]"
+              className="object-contain p-2 transition-transform duration-500 group-hover:scale-110 relative z-[1]"
             />
             {event.hasImage && (
               <div className="absolute inset-0 bg-gradient-to-t from-black/40 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-300 z-[2]" />
@@ -209,7 +220,7 @@ function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
                 <EventImage
                   event={event}
                   variant="featured"
-                  className="object-cover object-left transition-transform duration-700 group-hover:scale-105 relative z-[1]"
+                  className="object-contain p-4 transition-transform duration-700 group-hover:scale-105 relative z-[1]"
                 />
                 {event.hasImage && (
                   <>
@@ -389,7 +400,7 @@ function PastEventsCarousel({ events }: { events: DisplayEvent[] }) {
                       <EventImage
                         event={event}
                         variant="card"
-                        className="object-cover transition-transform duration-500 group-hover:scale-105 relative z-[1]"
+                        className="object-contain p-3 pb-24 transition-transform duration-500 group-hover:scale-105 relative z-[1]"
                         draggable={false}
                       />
                       {/* Gradient overlay for photo readability */}

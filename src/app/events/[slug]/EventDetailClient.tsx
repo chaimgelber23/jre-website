@@ -531,16 +531,34 @@ export default function EventDetailClient({
         <h1 className="sr-only">{event.title}</h1>
 
         {/* Image / Placeholder area */}
-        <div className={`relative ${hasEventImage ? "h-[85vh] min-h-[600px] bg-black" : "h-[65vh] min-h-[480px]"}`}>
+        <div className={`relative ${hasEventImage ? "h-[85vh] min-h-[600px] overflow-hidden" : "h-[65vh] min-h-[480px]"}`}>
           {hasEventImage ? (
-            <Image
-              src={eventImage}
-              alt={event.title}
-              fill
-              className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-              priority
-              onError={() => setImageError(true)}
-            />
+            <>
+              {/* Blurred Background */}
+              <div className="absolute inset-0 z-0">
+                <Image
+                  src={eventImage}
+                  alt=""
+                  fill
+                  className="object-cover blur-[60px] opacity-60 scale-[1.2]"
+                  priority
+                />
+                <div className="absolute inset-0 bg-black/40" />
+              </div>
+              {/* Foreground flyer */}
+              <div className="absolute inset-0 z-10 p-4 pt-16 pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
+                <div className="relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/20 bg-black/20 backdrop-blur-sm">
+                  <Image
+                    src={eventImage}
+                    alt={event.title}
+                    fill
+                    className="object-contain transition-transform duration-300 group-hover:scale-[1.02] p-2"
+                    priority
+                    onError={() => setImageError(true)}
+                  />
+                </div>
+              </div>
+            </>
           ) : (
             <EventPlaceholder
               title={event.title}
@@ -1174,90 +1192,90 @@ export default function EventDetailClient({
                           animate={{ opacity: [0.3, 0.6, 0.3] }}
                           transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
                         />
-                              <div>
-                                <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
-                                <input
-                                  ref={cardNameRef}
-                                  type="text"
-                                  name="cardName"
-                                  value={formState.cardName}
-                                  onChange={handleChange}
-                                  onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
-                                  className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
-                                  placeholder="Name on Card"
-                                  autoComplete="cc-name"
-                                />
-                              </div>
-                              <div>
-                                <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
-                                <div className="relative">
-                                  <input
-                                    ref={cardNumberRef}
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formState.cardNumber}
-                                    onChange={(e) => {
-                                      const formatted = formatCardNumber(e.target.value);
-                                      setFormState((prev) => ({ ...prev, cardNumber: formatted }));
-                                      if (formatted.replace(/\s/g, "").length === 16) {
-                                        cardExpiryRef.current?.focus();
-                                      }
-                                    }}
-                                    onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
-                                    placeholder="Card Number"
-                                    maxLength={19}
-                                    autoComplete="cc-number"
-                                  />
-                                  <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
-                                </div>
-                              </div>
-                              <div className="grid grid-cols-2 gap-3">
-                                <div>
-                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
-                                  <input
-                                    ref={cardExpiryRef}
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formState.cardExpiry}
-                                    onChange={(e) => {
-                                      const formatted = formatExpiry(e.target.value, formState.cardExpiry);
-                                      setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
-                                      if (formatted.length === 5) {
-                                        cardCvvRef.current?.focus();
-                                      }
-                                    }}
-                                    onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                    placeholder="MM / YY"
-                                    maxLength={5}
-                                    autoComplete="cc-exp"
-                                  />
-                                </div>
-                                <div>
-                                  <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
-                                  <input
-                                    ref={cardCvvRef}
-                                    type="text"
-                                    inputMode="numeric"
-                                    value={formState.cardCvv}
-                                    onChange={(e) => {
-                                      const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
-                                      setFormState((prev) => ({ ...prev, cardCvv: digits }));
-                                    }}
-                                    onKeyDown={(e) => {
-                                      if (e.key === "Enter") {
-                                        e.preventDefault();
-                                        submitRef.current?.focus();
-                                      }
-                                    }}
-                                    className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
-                                    placeholder="CVV"
-                                    maxLength={4}
-                                    autoComplete="cc-csc"
-                                  />
-                                </div>
-                              </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
+                          <input
+                            ref={cardNameRef}
+                            type="text"
+                            name="cardName"
+                            value={formState.cardName}
+                            onChange={handleChange}
+                            onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors"
+                            placeholder="Name on Card"
+                            autoComplete="cc-name"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
+                          <div className="relative">
+                            <input
+                              ref={cardNumberRef}
+                              type="text"
+                              inputMode="numeric"
+                              value={formState.cardNumber}
+                              onChange={(e) => {
+                                const formatted = formatCardNumber(e.target.value);
+                                setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                                if (formatted.replace(/\s/g, "").length === 16) {
+                                  cardExpiryRef.current?.focus();
+                                }
+                              }}
+                              onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                              placeholder="Card Number"
+                              maxLength={19}
+                              autoComplete="cc-number"
+                            />
+                            <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                          </div>
+                        </div>
+                        <div className="grid grid-cols-2 gap-3">
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
+                            <input
+                              ref={cardExpiryRef}
+                              type="text"
+                              inputMode="numeric"
+                              value={formState.cardExpiry}
+                              onChange={(e) => {
+                                const formatted = formatExpiry(e.target.value, formState.cardExpiry);
+                                setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                                if (formatted.length === 5) {
+                                  cardCvvRef.current?.focus();
+                                }
+                              }}
+                              onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                              placeholder="MM / YY"
+                              maxLength={5}
+                              autoComplete="cc-exp"
+                            />
+                          </div>
+                          <div>
+                            <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
+                            <input
+                              ref={cardCvvRef}
+                              type="text"
+                              inputMode="numeric"
+                              value={formState.cardCvv}
+                              onChange={(e) => {
+                                const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                                setFormState((prev) => ({ ...prev, cardCvv: digits }));
+                              }}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  submitRef.current?.focus();
+                                }
+                              }}
+                              className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                              placeholder="CVV"
+                              maxLength={4}
+                              autoComplete="cc-csc"
+                            />
+                          </div>
+                        </div>
                       </div>
                     </div>
 
