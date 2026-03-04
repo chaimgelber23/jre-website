@@ -47,6 +47,8 @@ export default function EventDetailClient({
 
   // Theme colors (defaults to orange when event not loaded yet)
   const theme = getEventTheme(event?.theme_color);
+  // Light-background themes (womens) need dark text in the hero info bar
+  const isLightHero = theme.darkBg === "#ffffff" || theme.darkBg === "#fafafa";
 
   // Form state
   const [adults, setAdults] = useState(1);
@@ -534,7 +536,7 @@ export default function EventDetailClient({
         <div className={`relative ${hasEventImage ? "h-[85vh] min-h-[600px] overflow-hidden" : "h-[65vh] min-h-[480px]"}`}>
           {hasEventImage ? (
             <>
-              {/* Blurred Background — dark tinted */}
+              {/* Blurred Background */}
               <div className="absolute inset-0 z-0">
                 <Image
                   src={eventImage}
@@ -543,11 +545,11 @@ export default function EventDetailClient({
                   className="object-cover blur-[60px] opacity-30 scale-[1.2]"
                   priority
                 />
-                <div className="absolute inset-0 bg-black/50" />
+                <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
               </div>
-              {/* Foreground flyer — floating card on dark */}
+              {/* Foreground flyer — floating card */}
               <div className="absolute inset-0 z-10 p-4 pt-16 pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                <div className="relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10 p-2">
+                <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
                   <Image
                     src={eventImage}
                     alt={event.title}
@@ -573,7 +575,7 @@ export default function EventDetailClient({
           <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
             <Link
               href="/events"
-              className="inline-flex items-center gap-2 text-white/80 hover:text-white bg-black/30 hover:bg-black/50 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm"
+              className={`inline-flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm ${isLightHero ? "text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white shadow-sm ring-1 ring-black/5" : "text-white/80 hover:text-white bg-black/30 hover:bg-black/50"}`}
               onClick={(e) => e.stopPropagation()}
             >
               <ArrowLeft className="w-4 h-4" />
