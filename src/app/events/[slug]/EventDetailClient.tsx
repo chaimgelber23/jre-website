@@ -599,24 +599,24 @@ export default function EventDetailClient({
                   transition={{ delay: 0.2 }}
                   className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-5"
                 >
-                  <span className="flex items-center gap-2 text-white text-sm">
-                    <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                      <Calendar className="w-4 h-4 text-white" />
+                  <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                      <Calendar className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                     </div>
                     <span className="font-medium">{eventDate}</span>
                   </span>
                   {eventTime && (
-                    <span className="flex items-center gap-2 text-white text-sm">
-                      <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                        <Clock className="w-4 h-4 text-white" />
+                    <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                        <Clock className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                       </div>
                       <span className="font-medium">{eventTime}</span>
                     </span>
                   )}
                   {event.speaker && (
-                    <span className="flex items-center gap-2 text-white text-sm">
-                      <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                        <Users className="w-4 h-4 text-white" />
+                    <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                        <Users className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                       </div>
                       <span className="font-medium">{event.speaker}</span>
                     </span>
@@ -627,18 +627,18 @@ export default function EventDetailClient({
                         href={event.location_url}
                         target="_blank"
                         rel="noopener noreferrer"
-                        className="flex items-center gap-2 text-white text-sm hover:text-white/70 transition-colors"
+                        className={`flex items-center gap-2 text-sm transition-colors ${isLightHero ? "text-gray-800 hover:text-[var(--theme-primary)]" : "text-white hover:text-white/70"}`}
                         onClick={(e) => e.stopPropagation()}
                       >
-                        <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                          <MapPin className="w-4 h-4 text-white" />
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                          <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                         </div>
                         <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
                       </a>
                     ) : (
-                      <span className="flex items-center gap-2 text-white text-sm">
-                        <div className="w-7 h-7 bg-white/20 rounded-lg flex items-center justify-center">
-                          <MapPin className="w-4 h-4 text-white" />
+                      <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                          <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                         </div>
                         <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
                       </span>
@@ -653,7 +653,7 @@ export default function EventDetailClient({
                   transition={{ delay: 0.5 }}
                   className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
                 >
-                  <span className="text-white/80 text-sm font-medium tracking-wide">Click to Register</span>
+                  <span className={`text-sm font-medium tracking-wide ${isLightHero ? "text-gray-500" : "text-white/80"}`}>Click to Register</span>
                   <motion.div
                     animate={{ y: [0, 6, 0] }}
                     transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
