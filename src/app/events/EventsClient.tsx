@@ -459,7 +459,7 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
       {/* Hero Section - Clean and Professional */}
       <section className="relative pt-32 pb-20 overflow-hidden">
         {/* Background - dark to match spotlight */}
-        <div className="absolute inset-0 bg-[#2d3748]" />
+        <div className="absolute inset-0 bg-[#18181b]" />
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.p

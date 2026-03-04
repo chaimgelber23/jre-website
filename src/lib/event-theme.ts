@@ -22,18 +22,18 @@ export interface EventTheme {
 const defaultTheme: EventTheme = {
   primary: "#EF8046",
   primaryHover: "#d96a2f",
-  darkBg: "#2d3748",
-  darkerBg: "#1a202c",
+  darkBg: "#18181b",
+  darkerBg: "#09090b",
   primaryRgb: "239, 128, 70",
   confettiColors: ["#EF8046", "#f59e0b", "#10b981"],
 };
 
 const womensTheme: EventTheme = {
-  primary: "#B5838D",
-  primaryHover: "#9B6B75",
-  darkBg: "#5A3D42",
+  primary: "#EF8046", // Use brand orange for links/buttons to avoid clashing
+  primaryHover: "#d96a2f",
+  darkBg: "#5A3D42", // Keep the dark rose background for differentiation
   darkerBg: "#3D2A2E",
-  primaryRgb: "181, 131, 141",
+  primaryRgb: "239, 128, 70",
   confettiColors: ["#B5838D", "#D4A5AD", "#9B6B75"],
 };
 

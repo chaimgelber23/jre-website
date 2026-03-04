@@ -1,7 +1,7 @@
 # Event Detail Page — Hero Pattern
 
 ## Rule
-- **With photo**: Show full-height image hero → followed by a dark info bar with the event title, date (calendar icon), time (clock icon), and teacher/speaker (person icon).
+- **With photo**: Use a "modern glassmorphism" full-height image hero block. The flyer image must use `object-contain` so it's fully visible without cropping, overlaid on a heavily blurred and zoomed version of the same image (`blur-[60px] opacity-60` or similar). Following this hero, show a dark info bar with the event title, date (calendar icon), time (clock icon), and teacher/speaker (person icon).
 - **Without photo**: Show the `EventPlaceholder` component (which already displays the event title and date) → followed by the same dark info bar.
 
 ## Key Points
