@@ -29,11 +29,11 @@ const defaultTheme: EventTheme = {
 };
 
 const womensTheme: EventTheme = {
-  primary: "#EF8046", // Use brand orange for links/buttons to avoid clashing
-  primaryHover: "#d96a2f",
+  primary: "#B5838D", // Restored rose pink accent
+  primaryHover: "#9B6B75",
   darkBg: "#5A3D42", // Keep the dark rose background for differentiation
   darkerBg: "#3D2A2E",
-  primaryRgb: "239, 128, 70",
+  primaryRgb: "181, 131, 141",
   confettiColors: ["#B5838D", "#D4A5AD", "#9B6B75"],
 };
 

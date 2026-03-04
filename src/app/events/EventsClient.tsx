@@ -457,16 +457,13 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
       <Header />
 
       {/* Hero Section - Clean and Professional */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background - dark to match spotlight */}
-        <div className="absolute inset-0 bg-[#18181b]" />
-
+      <section className="relative pt-32 pb-20 overflow-hidden bg-white">
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.p
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className="text-white/80 font-medium tracking-wider uppercase mb-4"
+            className="text-[#EF8046] font-medium tracking-wider uppercase mb-4"
           >
             Join Us
           </motion.p>
@@ -475,7 +472,7 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
             initial={{ opacity: 0, y: 30 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.1, duration: 0.5 }}
-            className="text-5xl md:text-6xl font-bold mb-6 text-white"
+            className="text-5xl md:text-6xl font-bold mb-6 text-gray-900"
           >
             {upcomingEvents.length > 0 ? "Upcoming Events" : "Our Events"}
           </motion.h1>
@@ -484,7 +481,7 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ delay: 0.2, duration: 0.5 }}
-            className="text-xl text-white/90 max-w-2xl mx-auto"
+            className="text-xl text-gray-600 max-w-2xl mx-auto"
           >
             Great people, great food, and meaningful Torah—we&apos;d love to see
             you!
@@ -504,7 +501,7 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
                 repeat: Infinity,
                 ease: "easeInOut",
               }}
-              className="inline-flex flex-col items-center gap-1 text-white/60"
+              className="inline-flex flex-col items-center gap-1 text-gray-400"
             >
               <span className="text-xs uppercase tracking-widest">
                 {upcomingEvents.length > 0
