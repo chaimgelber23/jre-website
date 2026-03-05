@@ -29,6 +29,12 @@ const nextConfig: NextConfig = {
         destination: "/events/purim-2026",
         permanent: true,
       },
+      {
+        source: "/:path*",
+        has: [{ type: "host", value: "www.thejre.org" }],
+        destination: "https://thejre.org/:path*",
+        permanent: true,
+      },
     ];
   },
 };
