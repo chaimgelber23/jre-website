@@ -18,6 +18,7 @@ import {
   Ticket,
   Award,
   Sparkles,
+  ChevronDown,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -93,6 +94,7 @@ export default function EventDetailClient({
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
   const [imageError, setImageError] = useState(false);
+  const [sponsorshipClearedMsg, setSponsorshipClearedMsg] = useState(false);
 
   const sponsorshipRef = useRef<HTMLDivElement>(null);
   const paymentRef = useRef<HTMLDivElement>(null);
@@ -204,6 +206,23 @@ export default function EventDetailClient({
     ? adults * event.price_per_adult + kids * event.kids_price
     : 0;
   const total = sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal;
+
+  // Only show sponsorships that are at least $180 above the registrant's cover total
+  const eligibleSponsorships = sponsorships.filter(s => s.price >= baseTotal + 180);
+  // Lowest eligible tier for upsell nudge (sponsorships come sorted desc by price, so last = cheapest)
+  const lowestEligible = eligibleSponsorships.length > 0
+    ? eligibleSponsorships[eligibleSponsorships.length - 1]
+    : null;
+
+  // Auto-clear selected sponsorship if it's no longer eligible (e.g. user added more guests)
+  useEffect(() => {
+    if (selectedSponsorship && !eligibleSponsorships.find(s => s.id === selectedSponsorship)) {
+      setSelectedSponsorship(null);
+      setSponsorshipClearedMsg(true);
+      setTimeout(() => setSponsorshipClearedMsg(false), 4000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [adults, kids]);
 
   const handleChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
@@ -772,35 +791,63 @@ export default function EventDetailClient({
                       </div>
                     )}
                   </div>
-                  {sponsorships.length > 0 && (
+                  {eligibleSponsorships.length > 0 && (
                     <p className="text-sm text-gray-500 mt-4">
                       Sponsorships available!
                     </p>
                   )}
                 </div>
 
-                {/* Sponsorship Tiers Preview */}
+                {/* Sponsorship Tiers Preview — clickable to select */}
                 {sponsorships.length > 0 && (
                   <div className="bg-[#FBFBFB] rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-4 flex items-center gap-2">
+                    <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
                       <Award className="w-5 h-5 text-[var(--theme-primary)]" />
                       Sponsorship Opportunities
                     </h3>
+                    <p className="text-xs text-gray-400 mb-4">Tap any tier to select it in the form</p>
                     <div className="grid sm:grid-cols-2 gap-3">
-                      {sponsorships.map((s) => (
-                        <div
-                          key={s.id}
-                          className="flex items-center justify-between bg-white rounded-xl p-4 border border-gray-100"
-                        >
-                          <div>
-                            <p className="font-medium text-gray-900 text-sm">{s.name}</p>
-                            {s.description && (
-                              <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>
-                            )}
-                          </div>
-                          <span className="text-[var(--theme-primary)] font-bold ml-4">${s.price}</span>
-                        </div>
-                      ))}
+                      {sponsorships.map((s) => {
+                        const isEligible = eligibleSponsorships.some(e => e.id === s.id);
+                        const isSelected = selectedSponsorship === s.id;
+                        return (
+                          <motion.button
+                            key={s.id}
+                            type="button"
+                            whileHover={isEligible ? { scale: 1.02 } : {}}
+                            whileTap={isEligible ? { scale: 0.98 } : {}}
+                            onClick={() => {
+                              if (!isEligible) return;
+                              setSelectedSponsorship(isSelected ? null : s.id);
+                              setShowSponsorship(true);
+                              setTimeout(() => {
+                                registrationRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+                              }, 100);
+                            }}
+                            className={`flex items-center justify-between rounded-xl p-4 border text-left w-full transition-all duration-200 ${
+                              isSelected
+                                ? "border-[var(--theme-primary)] bg-[var(--theme-primary)]/8 shadow-sm"
+                                : isEligible
+                                  ? "bg-white border-gray-100 hover:border-[var(--theme-primary)]/40 hover:shadow-sm cursor-pointer"
+                                  : "bg-white border-gray-100 opacity-40 cursor-not-allowed"
+                            }`}
+                          >
+                            <div>
+                              <p className={`font-medium text-sm ${isSelected ? "text-[var(--theme-primary)]" : "text-gray-900"}`}>{s.name}</p>
+                              {s.description && (
+                                <p className="text-xs text-gray-500 mt-0.5">{s.description}</p>
+                              )}
+                              {!isEligible && (
+                                <p className="text-[10px] text-gray-400 mt-0.5">Add more guests to unlock</p>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 ml-4 flex-shrink-0">
+                              <span className={`font-bold ${isSelected ? "text-[var(--theme-primary)]" : "text-[var(--theme-primary)]"}`}>${s.price}</span>
+                              {isSelected && <Check className="w-4 h-4 text-[var(--theme-primary)]" />}
+                            </div>
+                          </motion.button>
+                        );
+                      })}
                     </div>
                   </div>
                 )}
@@ -956,7 +1003,7 @@ export default function EventDetailClient({
                     </div>
 
                     {/* Sponsorship Toggle */}
-                    {sponsorships.length > 0 && (
+                    {eligibleSponsorships.length > 0 && (
                       <div className="pt-5 border-t border-gray-100/80">
                         <motion.button
                           type="button"
@@ -966,31 +1013,38 @@ export default function EventDetailClient({
                               setSelectedSponsorship(null);
                             }
                           }}
-                          className={`w-full relative overflow-hidden rounded-xl p-4 font-medium text-sm flex items-center justify-center gap-2 transition-all duration-300 ${showSponsorship
-                            ? "bg-gray-50 text-gray-500 border border-transparent hover:bg-gray-100"
-                            : "border-2 border-[var(--theme-primary)] text-[var(--theme-primary)] hover:bg-[var(--theme-primary)]/5 shadow-sm"
+                          className={`w-full relative overflow-hidden rounded-xl font-medium text-sm flex items-center justify-between gap-2 transition-all duration-300 px-5 py-4 ${showSponsorship
+                            ? "bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100"
+                            : "bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white shadow-md hover:shadow-lg"
                             }`}
-                          whileHover={{ scale: showSponsorship ? 1 : 1.02 }}
+                          whileHover={{ scale: showSponsorship ? 1 : 1.015 }}
                           whileTap={{ scale: 0.98 }}
                         >
                           {/* Shimmer sweep */}
                           {!showSponsorship && (
                             <motion.span
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/30 to-transparent -skew-x-12"
+                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
                               animate={{ x: ["-150%", "250%"] }}
                               transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
                             />
                           )}
-                          <span className="relative">
-                            {showSponsorship ? (
-                              <>
-                                <Plus className="w-4 h-4 rotate-45 inline mr-1.5" />
-                                Remove Sponsorship
-                              </>
-                            ) : (
-                              "Become a Sponsor"
+                          <span className="relative flex flex-col items-start text-left">
+                            <span className={`font-semibold ${showSponsorship ? "text-gray-600" : "text-white"}`}>
+                              {showSponsorship ? "Close Sponsorship Options" : "Become a Sponsor"}
+                            </span>
+                            {!showSponsorship && lowestEligible && (
+                              <span className="text-white/80 text-xs font-normal">
+                                {eligibleSponsorships.length} tier{eligibleSponsorships.length > 1 ? "s" : ""} — starting at ${lowestEligible.price}
+                              </span>
                             )}
                           </span>
+                          <motion.span
+                            className="relative flex-shrink-0"
+                            animate={{ rotate: showSponsorship ? 180 : 0 }}
+                            transition={{ duration: 0.25 }}
+                          >
+                            <ChevronDown className={`w-5 h-5 ${showSponsorship ? "text-gray-400" : "text-white"}`} />
+                          </motion.span>
                         </motion.button>
 
                         <AnimatePresence>
@@ -1005,8 +1059,8 @@ export default function EventDetailClient({
                               <div className="space-y-3 pt-4">
                                 <p className="text-xs text-gray-400 text-center font-medium tracking-wide uppercase">Select a sponsorship level</p>
                                 {(() => {
-                                  const maxPrice = Math.max(...sponsorships.map(sp => sp.price), 1);
-                                  return sponsorships.map((s, i) => {
+                                  const maxPrice = Math.max(...eligibleSponsorships.map(sp => sp.price), 1);
+                                  return eligibleSponsorships.map((s, i) => {
                                     const ratio = s.price / maxPrice;
                                     const isTop = ratio > 0.8;
                                     const isHigh = ratio > 0.5;
@@ -1171,6 +1225,46 @@ export default function EventDetailClient({
                       )}
                       {selectedSponsorshipData && (
                         <p className="text-xs text-gray-500 mt-1">{selectedSponsorshipData.name}</p>
+                      )}
+
+                      {/* Sponsorship cleared warning */}
+                      <AnimatePresence>
+                        {sponsorshipClearedMsg && (
+                          <motion.p
+                            initial={{ opacity: 0, y: -4 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0 }}
+                            className="text-xs text-amber-600 mt-2 font-medium"
+                          >
+                            Sponsorship removed — sponsorships must be at least $180 above your cover total.
+                          </motion.p>
+                        )}
+                      </AnimatePresence>
+
+                      {/* Subtle upsell nudge */}
+                      {!selectedSponsorship && !sponsorshipClearedMsg && lowestEligible && (
+                        <motion.div
+                          initial={{ opacity: 0 }}
+                          animate={{ opacity: 1 }}
+                          className="mt-3 pt-3 border-t border-[var(--theme-primary)]/10 flex items-center justify-between"
+                        >
+                          <p className="text-xs text-gray-500">
+                            Make it a sponsorship for{" "}
+                            <span className="font-semibold text-[var(--theme-primary)]">
+                              ${lowestEligible.price - baseTotal} more
+                            </span>
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setShowSponsorship(true);
+                              setTimeout(() => sponsorshipRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
+                            }}
+                            className="text-xs font-semibold text-[var(--theme-primary)] hover:underline ml-3 flex-shrink-0"
+                          >
+                            View →
+                          </button>
+                        </motion.div>
                       )}
                     </div>
 
