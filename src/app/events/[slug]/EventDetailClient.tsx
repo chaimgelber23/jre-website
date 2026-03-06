@@ -801,8 +801,7 @@ export default function EventDetailClient({
                 {/* Sponsorship Tiers Preview — clickable to select */}
                 {sponsorships.length > 0 && (
                   <div className="bg-[#FBFBFB] rounded-2xl p-6">
-                    <h3 className="text-xl font-bold text-gray-900 mb-1 flex items-center gap-2">
-                      <Award className="w-5 h-5 text-[var(--theme-primary)]" />
+                    <h3 className="text-xl font-bold text-gray-900 mb-1">
                       Sponsorship Opportunities
                     </h3>
                     <p className="text-xs text-gray-400 mb-4">Tap any tier to select it in the form</p>
