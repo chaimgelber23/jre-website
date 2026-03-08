@@ -771,31 +771,26 @@ export default function EventDetailClient({
                 )}
 
                 {/* Cover */}
-                <div className="bg-[#FBFBFB] rounded-2xl p-8 mb-10">
-                  <h3 className="text-2xl font-bold text-gray-900 mb-5">
+                <div className="bg-[#FBFBFB] rounded-2xl px-6 py-4 mb-6">
+                  <h3 className="text-lg font-bold text-gray-900 mb-3">
                     Cover
                   </h3>
-                  <div className="space-y-3">
-                    <div className={`flex justify-between items-center py-3${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
-                      <span className="text-gray-600 text-lg">Per person</span>
-                      <span className="font-semibold text-gray-900 text-lg">
+                  <div className="space-y-1">
+                    <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
+                      <span className="text-gray-600">Per person</span>
+                      <span className="font-semibold text-gray-900">
                         ${event.price_per_adult}
                       </span>
                     </div>
                     {event.kids_price > 0 && (
-                      <div className="flex justify-between items-center py-3">
-                        <span className="text-gray-600 text-lg">Per child</span>
-                        <span className="font-semibold text-gray-900 text-lg">
+                      <div className="flex justify-between items-center py-2">
+                        <span className="text-gray-600">Per child</span>
+                        <span className="font-semibold text-gray-900">
                           ${event.kids_price}
                         </span>
                       </div>
                     )}
                   </div>
-                  {eligibleSponsorships.length > 0 && (
-                    <p className="text-sm text-gray-500 mt-4">
-                      Sponsorships available!
-                    </p>
-                  )}
                 </div>
 
                 {/* Sponsorship Tiers Preview — clickable to select */}
