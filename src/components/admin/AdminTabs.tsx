@@ -7,7 +7,7 @@ import { motion } from "framer-motion";
 
 const tabs = [
   { name: "Events", href: "/admin/events", icon: Calendar },
-  { name: "Donations", href: "/admin", icon: DollarSign },
+  { name: "Donations", href: "/admin/donations", icon: DollarSign },
   { name: "People", href: "/admin/people", icon: Users },
   { name: "Gallery", href: "/admin/gallery", icon: ImageIcon },
 ];
@@ -15,12 +15,7 @@ const tabs = [
 export default function AdminTabs() {
   const pathname = usePathname();
 
-  const isActive = (href: string) => {
-    if (href === "/admin") {
-      return pathname === "/admin" || pathname === "/admin/donations";
-    }
-    return pathname.startsWith(href);
-  };
+  const isActive = (href: string) => pathname.startsWith(href);
 
   return (
     <div className="border-b border-gray-200 bg-white">
