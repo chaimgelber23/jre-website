@@ -149,20 +149,26 @@ async function ensureSheetExists(sheetName: string, config: EventSheetConfig): P
 
 /**
  * Converts an event slug to a sheet tab name
- * e.g. "purim-2025" → "Purim25"
+ * e.g. "purim-2026" → "Purim26", "scotch-steak-seder" → "ScotchSteakSeder"
  */
 export function slugToSheetName(slug: string): string {
   slug = slug.replace(/^\//, "");
   const parts = slug.split("-");
 
-  if (parts.length >= 2) {
-    const eventName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
-    const year = parts[parts.length - 1];
-    const shortYear = year.length === 4 ? year.slice(-2) : year;
-    return `${eventName}${shortYear}`;
+  // Check if last part is a year (4-digit number)
+  const lastPart = parts[parts.length - 1];
+  const hasYear = /^\d{4}$/.test(lastPart);
+
+  if (hasYear) {
+    // Capitalize all name parts, append 2-digit year
+    const nameParts = parts.slice(0, -1);
+    const name = nameParts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("");
+    const shortYear = lastPart.slice(-2);
+    return `${name}${shortYear}`;
   }
 
-  return slug.charAt(0).toUpperCase() + slug.slice(1);
+  // No year — just capitalize all parts
+  return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("");
 }
 
 /**
