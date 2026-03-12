@@ -174,6 +174,7 @@ export interface Database {
           event_id: string;
           name: string;
           price: number;
+          fair_market_value: number;
           description: string | null;
           max_available: number | null;
           created_at: string;
@@ -183,6 +184,7 @@ export interface Database {
           event_id: string;
           name: string;
           price: number;
+          fair_market_value?: number;
           description?: string | null;
           max_available?: number | null;
           created_at?: string;
@@ -192,6 +194,7 @@ export interface Database {
           event_id?: string;
           name?: string;
           price?: number;
+          fair_market_value?: number;
           description?: string | null;
           max_available?: number | null;
           created_at?: string;
@@ -326,6 +329,162 @@ export interface Database {
           updated_at?: string;
         };
       };
+      outreach_team_members: {
+        Row: {
+          id: string;
+          name: string;
+          email: string;
+          phone: string | null;
+          gender: 'male' | 'female';
+          role: 'member' | 'admin';
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          email: string;
+          phone?: string | null;
+          gender: 'male' | 'female';
+          role?: 'member' | 'admin';
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          email?: string;
+          phone?: string | null;
+          gender?: 'male' | 'female';
+          role?: 'member' | 'admin';
+          is_active?: boolean;
+          created_at?: string;
+        };
+      };
+      outreach_contacts: {
+        Row: {
+          id: string;
+          first_name: string;
+          last_name: string;
+          email: string | null;
+          phone: string | null;
+          gender: 'male' | 'female' | 'unknown';
+          stage: OutreachStage;
+          stage_updated_at: string;
+          assigned_to: string | null;
+          background: string | null;
+          how_met: string | null;
+          spouse_name: string | null;
+          event_registration_id: string | null;
+          next_followup_date: string | null;
+          is_active: boolean;
+          source: string;
+          engagement_score: number;
+          created_by: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          first_name: string;
+          last_name: string;
+          email?: string | null;
+          phone?: string | null;
+          gender?: 'male' | 'female' | 'unknown';
+          stage?: OutreachStage;
+          stage_updated_at?: string;
+          assigned_to?: string | null;
+          background?: string | null;
+          how_met?: string | null;
+          spouse_name?: string | null;
+          event_registration_id?: string | null;
+          next_followup_date?: string | null;
+          is_active?: boolean;
+          source?: string;
+          engagement_score?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          first_name?: string;
+          last_name?: string;
+          email?: string | null;
+          phone?: string | null;
+          gender?: 'male' | 'female' | 'unknown';
+          stage?: OutreachStage;
+          stage_updated_at?: string;
+          assigned_to?: string | null;
+          background?: string | null;
+          how_met?: string | null;
+          spouse_name?: string | null;
+          event_registration_id?: string | null;
+          next_followup_date?: string | null;
+          is_active?: boolean;
+          source?: string;
+          engagement_score?: number;
+          created_by?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      outreach_interactions: {
+        Row: {
+          id: string;
+          contact_id: string;
+          team_member_id: string | null;
+          type: OutreachInteractionType;
+          date: string;
+          notes: string | null;
+          location: string | null;
+          stage_before: string | null;
+          stage_after: string | null;
+          event_id: string | null;
+          donation_amount: number | null;
+          parsed_by_ai: boolean;
+          raw_input: string | null;
+          whatsapp_message_sid: string | null;
+          confirmation_status: 'pending' | 'confirmed' | 'corrected';
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          contact_id: string;
+          team_member_id?: string | null;
+          type: OutreachInteractionType;
+          date?: string;
+          notes?: string | null;
+          location?: string | null;
+          stage_before?: string | null;
+          stage_after?: string | null;
+          event_id?: string | null;
+          donation_amount?: number | null;
+          parsed_by_ai?: boolean;
+          raw_input?: string | null;
+          whatsapp_message_sid?: string | null;
+          confirmation_status?: 'pending' | 'confirmed' | 'corrected';
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          contact_id?: string;
+          team_member_id?: string | null;
+          type?: OutreachInteractionType;
+          date?: string;
+          notes?: string | null;
+          location?: string | null;
+          stage_before?: string | null;
+          stage_after?: string | null;
+          event_id?: string | null;
+          donation_amount?: number | null;
+          parsed_by_ai?: boolean;
+          raw_input?: string | null;
+          whatsapp_message_sid?: string | null;
+          confirmation_status?: 'pending' | 'confirmed' | 'corrected';
+          created_at?: string;
+        };
+      };
     };
     Views: {
       [_ in never]: never;
@@ -360,3 +519,69 @@ export type ParshaContentInsert = Database["public"]["Tables"]["parsha_content"]
 
 export type GalleryPhoto = Database["public"]["Tables"]["gallery_photos"]["Row"];
 export type GalleryPhotoInsert = Database["public"]["Tables"]["gallery_photos"]["Insert"];
+
+// ============================================================
+// CRM / Outreach types
+// ============================================================
+
+export type OutreachStage =
+  | 'new_contact'
+  | 'in_touch'
+  | 'event_connected'
+  | 'deepening'
+  | 'learning'
+  | 'inner_circle'
+  | 'multiplying';
+
+export type OutreachInteractionType =
+  | 'met'
+  | 'call'
+  | 'text'
+  | 'coffee'
+  | 'shabbos'
+  | 'event'
+  | 'learning'
+  | 'email'
+  | 'donation'
+  | 'other';
+
+export const STAGE_LABELS: Record<OutreachStage, string> = {
+  new_contact:     'New Contact',
+  in_touch:        'In Touch',
+  event_connected: 'Event Connected',
+  deepening:       'Deepening',
+  learning:        'Learning',
+  inner_circle:    'Inner Circle',
+  multiplying:     'Multiplying',
+};
+
+export const INTERACTION_LABELS: Record<OutreachInteractionType, string> = {
+  met:      'Met',
+  call:     'Call',
+  text:     'Text',
+  coffee:   'Coffee',
+  shabbos:  'Shabbos',
+  event:    'Event',
+  learning: 'Learning',
+  email:    'Email',
+  donation: 'Donation',
+  other:    'Other',
+};
+
+export type OutreachTeamMember = Database["public"]["Tables"]["outreach_team_members"]["Row"];
+export type OutreachTeamMemberInsert = Database["public"]["Tables"]["outreach_team_members"]["Insert"];
+
+export type OutreachContact = Database["public"]["Tables"]["outreach_contacts"]["Row"];
+export type OutreachContactInsert = Database["public"]["Tables"]["outreach_contacts"]["Insert"];
+
+export type OutreachInteraction = Database["public"]["Tables"]["outreach_interactions"]["Row"];
+export type OutreachInteractionInsert = Database["public"]["Tables"]["outreach_interactions"]["Insert"];
+
+// Rich contact type with joined data (used in admin views)
+export interface OutreachContactWithDetails extends OutreachContact {
+  assigned_member?: OutreachTeamMember | null;
+  interactions?: OutreachInteraction[];
+  last_interaction_date?: string | null;
+  last_interaction_type?: OutreachInteractionType | null;
+  interaction_count?: number;
+}

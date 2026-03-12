@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import { Lock, ArrowRight } from "lucide-react";
 
-const ADMIN_CODE = "000000";
+const ADMIN_CODE = "Jre26";
 
 export default function AdminLoginPage() {
   const [code, setCode] = useState("");
@@ -18,11 +18,9 @@ export default function AdminLoginPage() {
     setError("");
     setIsLoading(true);
 
-    // Simulate a small delay
     await new Promise((resolve) => setTimeout(resolve, 500));
 
     if (code === ADMIN_CODE) {
-      // Store auth in localStorage
       localStorage.setItem("jre_admin_auth", "true");
       router.push("/admin");
     } else {
@@ -44,25 +42,26 @@ export default function AdminLoginPage() {
             <Lock className="w-8 h-8 text-[#EF8046]" />
           </div>
           <h1 className="text-2xl font-bold text-gray-900">Admin Access</h1>
-          <p className="text-gray-500 mt-2">Enter the access code to continue</p>
+          <p className="text-gray-500 mt-2">Enter your password to continue</p>
         </div>
 
-        <form onSubmit={handleSubmit} className="space-y-6">
+        <form onSubmit={handleSubmit} className="space-y-6" autoComplete="on">
           <div>
             <label
-              htmlFor="code"
+              htmlFor="password"
               className="block text-sm font-medium text-gray-700 mb-2"
             >
-              Access Code
+              Password
             </label>
             <input
               type="password"
-              id="code"
+              id="password"
+              name="password"
               value={code}
               onChange={(e) => setCode(e.target.value)}
-              placeholder="Enter 6-digit code"
-              maxLength={6}
-              className="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
+              placeholder="Enter password"
+              autoComplete="current-password"
+              className="w-full px-4 py-3 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none transition-all"
               autoFocus
             />
           </div>
@@ -79,7 +78,7 @@ export default function AdminLoginPage() {
 
           <motion.button
             type="submit"
-            disabled={code.length !== 6 || isLoading}
+            disabled={code.length === 0 || isLoading}
             whileHover={{ scale: 1.02 }}
             whileTap={{ scale: 0.98 }}
             className="w-full bg-[#EF8046] text-white py-3 rounded-lg font-medium flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

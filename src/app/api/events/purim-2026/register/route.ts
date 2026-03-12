@@ -5,7 +5,7 @@ import { processDirectCardPayment } from "@/lib/banquest";
 // KEPT FOR FALLBACK: Hosted Tokenization (has expiry encoding bug as of Feb 2026)
 // import { processTokenizedPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
-import { appendEventRegistration } from "@/lib/google-sheets/event-sheets";
+import { appendEventRegistration, type EventSheetConfig, type EventRegistrationRow } from "@/lib/google-sheets/event-sheets";
 
 // Purim event details (fallback if not in Supabase)
 const PURIM_EVENT = {
@@ -260,30 +260,51 @@ export async function POST(request: NextRequest) {
       console.error("Failed to save registration to Supabase:", err);
     }
 
+    // Look up FMV for this sponsorship tier from DB (needed for sheets + email)
+    let purimFMV = 0;
+    if (sponsorship) {
+      try {
+        const { data: tierData } = await supabase
+          .from("event_sponsorships")
+          .select("fair_market_value")
+          .eq("name", sponsorship)
+          .limit(1)
+          .single();
+        purimFMV = (tierData as { fair_market_value: number } | null)?.fair_market_value ?? 0;
+      } catch {
+        // FMV lookup failed — default to 0
+      }
+    }
+    const purimTaxDeductible = sponsorship ? Math.max(0, (sponsorshipAmount || 0) - purimFMV) : 0;
+
     // Sync to Google Sheets - Auto-creates "Purim26" tab if needed
     try {
-      const rowData = [
-        registrationId,
-        new Date().toLocaleString(),
+
+      const purimSheetConfig: EventSheetConfig = {
+        hasKids: true,       // Purim has kids pricing
+        hasSponsorships: true, // Purim has sponsorship tiers
+      };
+      const purimRowData: EventRegistrationRow = {
+        id: registrationId,
+        timestamp: new Date().toLocaleString(),
         name,
         email,
-        normalizedPhone,
-        spouseName || "",
-        spouseEmail || "",
-        spousePhone || "",
-        numAdults,
-        numKids,
-        allAttendees.join("; "),
-        sponsorship || "None",
-        sponsorshipAmount || 0,
-        totalAmount,
+        phone: normalizedPhone,
+        adults: numAdults,
+        kids: numKids,
+        allAttendees: allAttendees.join("; "),
+        sponsorshipName: sponsorship || "",
+        sponsorshipAmount: sponsorshipAmount || 0,
+        fairMarketValue: purimFMV,
+        taxDeductible: purimTaxDeductible,
+        total: totalAmount,
         paymentMethod,
         paymentStatus,
         paymentReference,
-        message || "",
-      ];
+        notes: message || "",
+      };
 
-      const sheetResult = await appendEventRegistration("Purim26", rowData);
+      const sheetResult = await appendEventRegistration("Purim26", purimRowData, purimSheetConfig);
       if (sheetResult.success) {
         console.log("Purim 2026 registration synced to Google Sheets:", registrationId);
       } else {
@@ -307,6 +328,8 @@ export async function POST(request: NextRequest) {
         kids: numKids,
         total: totalAmount,
         sponsorship: sponsorship || undefined,
+        fairMarketValue: sponsorship ? purimFMV : undefined,
+        taxDeductible: sponsorship ? purimTaxDeductible : undefined,
         transactionId: paymentReference,
       });
       console.log("Email send result:", JSON.stringify(emailResult));

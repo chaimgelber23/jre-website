@@ -9,7 +9,7 @@ interface SyncResult {
   folders?: number;
   totalInserted?: number;
   totalSkipped?: number;
-  categories?: Record<string, { added: number; skipped: number }>;
+  categories?: Record<string, { added: number; skipped: number; total: number }>;
   error?: string;
 }
 
@@ -47,9 +47,7 @@ export default function AdminGalleryPage() {
     setIsSyncing(true);
     setSyncResult(null);
     try {
-      const res = await fetch("/api/cron/sync-gallery", {
-        headers: { Authorization: `Bearer ${process.env.NEXT_PUBLIC_CRON_SECRET || ""}` },
-      });
+      const res = await fetch("/api/admin/gallery", { method: "POST" });
       const data = await res.json();
       setSyncResult(data);
       if (data.success) {
@@ -177,10 +175,16 @@ export default function AdminGalleryPage() {
                       {Object.entries(syncResult.categories).map(([name, stat]) => (
                         <p key={name} className="text-sm text-green-700">
                           <span className="font-medium">{name}:</span>{" "}
-                          {stat.added} new, {stat.skipped} existing
+                          {stat.total} photos found
+                          {stat.added > 0 ? `, ${stat.added} new` : ""}
+                          {stat.skipped > 0 ? `, ${stat.skipped} already synced` : ""}
+                          {stat.total === 0 ? " — no images found in this folder" : ""}
                         </p>
                       ))}
                     </div>
+                  )}
+                  {syncResult.folders === 0 && (
+                    <p className="text-sm text-yellow-700 mt-2">⚠️ No folders were discovered. Check that your Drive folder is shared with the service account.</p>
                   )}
                 </>
               ) : (

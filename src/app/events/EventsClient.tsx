@@ -182,17 +182,14 @@ function EventCard({
 function FeaturedEventSpotlight({ event }: { event: DisplayEvent }) {
   const theme = getEventTheme(event.themeColor);
 
-  const isLightTheme = theme.darkBg === "#ffffff" || theme.darkBg.toLowerCase() === "#fff" || theme.darkBg === "#FBFBFB";
-  const textColor = isLightTheme ? "text-gray-900" : "text-white";
-  const mutedTextColor = isLightTheme ? "text-gray-600" : "text-gray-300";
-  const labelTextColor = isLightTheme ? "text-gray-500" : "text-gray-400";
-  const cardBg = isLightTheme ? "bg-black/5" : "bg-white/10";
-  const cardHoverBg = isLightTheme ? "rgba(0,0,0,0.08)" : "rgba(255,255,255,0.15)";
+  const textColor = "text-gray-900";
+  const mutedTextColor = "text-gray-600";
+  const labelTextColor = "text-gray-500";
+  const cardBg = "bg-black/5";
+  const cardHoverBg = "rgba(0,0,0,0.08)";
 
   return (
-    <section className="relative py-12 md:py-16 overflow-hidden">
-      {/* Background */}
-      <div className="absolute inset-0" style={{ backgroundColor: theme.darkBg }} />
+    <section className="relative py-12 md:py-16 overflow-hidden bg-white">
 
       <div className="container mx-auto px-6 relative z-10">
         <motion.div
@@ -464,9 +461,7 @@ export default function EventsClient({ upcomingEvents, pastEvents }: EventsClien
       <Header />
 
       {/* Hero Section - Clean and Professional */}
-      <section className="relative pt-32 pb-20 overflow-hidden">
-        {/* Background - dark to match spotlight */}
-        <div className="absolute inset-0 bg-[#2d3748]" />
+      <section className="relative pt-32 pb-20 overflow-hidden bg-[#2d3748]">
 
         <div className="container mx-auto px-6 text-center relative z-10">
           <motion.p

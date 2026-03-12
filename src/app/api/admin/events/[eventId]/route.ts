@@ -165,7 +165,7 @@ export async function PATCH(
           // Update existing
           await supabase
             .from("event_sponsorships")
-            .update({ name: s.name, price: s.price, description: s.description || null } as never)
+            .update({ name: s.name, price: s.price, fair_market_value: s.fair_market_value ?? 0, description: s.description || null } as never)
             .eq("id", s.id);
         } else {
           // Insert new
@@ -173,6 +173,7 @@ export async function PATCH(
             event_id: eventId,
             name: s.name,
             price: s.price,
+            fair_market_value: s.fair_market_value ?? 0,
             description: s.description || null,
           };
           await supabase

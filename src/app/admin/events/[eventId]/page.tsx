@@ -96,6 +96,7 @@ interface SponsorshipFormItem {
   id?: string;
   name: string;
   price: string;
+  fairMarketValue: string;
   description: string;
 }
 
@@ -339,6 +340,7 @@ export default function EventDetailPage({
         id: s.id,
         name: s.name,
         price: String(s.price),
+        fairMarketValue: String(s.fair_market_value ?? 0),
         description: s.description || "",
       }))
     );
@@ -373,6 +375,7 @@ export default function EventDetailPage({
               id: s.id || undefined,
               name: s.name,
               price: Number(s.price),
+              fair_market_value: Number(s.fairMarketValue) || 0,
               description: s.description || null,
             })),
         }),
@@ -498,10 +501,9 @@ export default function EventDetailPage({
       <div>
         <Link
           href="/admin/events"
-          className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-4"
+          className="inline-flex items-center text-gray-500 hover:text-gray-700 mb-4 text-sm"
         >
-          <ArrowLeft className="w-4 h-4" />
-          Back to Events
+          ← Back to Events
         </Link>
 
         <div className="flex items-start justify-between">
@@ -509,21 +511,13 @@ export default function EventDetailPage({
             <div className="flex items-center gap-3 mb-1">
               <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
               <span
-                className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
                   event.is_active
                     ? "bg-green-100 text-green-700"
                     : "bg-gray-100 text-gray-500"
                 }`}
               >
-                {event.is_active ? (
-                  <>
-                    <Eye className="w-3 h-3" /> Live
-                  </>
-                ) : (
-                  <>
-                    <EyeOff className="w-3 h-3" /> Inactive
-                  </>
-                )}
+                {event.is_active ? "Live" : "Inactive"}
               </span>
             </div>
             <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
@@ -560,33 +554,25 @@ export default function EventDetailPage({
           <div className="flex items-center gap-2 ml-4">
             <button
               onClick={handleToggleActive}
-              className={`flex items-center gap-1.5 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                 event.is_active
                   ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   : "bg-green-50 text-green-700 hover:bg-green-100"
               }`}
             >
-              {event.is_active ? (
-                <>
-                  <EyeOff className="w-4 h-4" /> Deactivate
-                </>
-              ) : (
-                <>
-                  <Eye className="w-4 h-4" /> Activate
-                </>
-              )}
+              {event.is_active ? "Deactivate" : "Activate"}
             </button>
             <button
               onClick={openEditEventModal}
-              className="flex items-center gap-1.5 px-3 py-2 bg-[#EF8046] text-white rounded-lg text-sm font-medium hover:bg-[#d96a2f] transition-colors"
+              className="px-3 py-2 bg-[#EF8046] text-white rounded-lg text-sm font-medium hover:bg-[#d96a2f] transition-colors"
             >
-              <Pencil className="w-4 h-4" /> Edit Event
+              Edit Event
             </button>
             <button
               onClick={() => setShowDeleteEvent(true)}
-              className="flex items-center gap-1.5 px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+              className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
             >
-              <Trash2 className="w-4 h-4" /> Delete
+              Delete
             </button>
           </div>
         </div>
@@ -1208,12 +1194,12 @@ export default function EventDetailPage({
                       onClick={() =>
                         setEditSponsorships([
                           ...editSponsorships,
-                          { name: "", price: "", description: "" },
+                          { name: "", price: "", fairMarketValue: "", description: "" },
                         ])
                       }
-                      className="flex items-center gap-1 text-sm text-[#EF8046] hover:text-[#d96a2f]"
+                      className="text-sm text-[#EF8046] hover:text-[#d96a2f]"
                     >
-                      <Plus className="w-3.5 h-3.5" /> Add Tier
+                      + Add Tier
                     </button>
                   </div>
                   {editSponsorships.length === 0 ? (
@@ -1249,6 +1235,20 @@ export default function EventDetailPage({
                                 className={inputClassName}
                                 placeholder="Price"
                               />
+                              <div>
+                                <input
+                                  type="number"
+                                  value={s.fairMarketValue}
+                                  onChange={(e) => {
+                                    const updated = [...editSponsorships];
+                                    updated[i].fairMarketValue = e.target.value;
+                                    setEditSponsorships(updated);
+                                  }}
+                                  className={inputClassName}
+                                  placeholder="Fair Market Value"
+                                />
+                                <p className="text-xs text-gray-400 mt-0.5">Value of goods/services received (for tax receipt)</p>
+                              </div>
                               <input
                                 type="text"
                                 value={s.description}

@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { LayoutDashboard, RefreshCw, LogOut } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import { motion } from "framer-motion";
 
 interface AdminHeaderProps {
@@ -22,12 +22,9 @@ export default function AdminHeader({ onSync, isSyncing }: AdminHeaderProps) {
     <header className="bg-[#2d3748] text-white sticky top-0 z-50">
       <div className="container mx-auto px-6">
         <div className="flex items-center justify-between h-16">
-          <div className="flex items-center gap-3">
-            <LayoutDashboard className="w-6 h-6 text-[#EF8046]" />
-            <Link href="/admin" className="text-xl font-bold">
-              JRE Admin
-            </Link>
-          </div>
+          <Link href="/admin" className="text-xl font-bold">
+            JRE Admin
+          </Link>
 
           <div className="flex items-center gap-4">
             {onSync && (
@@ -50,9 +47,8 @@ export default function AdminHeader({ onSync, isSyncing }: AdminHeaderProps) {
             </Link>
             <button
               onClick={handleLogout}
-              className="flex items-center gap-2 text-sm text-gray-300 hover:text-white transition-colors"
+              className="text-sm text-gray-300 hover:text-white transition-colors"
             >
-              <LogOut className="w-4 h-4" />
               Logout
             </button>
           </div>

@@ -310,9 +310,7 @@ export default function BatMitzvahNowWhatPage() {
                   <h2 className="text-2xl font-bold text-white leading-tight">
                     Reserve Your Spot
                   </h2>
-                  <p className="text-white/80 text-sm mt-1">
-                    Free event — no payment required
-                  </p>
+
                 </div>
 
                 {/* Form body */}
@@ -437,9 +435,7 @@ export default function BatMitzvahNowWhatPage() {
                     </span>
                   </button>
 
-                  <p className="text-center text-xs text-gray-400 mt-2">
-                    This event is completely free — no payment needed
-                  </p>
+
                 </form>
               </motion.div>
             )}

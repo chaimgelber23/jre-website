@@ -1,40 +1,72 @@
 import { sheets, SPREADSHEET_ID } from "./client";
 
-// Standard headers for all event registration sheets
-const EVENT_SHEET_HEADERS = [
-  "Registration ID",
-  "Timestamp",
-  "Name",
-  "Email",
-  "Phone",
-  "Spouse Name",
-  "Spouse Email",
-  "Spouse Phone",
-  "Adults Count",
-  "Kids Count",
-  "All Attendees",
-  "Sponsorship",
-  "Sponsorship Amount",
-  "Total Amount",
-  "Payment Method",
-  "Payment Status",
-  "Payment Reference",
-  "Message",
-];
+export interface EventSheetConfig {
+  hasKids: boolean;
+  hasSponsorships: boolean;
+}
+
+export interface EventRegistrationRow {
+  id: string;
+  timestamp: string;
+  name: string;
+  email: string;
+  phone: string;
+  adults: number;
+  kids: number;
+  allAttendees: string;
+  sponsorshipName: string;
+  sponsorshipAmount: number;
+  fairMarketValue: number;
+  taxDeductible: number;
+  total: number;
+  paymentMethod: string;
+  paymentStatus: string;
+  paymentReference: string;
+  notes: string;
+}
+
+function buildHeaders(config: EventSheetConfig): string[] {
+  const headers = [
+    "Registration ID",
+    "Timestamp",
+    "Name",
+    "Email",
+    "Phone",
+    "Adults",
+  ];
+  if (config.hasKids) headers.push("Kids");
+  headers.push("All Attendees");
+  if (config.hasSponsorships) headers.push("Sponsorship", "Sponsorship Amount", "Fair Market Value", "Tax Deductible");
+  headers.push("Total", "Payment Method", "Payment Status", "Payment Reference", "Notes");
+  return headers;
+}
+
+function buildRow(data: EventRegistrationRow, config: EventSheetConfig): (string | number)[] {
+  const row: (string | number)[] = [
+    data.id,
+    data.timestamp,
+    data.name,
+    data.email,
+    data.phone,
+    data.adults,
+  ];
+  if (config.hasKids) row.push(data.kids);
+  row.push(data.allAttendees);
+  if (config.hasSponsorships) row.push(data.sponsorshipName, data.sponsorshipAmount, data.fairMarketValue, data.taxDeductible);
+  row.push(data.total, data.paymentMethod, data.paymentStatus, data.paymentReference, data.notes);
+  return row;
+}
 
 /**
  * Ensures a sheet tab exists for an event, creating it with headers if needed
- * @param sheetName - The name of the tab to create (e.g., "Purim25")
- * @returns true if successful
  */
-async function ensureSheetExists(sheetName: string): Promise<boolean> {
+async function ensureSheetExists(sheetName: string, config: EventSheetConfig): Promise<boolean> {
   if (!SPREADSHEET_ID) {
     console.error("SPREADSHEET_ID not configured");
     return false;
   }
 
   try {
-    // Get existing sheets
     const spreadsheet = await sheets.spreadsheets.get({
       spreadsheetId: SPREADSHEET_ID,
     });
@@ -45,33 +77,24 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
     );
 
     if (!sheetExists) {
-      // Create the new sheet
       await sheets.spreadsheets.batchUpdate({
         spreadsheetId: SPREADSHEET_ID,
         requestBody: {
-          requests: [
-            {
-              addSheet: {
-                properties: {
-                  title: sheetName,
-                },
-              },
-            },
-          ],
+          requests: [{ addSheet: { properties: { title: sheetName } } }],
         },
       });
 
-      // Add headers to the new sheet
+      const headers = buildHeaders(config);
+      const lastCol = String.fromCharCode(64 + headers.length); // A=1, B=2, etc.
+
       await sheets.spreadsheets.values.update({
         spreadsheetId: SPREADSHEET_ID,
-        range: `${sheetName}!A1:R1`,
+        range: `${sheetName}!A1:${lastCol}1`,
         valueInputOption: "USER_ENTERED",
-        requestBody: {
-          values: [EVENT_SHEET_HEADERS],
-        },
+        requestBody: { values: [headers] },
       });
 
-      // Format the header row (bold, frozen)
+      // Format header row (bold, frozen, orange bg)
       const newSpreadsheet = await sheets.spreadsheets.get({
         spreadsheetId: SPREADSHEET_ID,
       });
@@ -87,14 +110,10 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
             requests: [
               {
                 repeatCell: {
-                  range: {
-                    sheetId: sheetId,
-                    startRowIndex: 0,
-                    endRowIndex: 1,
-                  },
+                  range: { sheetId, startRowIndex: 0, endRowIndex: 1 },
                   cell: {
                     userEnteredFormat: {
-                      backgroundColor: { red: 0.937, green: 0.502, blue: 0.275 }, // #EF8046
+                      backgroundColor: { red: 0.937, green: 0.502, blue: 0.275 },
                       textFormat: {
                         bold: true,
                         foregroundColor: { red: 1, green: 1, blue: 1 },
@@ -107,10 +126,8 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
               {
                 updateSheetProperties: {
                   properties: {
-                    sheetId: sheetId,
-                    gridProperties: {
-                      frozenRowCount: 1,
-                    },
+                    sheetId,
+                    gridProperties: { frozenRowCount: 1 },
                   },
                   fields: "gridProperties.frozenRowCount",
                 },
@@ -120,7 +137,7 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
         });
       }
 
-      console.log(`Created new sheet tab: ${sheetName}`);
+      console.log(`Created sheet tab: ${sheetName} with ${headers.length} columns`);
     }
 
     return true;
@@ -132,54 +149,49 @@ async function ensureSheetExists(sheetName: string): Promise<boolean> {
 
 /**
  * Converts an event slug to a sheet tab name
- * @param slug - Event slug (e.g., "purim-2025")
- * @returns Sheet tab name (e.g., "Purim25")
+ * e.g. "purim-2025" → "Purim25"
  */
 export function slugToSheetName(slug: string): string {
-  // Remove the leading slash if present
   slug = slug.replace(/^\//, "");
-
-  // Split by dash
   const parts = slug.split("-");
 
   if (parts.length >= 2) {
-    // Capitalize first part and take last 2 digits of year
     const eventName = parts[0].charAt(0).toUpperCase() + parts[0].slice(1);
     const year = parts[parts.length - 1];
     const shortYear = year.length === 4 ? year.slice(-2) : year;
     return `${eventName}${shortYear}`;
   }
 
-  // Fallback: just capitalize
   return slug.charAt(0).toUpperCase() + slug.slice(1);
 }
 
 /**
- * Appends a registration row to an event sheet, creating the sheet if needed
- * @param sheetName - The sheet tab name (e.g., "Purim25")
- * @param rowData - Array of values matching EVENT_SHEET_HEADERS order
+ * Appends a registration row to an event sheet, creating the sheet if needed.
+ * Headers are built dynamically based on the event config.
  */
 export async function appendEventRegistration(
   sheetName: string,
-  rowData: (string | number)[]
+  rowData: EventRegistrationRow,
+  config: EventSheetConfig
 ): Promise<{ success: boolean; error?: string }> {
   if (!SPREADSHEET_ID) {
     return { success: false, error: "SPREADSHEET_ID not configured" };
   }
 
   try {
-    // Ensure sheet exists (creates with headers if not)
-    const sheetReady = await ensureSheetExists(sheetName);
+    const sheetReady = await ensureSheetExists(sheetName, config);
     if (!sheetReady) {
       return { success: false, error: "Failed to prepare sheet" };
     }
 
-    // Append the registration data
+    const row = buildRow(rowData, config);
+    const lastCol = String.fromCharCode(64 + row.length);
+
     await sheets.spreadsheets.values.append({
       spreadsheetId: SPREADSHEET_ID,
-      range: `${sheetName}!A:R`,
+      range: `${sheetName}!A:${lastCol}`,
       valueInputOption: "USER_ENTERED",
-      requestBody: { values: [rowData] },
+      requestBody: { values: [row] },
     });
 
     return { success: true };
@@ -187,7 +199,7 @@ export async function appendEventRegistration(
     console.error("Failed to append registration:", error);
     return {
       success: false,
-      error: error instanceof Error ? error.message : "Unknown error"
+      error: error instanceof Error ? error.message : "Unknown error",
     };
   }
 }

@@ -37,6 +37,8 @@ interface RegistrationEmailData {
   kids: number;
   total: number;
   sponsorship?: string;
+  fairMarketValue?: number;
+  taxDeductible?: number;
   transactionId?: string;
 }
 
@@ -351,6 +353,31 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                               </tr>
                             </table>
 
+                            ${data.sponsorship && data.taxDeductible !== undefined ? `
+                            <!-- Tax Receipt Block -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin: 0 0 40px;">
+                              <tr>
+                                <td style="padding: 20px 24px;">
+                                  <p style="color: #065f46; font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; margin: 0 0 14px;">Tax Receipt — 501(c)(3)</p>
+                                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                                    <tr>
+                                      <td style="color: #374151; font-size: 13px; padding: 5px 0;">Sponsorship Amount</td>
+                                      <td align="right" style="color: #374151; font-size: 13px; padding: 5px 0;">$${data.total.toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                      <td style="color: #374151; font-size: 13px; padding: 5px 0;">Fair Market Value of Benefits Received</td>
+                                      <td align="right" style="color: #374151; font-size: 13px; padding: 5px 0;">$${(data.fairMarketValue ?? 0).toFixed(2)}</td>
+                                    </tr>
+                                    <tr>
+                                      <td style="color: #065f46; font-size: 14px; font-weight: 700; padding: 10px 0 4px; border-top: 1px solid #bbf7d0;">Tax-Deductible Portion</td>
+                                      <td align="right" style="color: #065f46; font-size: 14px; font-weight: 700; padding: 10px 0 4px; border-top: 1px solid #bbf7d0;">$${data.taxDeductible.toFixed(2)}</td>
+                                    </tr>
+                                  </table>
+                                  <p style="color: #6b7280; font-size: 11px; margin: 10px 0 0; line-height: 1.6;">The Jewish Renaissance Experience is a registered 501(c)(3) nonprofit organization. Please retain this email as your official tax receipt. No goods or services were provided beyond the fair market value noted above.</p>
+                                </td>
+                              </tr>
+                            </table>
+                            ` : ""}
                             <p style="color: #6b7280; font-size: 14px; margin: 0 0 8px; line-height: 1.6;">If you have any questions, feel free to reach out to <a href="mailto:glevi@thejre.org" style="color: #EF8046; text-decoration: none; font-weight: 500;">glevi@thejre.org</a> or <a href="mailto:yoratz@thejre.org" style="color: #EF8046; text-decoration: none; font-weight: 500;">yoratz@thejre.org</a>.</p>
                             <p style="color: #6b7280; font-size: 14px; margin: 0 0 32px; line-height: 1.6;">Looking forward to seeing you!</p>
 

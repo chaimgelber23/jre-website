@@ -34,6 +34,8 @@ const IMAGE_MIMES = [
   "image/png",
   "image/webp",
   "image/gif",
+  "image/heif",   // iPhone HEIC photos
+  "image/heic",   // alternate HEIC MIME
 ];
 
 // Year-like folder names (e.g., "Pictures 2025", "2025", "Photos 2026")
@@ -66,6 +68,8 @@ async function listSubfolders(drive: DriveClient, parentId: string) {
       fields: "nextPageToken, files(id, name)",
       pageSize: 100,
       pageToken,
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
     });
     if (res.data.files) {
       for (const f of res.data.files) {
@@ -88,6 +92,8 @@ async function listImages(drive: DriveClient, folderId: string) {
       fields: "nextPageToken, files(id, name, mimeType, createdTime)",
       pageSize: 200,
       pageToken,
+      includeItemsFromAllDrives: true,
+      supportsAllDrives: true,
     });
     if (res.data.files) {
       for (const f of res.data.files) {
@@ -186,7 +192,7 @@ export async function GET(request: NextRequest) {
 
     let totalInserted = 0;
     let totalSkipped = 0;
-    const categoryStats: Record<string, { added: number; skipped: number }> = {};
+    const categoryStats: Record<string, { added: number; skipped: number; total: number }> = {};
 
     for (const cat of categories) {
       const images = await listImages(drive, cat.folderId);
@@ -239,9 +245,8 @@ export async function GET(request: NextRequest) {
 
       totalInserted += added;
       totalSkipped += skipped;
-      if (added > 0 || skipped > 0) {
-        categoryStats[cat.category] = { added, skipped };
-      }
+      // Always record every folder so admin can see what was discovered
+      categoryStats[cat.category] = { added, skipped, total: images.length };
     }
 
     return NextResponse.json({

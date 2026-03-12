@@ -1,4 +1,4 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 
 export async function GET() {
@@ -41,6 +41,30 @@ export async function GET() {
     console.error("Admin gallery stats error:", error);
     return NextResponse.json(
       { success: false, error: "Internal server error" },
+      { status: 500 }
+    );
+  }
+}
+
+/** Trigger gallery sync from the admin panel (server-side, so CRON_SECRET is available) */
+export async function POST(request: NextRequest) {
+  try {
+    const host = request.headers.get("host") || "localhost:3000";
+    const protocol = host.includes("localhost") ? "http" : "https";
+    const cronUrl = `${protocol}://${host}/api/cron/sync-gallery`;
+
+    const res = await fetch(cronUrl, {
+      headers: {
+        Authorization: `Bearer ${process.env.CRON_SECRET || ""}`,
+      },
+    });
+
+    const data = await res.json();
+    return NextResponse.json(data);
+  } catch (error) {
+    console.error("Admin gallery sync error:", error);
+    return NextResponse.json(
+      { success: false, error: "Sync failed" },
       { status: 500 }
     );
   }

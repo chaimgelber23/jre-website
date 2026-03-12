@@ -4,11 +4,12 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { motion } from "framer-motion";
-import { ArrowLeft, Plus, Trash2 } from "lucide-react";
+import { Trash2 } from "lucide-react";
 
 interface Sponsorship {
   name: string;
   price: string;
+  fairMarketValue: string;
   description: string;
 }
 
@@ -47,7 +48,7 @@ export default function NewEventPage() {
   };
 
   const addSponsorship = () => {
-    setSponsorships([...sponsorships, { name: "", price: "", description: "" }]);
+    setSponsorships([...sponsorships, { name: "", price: "", fairMarketValue: "", description: "" }]);
   };
 
   const updateSponsorship = (
@@ -81,6 +82,7 @@ export default function NewEventPage() {
             .map((s) => ({
               name: s.name,
               price: Number(s.price),
+              fairMarketValue: Number(s.fairMarketValue) || 0,
               description: s.description || null,
             })),
         }),
@@ -105,10 +107,9 @@ export default function NewEventPage() {
     <div className="max-w-3xl mx-auto">
       <Link
         href="/admin/events"
-        className="inline-flex items-center gap-2 text-gray-500 hover:text-gray-700 mb-6"
+        className="inline-flex items-center text-sm text-gray-500 hover:text-gray-700 mb-6"
       >
-        <ArrowLeft className="w-4 h-4" />
-        Back to Events
+        ← Back to Events
       </Link>
 
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Create New Event</h1>
@@ -283,10 +284,9 @@ export default function NewEventPage() {
             <button
               type="button"
               onClick={addSponsorship}
-              className="flex items-center gap-2 text-sm text-[#EF8046] hover:text-[#d96a2f]"
+              className="text-sm text-[#EF8046] hover:text-[#d96a2f]"
             >
-              <Plus className="w-4 h-4" />
-              Add Tier
+              + Add Tier
             </button>
           </div>
 
@@ -330,6 +330,21 @@ export default function NewEventPage() {
                           className="w-full px-3 py-2 rounded border border-gray-200 text-sm focus:border-[#EF8046] outline-none"
                           placeholder="500"
                         />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-500 mb-1">
+                          Fair Market Value ($)
+                        </label>
+                        <input
+                          type="number"
+                          value={sponsorship.fairMarketValue}
+                          onChange={(e) =>
+                            updateSponsorship(index, "fairMarketValue", e.target.value)
+                          }
+                          className="w-full px-3 py-2 rounded border border-gray-200 text-sm focus:border-[#EF8046] outline-none"
+                          placeholder="0"
+                        />
+                        <p className="text-xs text-gray-400 mt-0.5">Value of goods/services received</p>
                       </div>
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-500 mb-1">

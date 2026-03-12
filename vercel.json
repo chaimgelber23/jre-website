@@ -6,7 +6,15 @@
     },
     {
       "path": "/api/cron/sync-gallery",
-      "schedule": "0 8 * * 1"
+      "schedule": "0 8 * * *"
+    },
+    {
+      "path": "/api/cron/weekly-outreach-digest",
+      "schedule": "0 11 * * 1"
+    },
+    {
+      "path": "/api/cron/monthly-outreach-report",
+      "schedule": "0 11 1 * *"
     }
   ]
 }

@@ -158,10 +158,11 @@ export async function POST(request: NextRequest) {
 
     // Create sponsorships if provided
     if (sponsorships && sponsorships.length > 0) {
-      const sponsorshipData: EventSponsorshipInsert[] = sponsorships.map((s: { name: string; price: number; description?: string }) => ({
+      const sponsorshipData: EventSponsorshipInsert[] = sponsorships.map((s: { name: string; price: number; fairMarketValue?: number; description?: string }) => ({
         event_id: event.id,
         name: s.name,
         price: s.price,
+        fair_market_value: s.fairMarketValue ?? 0,
         description: s.description || null,
       }));
 
