@@ -57,6 +57,10 @@ export default function EventDetailClient({
   const [selectedSponsorship, setSelectedSponsorship] = useState<string | null>(null);
   const [showSponsorship, setShowSponsorship] = useState(false);
   const [paymentMethod, setPaymentMethod] = useState<"online" | "check" | null>("online");
+  // Promo code
+  const [promoCode, setPromoCode] = useState("");
+  const [promoApplied, setPromoApplied] = useState(false);
+  const [promoError, setPromoError] = useState("");
   // Payment processor: "banquest" (primary) or "square" (backup)
   // To switch to Square: change to "square" and uncomment Square imports above
   const paymentProcessor = "banquest" as const;
@@ -205,7 +209,7 @@ export default function EventDetailClient({
   const baseTotal = event
     ? adults * event.price_per_adult + kids * event.kids_price
     : 0;
-  const total = sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal;
+  const total = promoApplied ? 0 : (sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal);
 
   // Only show sponsorships that are at least $180 above the registrant's cover total
   const eligibleSponsorships = sponsorships.filter(s => s.price >= baseTotal + 180);
@@ -275,12 +279,13 @@ export default function EventDetailClient({
         sponsorshipId: selectedSponsorship || null,
         message: formState.message || null,
         honoreeEmail: formState.honoreeEmail || null,
-        paymentMethod,
-        paymentProcessor: paymentMethod === "online" ? paymentProcessor : undefined,
+        paymentMethod: promoApplied ? "promo" : paymentMethod,
+        paymentProcessor: paymentMethod === "online" && !promoApplied ? paymentProcessor : undefined,
+        promoCode: promoApplied ? promoCode : undefined,
       };
 
-      // Include card data for online payment
-      if (paymentMethod === "online") {
+      // Include card data for online payment (skip if promo covers it)
+      if (paymentMethod === "online" && !promoApplied) {
         payload.cardName = formState.cardName;
         payload.cardNumber = formState.cardNumber.replace(/\s/g, "");
         payload.cardExpiry = formState.cardExpiry;
@@ -306,14 +311,15 @@ export default function EventDetailClient({
     } finally {
       setIsSubmitting(false);
     }
-  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug]);
+  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug, promoCode, promoApplied]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
 
-    // Validate card fields (credit card only)
-    {
+    // Skip card validation if promo code covers full amount
+    if (!promoApplied) {
+      // Validate card fields (credit card only)
       const cardNum = formState.cardNumber.replace(/\s/g, "");
       if (cardNum.length < 14) {
         setError("Please enter a valid card number.");
@@ -1262,7 +1268,78 @@ export default function EventDetailClient({
                       )}
                     </div>
 
+                    {/* Promo Code */}
+                    <div className="pt-4">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          if (promoApplied) {
+                            setPromoApplied(false);
+                            setPromoCode("");
+                            setPromoError("");
+                          }
+                        }}
+                        className="text-xs text-gray-400 hover:text-[var(--theme-primary)] transition-colors cursor-pointer"
+                        style={{ pointerEvents: promoApplied ? "auto" : "none" }}
+                      >
+                        {promoApplied ? "✓ Promo code applied — click to remove" : "Have a promo code?"}
+                      </button>
+                      {!promoApplied && (
+                        <div className="mt-2 flex gap-2">
+                          <input
+                            type="text"
+                            value={promoCode}
+                            onChange={(e) => {
+                              setPromoCode(e.target.value);
+                              setPromoError("");
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                if (promoCode.trim() === "0000") {
+                                  setPromoApplied(true);
+                                  setPromoError("");
+                                } else if (promoCode.trim()) {
+                                  setPromoError("Invalid promo code");
+                                }
+                              }
+                            }}
+                            className="flex-1 px-4 py-2 rounded-lg border border-gray-200 focus:border-[var(--theme-primary)] focus:ring-2 focus:ring-[var(--theme-primary)]/20 outline-none text-sm bg-white transition-colors"
+                            placeholder="Enter code"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => {
+                              if (promoCode.trim() === "0000") {
+                                setPromoApplied(true);
+                                setPromoError("");
+                              } else if (promoCode.trim()) {
+                                setPromoError("Invalid promo code");
+                              }
+                            }}
+                            className="px-4 py-2 rounded-lg bg-[var(--theme-primary)] text-white text-sm font-medium hover:bg-[var(--theme-hover)] transition-colors"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      )}
+                      {promoError && (
+                        <p className="text-xs text-red-500 mt-1">{promoError}</p>
+                      )}
+                      {promoApplied && (
+                        <motion.div
+                          initial={{ opacity: 0, y: -4 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className="mt-2 bg-green-50 border border-green-200 rounded-lg px-3 py-2 flex items-center gap-2"
+                        >
+                          <Check className="w-4 h-4 text-green-600" />
+                          <span className="text-sm text-green-700 font-medium">Complimentary admission — no payment required</span>
+                        </motion.div>
+                      )}
+                    </div>
+
                     {/* Payment — Credit Card Only */}
+                    {!promoApplied && (
                     <div className="pt-6 border-t border-gray-100/80">
                       <div className="flex items-center justify-between mb-5">
                         <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase">Payment Details</h4>
@@ -1364,6 +1441,7 @@ export default function EventDetailClient({
                         </div>
                       </div>
                     </div>
+                    )}
 
                     {/* Submit */}
                     <motion.button

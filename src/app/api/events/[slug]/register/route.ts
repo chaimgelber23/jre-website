@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { appendEventRegistration, slugToSheetName } from "@/lib/google-sheets/event-sheets";
+import { appendEventRegistration, slugToSheetName, type EventSheetConfig, type EventRegistrationRow } from "@/lib/google-sheets/event-sheets";
 // Square kept for backup - uncomment to switch processors
 // import { processSquarePayment } from "@/lib/square";
 import { processDirectCardPayment } from "@/lib/banquest";
@@ -33,7 +33,7 @@ export async function POST(
     const body = await request.json();
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests, promoCode } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -85,9 +85,10 @@ export async function POST(
     // Calculate subtotal
     let subtotal = numAdults * event.price_per_adult + numKids * event.kids_price;
 
-    // If sponsorship is selected, get sponsorship price
+    // If sponsorship is selected, get sponsorship price + FMV
     let sponsorshipName: string | null = null;
     let sponsorshipPrice = 0;
+    let sponsorshipFMV = 0;
     if (sponsorshipId) {
       const { data: sponsorshipData } = await supabase
         .from("event_sponsorships")
@@ -98,9 +99,24 @@ export async function POST(
       if (sponsorshipData) {
         const sponsorship = sponsorshipData as EventSponsorship;
         sponsorshipPrice = sponsorship.price;
+        sponsorshipFMV = sponsorship.fair_market_value ?? 0;
         subtotal = sponsorship.price; // Sponsorship replaces base price
         sponsorshipName = sponsorship.name;
       }
+    }
+
+    // Handle promo code — validated server-side
+    const VALID_PROMO_CODES: Record<string, number> = { "0000": 0 }; // code → price override
+    let promoApplied = false;
+    if (promoCode && paymentMethod === "promo") {
+      if (!(promoCode in VALID_PROMO_CODES)) {
+        return NextResponse.json(
+          { success: false, error: "Invalid promo code" },
+          { status: 400 }
+        );
+      }
+      subtotal = VALID_PROMO_CODES[promoCode];
+      promoApplied = true;
     }
 
     // Process payment
@@ -151,9 +167,9 @@ export async function POST(
       paymentStatus = "success";
       paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
     } else if (subtotal === 0) {
-      // Free event
+      // Free event or promo code
       paymentStatus = "success";
-      paymentReference = `free_${Date.now()}`;
+      paymentReference = promoApplied ? `promo_${promoCode}_${Date.now()}` : `free_${Date.now()}`;
     } else if (paymentMethod === "check") {
       // Check payment - pending until check received
       paymentStatus = "pending";
@@ -204,31 +220,66 @@ export async function POST(
 
     const registration = registrationData as EventRegistration;
 
-    // Sync to Google Sheets - each event gets its own tab (e.g., "Chanukah25", "ScotchSteak26")
+    // Check if event has sponsorship tiers (for dynamic sheet columns)
+    const { count: sponsorshipCount } = await supabase
+      .from("event_sponsorships")
+      .select("*", { count: "exact", head: true })
+      .eq("event_id", event.id);
+
+    const sheetConfig: EventSheetConfig = {
+      hasKids: event.kids_price > 0,
+      hasSponsorships: (sponsorshipCount ?? 0) > 0,
+    };
+
+    // Build attendees string: handles any number of guests
+    let allAttendees: string;
+    if (guestList.length > 0) {
+      allAttendees = [
+        name,
+        ...guestList.map((g: { name: string; email?: string }) =>
+          `${g.name}${g.email ? ` (${g.email})` : ""}`
+        ),
+      ].join("; ");
+    } else {
+      const parts = [name];
+      if (numAdults > 1) parts.push(`+${numAdults - 1} adult${numAdults - 1 > 1 ? "s" : ""}`);
+      if (numKids > 0) parts.push(`+${numKids} kid${numKids > 1 ? "s" : ""}`);
+      allAttendees = parts.join(" ");
+    }
+
+    const taxDeductible = sponsorshipName ? Math.max(0, sponsorshipPrice - sponsorshipFMV) : undefined;
+
     const sheetName = slugToSheetName(slug);
-    const rowData = [
-      registration.id,
-      new Date().toLocaleString(),
+    const rowData: EventRegistrationRow = {
+      id: registration.id,
+      timestamp: new Date().toLocaleString(),
       name,
       email,
-      normalizedPhone,
-      "", // Spouse Name
-      "", // Spouse Email
-      "", // Spouse Phone
-      numAdults,
-      numKids,
-      guestList.length > 0
-        ? `${name}; ${guestList.map((g: { name: string; email?: string }) => `${g.name}${g.email ? ` (${g.email})` : ""}`).join("; ")}`
-        : `${name}${numAdults > 1 ? ` + ${numAdults - 1} adults` : ""}${numKids > 0 ? ` + ${numKids} kids` : ""}`,
-      sponsorshipName || "None",
-      sponsorshipPrice > 0 ? sponsorshipPrice : 0,
-      subtotal,
-      body.paymentMethod || "online",
+      phone: normalizedPhone,
+      adults: numAdults,
+      kids: numKids,
+      allAttendees,
+      sponsorshipName: sponsorshipName || "",
+      sponsorshipAmount: sponsorshipPrice,
+      fairMarketValue: sponsorshipFMV,
+      taxDeductible: taxDeductible ?? 0,
+      total: subtotal,
+      paymentMethod: promoApplied ? "promo" : (body.paymentMethod || "online"),
       paymentStatus,
       paymentReference,
-      message || "",
-    ];
-    appendEventRegistration(sheetName, rowData).catch(console.error);
+      notes: promoApplied ? `PROMO CODE: ${promoCode}${message ? ` | ${message}` : ""}` : (message || ""),
+    };
+    // Await sheets sync before responding — fire-and-forget gets killed on Vercel serverless
+    try {
+      const sheetResult = await appendEventRegistration(sheetName, rowData, sheetConfig);
+      if (sheetResult.success) {
+        console.log(`Registration synced to Google Sheets: ${sheetName} / ${registration.id}`);
+      } else {
+        console.error(`Failed to sync to Google Sheets (${sheetName}):`, sheetResult.error);
+      }
+    } catch (sheetError) {
+      console.error("Google Sheets sync error:", sheetError);
+    }
 
     // Send confirmation email
     try {
@@ -252,6 +303,8 @@ export async function POST(
         kids: numKids,
         total: subtotal,
         sponsorship: sponsorshipName || undefined,
+        fairMarketValue: sponsorshipName ? sponsorshipFMV : undefined,
+        taxDeductible,
         transactionId: paymentReference,
       });
       console.log("Email send result:", JSON.stringify(emailResult));
