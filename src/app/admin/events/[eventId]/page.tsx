@@ -162,6 +162,9 @@ export default function EventDetailPage({
   const [showDeleteEvent, setShowDeleteEvent] = useState(false);
   const [isDeletingEvent, setIsDeletingEvent] = useState(false);
 
+  // Sync to sheets state
+  const [isSyncingSheets, setIsSyncingSheets] = useState(false);
+
   // Toast state
   const [toast, setToast] = useState<{
     message: string;
@@ -440,6 +443,28 @@ export default function EventDetailPage({
     }
   };
 
+  const handleSyncSheets = async () => {
+    setIsSyncingSheets(true);
+    try {
+      const response = await fetch(`/api/admin/events/${eventId}/sync-sheets`, {
+        method: "POST",
+      });
+      const result = await response.json();
+      if (result.success) {
+        showToast(
+          `Synced ${result.synced}/${result.total} registrations to "${result.sheetName}"${result.failed ? ` (${result.failed} failed)` : ""}`,
+          result.failed ? "error" : "success"
+        );
+      } else {
+        showToast(result.error || "Sync failed", "error");
+      }
+    } catch {
+      showToast("Network error. Please try again.", "error");
+    } finally {
+      setIsSyncingSheets(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -611,7 +636,7 @@ export default function EventDetailPage({
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex gap-8">
+        <nav className="flex items-center gap-8">
           <button
             onClick={() => setActiveTab("registrations")}
             className={`relative py-4 text-sm font-medium transition-colors ${
@@ -644,6 +669,29 @@ export default function EventDetailPage({
               />
             )}
           </button>
+          {registrations.length > 0 && (
+            <button
+              onClick={handleSyncSheets}
+              disabled={isSyncingSheets}
+              className="ml-auto px-3 py-1.5 text-xs font-medium rounded-lg border border-gray-200 text-gray-600 hover:bg-gray-50 hover:text-gray-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5"
+            >
+              {isSyncingSheets ? (
+                <>
+                  <motion.span
+                    animate={{ rotate: 360 }}
+                    transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                    className="inline-block w-3 h-3 border border-gray-400 border-t-transparent rounded-full"
+                  />
+                  Syncing...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-3 h-3" />
+                  Sync to Sheets
+                </>
+              )}
+            </button>
+          )}
         </nav>
       </div>
 
