@@ -179,7 +179,7 @@ function filterStandaloneByDate() {
   const stillUpcoming: DisplayEvent[] = [];
   const nowPast: DisplayEvent[] = [];
   for (const evt of allStandalone) {
-    const parsed = new Date(evt.date);
+    const parsed = new Date(evt.date + "T00:00:00");
     if (!isNaN(parsed.getTime()) && parsed >= today) {
       stillUpcoming.push(evt);
     } else {
@@ -211,12 +211,12 @@ export default async function EventsPage() {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      const upcoming = events.filter((e) => new Date(e.date) >= today);
+      const upcoming = events.filter((e) => new Date(e.date + "T00:00:00") >= today);
       const past = events
-        .filter((e) => new Date(e.date) < today)
+        .filter((e) => new Date(e.date + "T00:00:00") < today)
         .sort(
           (a, b) =>
-            new Date(b.date).getTime() - new Date(a.date).getTime()
+            new Date(b.date + "T00:00:00").getTime() - new Date(a.date + "T00:00:00").getTime()
         );
 
       const dbUpcoming = upcoming.map((e) => eventToDisplay(e, false, false));

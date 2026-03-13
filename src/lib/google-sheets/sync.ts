@@ -87,7 +87,7 @@ export async function syncRegistrationToSheets(
   }
 
   try {
-    const eventYear = new Date(event.date).getFullYear();
+    const eventYear = new Date(event.date + "T00:00:00").getFullYear();
 
     const values = [
       [

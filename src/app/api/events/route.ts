@@ -27,10 +27,10 @@ export async function GET() {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
 
-    const upcoming = events.filter((e) => new Date(e.date) >= today);
+    const upcoming = events.filter((e) => new Date(e.date + "T00:00:00") >= today);
     const past = events
-      .filter((e) => new Date(e.date) < today)
-      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+      .filter((e) => new Date(e.date + "T00:00:00") < today)
+      .sort((a, b) => new Date(b.date + "T00:00:00").getTime() - new Date(a.date + "T00:00:00").getTime());
 
     return NextResponse.json({
       success: true,

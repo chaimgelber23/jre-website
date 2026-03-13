@@ -70,7 +70,7 @@ export async function GET(request: NextRequest) {
 
     const allEventsDates = (allEventsData || []) as { date: string }[];
     const availableYears = [
-      ...new Set(allEventsDates.map((e) => new Date(e.date).getFullYear())),
+      ...new Set(allEventsDates.map((e) => new Date(e.date + "T00:00:00").getFullYear())),
     ].sort((a, b) => b - a);
 
     // If no years available, add current year
