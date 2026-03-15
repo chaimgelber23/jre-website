@@ -19,8 +19,8 @@ export default function AdminTabs() {
 
   return (
     <div className="border-b border-gray-200 bg-white">
-      <div className="container mx-auto px-6">
-        <nav className="flex gap-8" aria-label="Tabs">
+      <div className="container mx-auto px-3 sm:px-6">
+        <nav className="flex gap-4 sm:gap-8 overflow-x-auto scrollbar-hide" aria-label="Tabs">
           {tabs.map((tab) => {
             const active = isActive(tab.href);
 
@@ -28,7 +28,7 @@ export default function AdminTabs() {
               <Link
                 key={tab.name}
                 href={tab.href}
-                className={`relative py-4 text-sm font-medium transition-colors ${
+                className={`relative py-3 sm:py-4 text-xs sm:text-sm font-medium transition-colors whitespace-nowrap ${
                   active
                     ? "text-[#EF8046]"
                     : "text-gray-500 hover:text-gray-700"

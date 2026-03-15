@@ -12,7 +12,7 @@ export default function AdminLayout({
       <div className="min-h-screen bg-[#FBFBFB]">
         <AdminHeader />
         <AdminTabs />
-        <main className="container mx-auto px-6 py-8">{children}</main>
+        <main className="container mx-auto px-3 sm:px-6 py-4 sm:py-8">{children}</main>
       </div>
     </AdminAuthCheck>
   );

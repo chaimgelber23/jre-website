@@ -165,6 +165,9 @@ export default function EventDetailPage({
   // Sync to sheets state
   const [isSyncingSheets, setIsSyncingSheets] = useState(false);
 
+  // Expanded sponsorship card (to show buyers)
+  const [expandedSponsorshipId, setExpandedSponsorshipId] = useState<string | null>(null);
+
   // Toast state
   const [toast, setToast] = useState<{
     message: string;
@@ -531,12 +534,12 @@ export default function EventDetailPage({
           ← Back to Events
         </Link>
 
-        <div className="flex items-start justify-between">
-          <div className="flex-1">
-            <div className="flex items-center gap-3 mb-1">
-              <h1 className="text-2xl font-bold text-gray-900">{event.title}</h1>
+        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 sm:gap-3 mb-1">
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{event.title}</h1>
               <span
-                className={`px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium flex-shrink-0 ${
                   event.is_active
                     ? "bg-green-100 text-green-700"
                     : "bg-gray-100 text-gray-500"
@@ -545,22 +548,22 @@ export default function EventDetailPage({
                 {event.is_active ? "Live" : "Inactive"}
               </span>
             </div>
-            <div className="flex flex-wrap items-center gap-4 mt-2 text-sm text-gray-500">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-4 mt-2 text-xs sm:text-sm text-gray-500">
               <span className="flex items-center gap-1">
-                <Calendar className="w-4 h-4" />
+                <Calendar className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                 {formatDate(event.date)}
               </span>
               {event.start_time && (
                 <span className="flex items-center gap-1">
-                  <Clock className="w-4 h-4" />
+                  <Clock className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                   {to12Hour(event.start_time)}
                   {event.end_time && ` - ${to12Hour(event.end_time)}`}
                 </span>
               )}
               {event.location && (
                 <span className="flex items-center gap-1">
-                  <MapPin className="w-4 h-4" />
-                  {event.location}
+                  <MapPin className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                  <span className="truncate max-w-[200px]">{event.location}</span>
                 </span>
               )}
               <a
@@ -576,10 +579,10 @@ export default function EventDetailPage({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 ml-4">
+          <div className="flex items-center gap-2 flex-shrink-0">
             <button
               onClick={handleToggleActive}
-              className={`px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
+              className={`px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-lg text-xs sm:text-sm font-medium transition-colors ${
                 event.is_active
                   ? "bg-gray-100 text-gray-600 hover:bg-gray-200"
                   : "bg-green-50 text-green-700 hover:bg-green-100"
@@ -589,13 +592,13 @@ export default function EventDetailPage({
             </button>
             <button
               onClick={openEditEventModal}
-              className="px-3 py-2 bg-[#EF8046] text-white rounded-lg text-sm font-medium hover:bg-[#d96a2f] transition-colors"
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-[#EF8046] text-white rounded-lg text-xs sm:text-sm font-medium hover:bg-[#d96a2f] transition-colors"
             >
-              Edit Event
+              Edit
             </button>
             <button
               onClick={() => setShowDeleteEvent(true)}
-              className="px-3 py-2 bg-red-50 text-red-600 rounded-lg text-sm font-medium hover:bg-red-100 transition-colors"
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 bg-red-50 text-red-600 rounded-lg text-xs sm:text-sm font-medium hover:bg-red-100 transition-colors"
             >
               Delete
             </button>
@@ -636,7 +639,7 @@ export default function EventDetailPage({
 
       {/* Tabs */}
       <div className="border-b border-gray-200">
-        <nav className="flex items-center gap-8">
+        <nav className="flex items-center gap-4 sm:gap-8">
           <button
             onClick={() => setActiveTab("registrations")}
             className={`relative py-4 text-sm font-medium transition-colors ${
@@ -714,30 +717,32 @@ export default function EventDetailPage({
             </p>
           </div>
         ) : (
-          <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
+          <>
+          {/* Desktop Table View */}
+          <div className="hidden md:block bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
                   <tr className="bg-gray-50 border-b border-gray-100">
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Attendee
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Attendees
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Sponsorship
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Amount
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status
                     </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Registered
                     </th>
-                    <th className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
+                    <th className="px-4 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Actions
                     </th>
                   </tr>
@@ -751,10 +756,9 @@ export default function EventDetailPage({
 
                     return (
                       <React.Fragment key={emailKey}>
-                        {/* Summary row for repeat registrants */}
                         {isRepeat && (
                           <tr className="bg-amber-50/60 border-b border-amber-200">
-                            <td colSpan={7} className="px-6 py-2.5 text-sm">
+                            <td colSpan={7} className="px-5 py-2.5 text-sm">
                               <div className="flex items-center gap-2">
                                 <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700 uppercase tracking-wider">
                                   {group.length} orders
@@ -771,11 +775,9 @@ export default function EventDetailPage({
                             </td>
                           </tr>
                         )}
-                        {/* Individual registration rows */}
                         {group.map((reg, index) => {
                           const { text: regMessage, guests: regGuests } = parseMessageField(reg.message);
                           const isExpanded = expandedRegId === reg.id;
-                          const hasDetails = regGuests.length > 0 || regMessage;
 
                           return (
                             <React.Fragment key={reg.id}>
@@ -783,16 +785,14 @@ export default function EventDetailPage({
                                 initial={{ opacity: 0, y: 10 }}
                                 animate={{ opacity: 1, y: 0 }}
                                 transition={{ delay: index * 0.03 }}
-                                className={`hover:bg-gray-50 transition-colors ${hasDetails ? "cursor-pointer" : ""} ${isRepeat ? "bg-amber-50/20" : ""}`}
-                                onClick={() => hasDetails && setExpandedRegId(isExpanded ? null : reg.id)}
+                                className={`hover:bg-gray-50 transition-colors cursor-pointer ${isRepeat ? "bg-amber-50/20" : ""}`}
+                                onClick={() => setExpandedRegId(isExpanded ? null : reg.id)}
                               >
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <td className="px-5 py-4 whitespace-nowrap text-sm">
                                   <div className="flex items-center gap-2">
-                                    {hasDetails && (
-                                      <ChevronDown
-                                        className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
-                                      />
-                                    )}
+                                    <ChevronDown
+                                      className={`w-4 h-4 text-gray-400 transition-transform flex-shrink-0 ${isExpanded ? "rotate-180" : ""}`}
+                                    />
                                     <div>
                                       <p className="font-medium text-gray-900">
                                         {reg.name}
@@ -804,7 +804,7 @@ export default function EventDetailPage({
                                     </div>
                                   </div>
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm">
                                   <span className="font-medium">{reg.adults}</span> adults
                                   {reg.kids > 0 && (
                                     <>
@@ -813,7 +813,7 @@ export default function EventDetailPage({
                                     </>
                                   )}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm">
                                   {reg.sponsorship_name ? (
                                     <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-purple-100 text-purple-700">
                                       <Award className="w-3 h-3 mr-1" />
@@ -823,16 +823,16 @@ export default function EventDetailPage({
                                     "-"
                                   )}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
                                   {formatCurrency(reg.subtotal)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm">
                                   <PaymentStatusBadge status={reg.payment_status} />
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-gray-500">
                                   {formatDateTime(reg.created_at)}
                                 </td>
-                                <td className="px-6 py-4 whitespace-nowrap text-sm text-right">
+                                <td className="px-4 py-4 whitespace-nowrap text-sm text-right">
                                   <div className="flex items-center justify-end gap-1">
                                     <button
                                       onClick={(e) => { e.stopPropagation(); openEditRegModal(reg); }}
@@ -857,14 +857,35 @@ export default function EventDetailPage({
                               </motion.tr>
                               {/* Expanded details row */}
                               <AnimatePresence>
-                                {isExpanded && hasDetails && (
+                                {isExpanded && (
                                   <motion.tr
                                     initial={{ opacity: 0, height: 0 }}
                                     animate={{ opacity: 1, height: "auto" }}
                                     exit={{ opacity: 0, height: 0 }}
                                   >
-                                    <td colSpan={7} className="px-6 py-4 bg-gray-50/50">
+                                    <td colSpan={7} className="px-5 py-4 bg-gray-50/50">
                                       <div className="pl-6 space-y-3">
+                                        {/* Full details always shown */}
+                                        <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                                          <div>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Email</p>
+                                            <p className="text-sm text-gray-900">{reg.email}</p>
+                                          </div>
+                                          {reg.phone && (
+                                            <div>
+                                              <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Phone</p>
+                                              <p className="text-sm text-gray-900">{reg.phone}</p>
+                                            </div>
+                                          )}
+                                          <div>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Registered</p>
+                                            <p className="text-sm text-gray-900">{formatDateTime(reg.created_at)}</p>
+                                          </div>
+                                          <div>
+                                            <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-1">Payment</p>
+                                            <p className="text-sm text-gray-900">{formatCurrency(reg.subtotal)} · <PaymentStatusBadge status={reg.payment_status} /></p>
+                                          </div>
+                                        </div>
                                         {regGuests.length > 0 && (
                                           <div>
                                             <p className="text-xs font-medium text-gray-500 uppercase tracking-wider mb-2">
@@ -909,51 +930,254 @@ export default function EventDetailPage({
               </table>
             </div>
           </div>
+
+          {/* Mobile Card View */}
+          <div className="md:hidden space-y-3">
+            {Object.entries(groupedByEmail).map(([emailKey, group]) => {
+              const isRepeat = group.length > 1;
+              const totalAmount = group.reduce((sum, r) => sum + r.subtotal, 0);
+
+              return (
+                <div key={emailKey}>
+                  {isRepeat && (
+                    <div className="bg-amber-50 border border-amber-200 rounded-t-xl px-4 py-2 text-xs font-semibold text-amber-700 flex items-center justify-between">
+                      <span>{group[0].name} — {group.length} orders</span>
+                      <span className="text-[#EF8046]">{formatCurrency(totalAmount)}</span>
+                    </div>
+                  )}
+                  {group.map((reg, index) => {
+                    const { text: regMessage, guests: regGuests } = parseMessageField(reg.message);
+                    const isExpanded = expandedRegId === reg.id;
+
+                    return (
+                      <motion.div
+                        key={reg.id}
+                        initial={{ opacity: 0, y: 10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: index * 0.03 }}
+                        className={`bg-white border border-gray-100 shadow-sm overflow-hidden ${
+                          isRepeat && index === 0 && !isRepeat ? "" :
+                          isRepeat && index === 0 ? "rounded-t-none" :
+                          index === 0 ? "rounded-t-xl" : ""
+                        } ${index === group.length - 1 ? "rounded-b-xl" : ""} ${
+                          !isRepeat && group.length === 1 ? "rounded-xl" : ""
+                        }`}
+                      >
+                        {/* Clickable card header */}
+                        <div
+                          className="px-4 py-3 cursor-pointer active:bg-gray-50"
+                          onClick={() => setExpandedRegId(isExpanded ? null : reg.id)}
+                        >
+                          <div className="flex items-start justify-between">
+                            <div className="flex-1 min-w-0">
+                              <div className="flex items-center gap-2">
+                                <p className="font-semibold text-gray-900 text-sm truncate">{reg.name}</p>
+                                <PaymentStatusBadge status={reg.payment_status} />
+                              </div>
+                              <p className="text-xs text-gray-500 mt-0.5 truncate">{reg.email}</p>
+                            </div>
+                            <div className="flex items-center gap-2 flex-shrink-0 ml-2">
+                              <span className="text-sm font-bold text-[#EF8046]">{formatCurrency(reg.subtotal)}</span>
+                              <ChevronDown
+                                className={`w-4 h-4 text-gray-400 transition-transform ${isExpanded ? "rotate-180" : ""}`}
+                              />
+                            </div>
+                          </div>
+                          <div className="flex items-center gap-3 mt-2 text-xs text-gray-500">
+                            <span>{reg.adults} adult{reg.adults !== 1 ? "s" : ""}{reg.kids > 0 ? `, ${reg.kids} kid${reg.kids !== 1 ? "s" : ""}` : ""}</span>
+                            {reg.sponsorship_name && (
+                              <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-100 text-purple-700">
+                                <Award className="w-2.5 h-2.5 mr-0.5" />
+                                {reg.sponsorship_name}
+                              </span>
+                            )}
+                            <span className="ml-auto">{formatDateTime(reg.created_at)}</span>
+                          </div>
+                        </div>
+
+                        {/* Expanded details */}
+                        <AnimatePresence>
+                          {isExpanded && (
+                            <motion.div
+                              initial={{ opacity: 0, height: 0 }}
+                              animate={{ opacity: 1, height: "auto" }}
+                              exit={{ opacity: 0, height: 0 }}
+                              className="border-t border-gray-100"
+                            >
+                              <div className="px-4 py-3 bg-gray-50/50 space-y-3">
+                                <div className="grid grid-cols-2 gap-3">
+                                  <div>
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Email</p>
+                                    <p className="text-xs text-gray-900 break-all">{reg.email}</p>
+                                  </div>
+                                  {reg.phone && (
+                                    <div>
+                                      <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Phone</p>
+                                      <p className="text-xs text-gray-900">{reg.phone}</p>
+                                    </div>
+                                  )}
+                                  <div>
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Attendees</p>
+                                    <p className="text-xs text-gray-900">{reg.adults} adult{reg.adults !== 1 ? "s" : ""}{reg.kids > 0 ? `, ${reg.kids} kid${reg.kids !== 1 ? "s" : ""}` : ""}</p>
+                                  </div>
+                                  <div>
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">Amount</p>
+                                    <p className="text-xs text-gray-900">{formatCurrency(reg.subtotal)}</p>
+                                  </div>
+                                </div>
+
+                                {regGuests.length > 0 && (
+                                  <div>
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-1.5">
+                                      Guests ({regGuests.length})
+                                    </p>
+                                    <div className="flex flex-wrap gap-1.5">
+                                      {regGuests.map((guest, gi) => (
+                                        <span
+                                          key={gi}
+                                          className="inline-flex items-center gap-1 px-2 py-1 bg-white rounded-lg border border-gray-200 text-xs"
+                                        >
+                                          <Users className="w-3 h-3 text-[#EF8046]" />
+                                          <span className="font-medium text-gray-900">{guest.name}</span>
+                                        </span>
+                                      ))}
+                                    </div>
+                                  </div>
+                                )}
+
+                                {regMessage && (
+                                  <div>
+                                    <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider mb-0.5">Message</p>
+                                    <p className="text-xs text-gray-700">{regMessage}</p>
+                                  </div>
+                                )}
+
+                                {/* Action buttons */}
+                                <div className="flex items-center gap-2 pt-2 border-t border-gray-200">
+                                  <button
+                                    onClick={(e) => { e.stopPropagation(); openEditRegModal(reg); }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-[#EF8046] bg-[#EF8046]/10 hover:bg-[#EF8046]/20 transition-colors"
+                                  >
+                                    <Pencil className="w-3.5 h-3.5" />
+                                    Edit
+                                  </button>
+                                  <button
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setDeletingRegId(reg.id);
+                                      setDeletingRegName(reg.name);
+                                    }}
+                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 rounded-lg text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 transition-colors"
+                                  >
+                                    <Trash2 className="w-3.5 h-3.5" />
+                                    Delete
+                                  </button>
+                                </div>
+                              </div>
+                            </motion.div>
+                          )}
+                        </AnimatePresence>
+                      </motion.div>
+                    );
+                  })}
+                </div>
+              );
+            })}
+          </div>
+          </>
         )
       ) : (
         /* Sponsorships Tab */
-        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+        <div className="grid gap-4 grid-cols-1 md:grid-cols-2 lg:grid-cols-3">
           {sponsorships.length > 0 ? (
             sponsorships.map((sponsorship) => {
-              const soldCount = registrations.filter(
+              const buyers = registrations.filter(
                 (r) =>
                   r.sponsorship_id === sponsorship.id &&
                   r.payment_status === "success"
-              ).length;
+              );
+              const soldCount = buyers.length;
+              const isOpen = expandedSponsorshipId === sponsorship.id;
 
               return (
                 <motion.div
                   key={sponsorship.id}
                   initial={{ opacity: 0, y: 20 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className="bg-white rounded-xl p-6 shadow-sm border border-gray-100"
+                  className={`bg-white rounded-xl shadow-sm border overflow-hidden transition-colors ${
+                    isOpen ? "border-[#EF8046]/30 shadow-md" : "border-gray-100 hover:border-[#EF8046]/20 hover:shadow-md"
+                  }`}
                 >
-                  <div className="flex items-start justify-between">
-                    <div>
-                      <h3 className="font-semibold text-gray-900">
-                        {sponsorship.name}
-                      </h3>
-                      {sponsorship.description && (
-                        <p className="text-sm text-gray-500 mt-1">
-                          {sponsorship.description}
-                        </p>
+                  <div
+                    className="p-4 sm:p-6 cursor-pointer"
+                    onClick={() => setExpandedSponsorshipId(isOpen ? null : sponsorship.id)}
+                  >
+                    <div className="flex items-start justify-between">
+                      <div className="min-w-0 flex-1">
+                        <h3 className="font-semibold text-gray-900 text-sm sm:text-base">
+                          {sponsorship.name}
+                        </h3>
+                        {sponsorship.description && (
+                          <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                            {sponsorship.description}
+                          </p>
+                        )}
+                      </div>
+                      <span className="text-base sm:text-lg font-bold text-[#EF8046] ml-3 flex-shrink-0">
+                        {formatCurrency(sponsorship.price)}
+                      </span>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-gray-100 flex items-center justify-between">
+                      <p className="text-xs sm:text-sm text-gray-500">
+                        <span className="font-medium text-gray-900">
+                          {soldCount}
+                        </span>{" "}
+                        sold
+                        {sponsorship.max_available && (
+                          <> / {sponsorship.max_available} available</>
+                        )}
+                      </p>
+                      {soldCount > 0 && (
+                        <div className="flex items-center gap-1 text-xs text-[#EF8046]">
+                          <span>View sponsors</span>
+                          <ChevronDown className={`w-3.5 h-3.5 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+                        </div>
                       )}
                     </div>
-                    <span className="text-lg font-bold text-[#EF8046]">
-                      {formatCurrency(sponsorship.price)}
-                    </span>
                   </div>
-                  <div className="mt-4 pt-4 border-t border-gray-100">
-                    <p className="text-sm text-gray-500">
-                      <span className="font-medium text-gray-900">
-                        {soldCount}
-                      </span>{" "}
-                      sold
-                      {sponsorship.max_available && (
-                        <> / {sponsorship.max_available} available</>
-                      )}
-                    </p>
-                  </div>
+
+                  {/* Expanded: show who bought this sponsorship */}
+                  <AnimatePresence>
+                    {isOpen && soldCount > 0 && (
+                      <motion.div
+                        initial={{ opacity: 0, height: 0 }}
+                        animate={{ opacity: 1, height: "auto" }}
+                        exit={{ opacity: 0, height: 0 }}
+                        className="border-t border-gray-100"
+                      >
+                        <div className="px-4 sm:px-6 py-3 bg-gray-50/50 space-y-2">
+                          <p className="text-[10px] font-medium text-gray-500 uppercase tracking-wider">
+                            Sponsors ({soldCount})
+                          </p>
+                          {buyers.map((buyer) => (
+                            <div
+                              key={buyer.id}
+                              className="flex items-center justify-between gap-2 px-3 py-2 bg-white rounded-lg border border-gray-200 text-sm"
+                            >
+                              <div className="min-w-0">
+                                <p className="font-medium text-gray-900 text-xs sm:text-sm truncate">{buyer.name}</p>
+                                <p className="text-gray-500 text-[10px] sm:text-xs truncate">{buyer.email}</p>
+                              </div>
+                              <div className="text-right flex-shrink-0">
+                                <p className="font-semibold text-[#EF8046] text-xs sm:text-sm">{formatCurrency(buyer.subtotal)}</p>
+                                <p className="text-gray-400 text-[10px]">{formatDateTime(buyer.created_at)}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </motion.div>
+                    )}
+                  </AnimatePresence>
                 </motion.div>
               );
             })
@@ -1039,7 +1263,7 @@ export default function EventDetailPage({
                 </div>
 
                 {/* Date & Times */}
-                <div className="grid grid-cols-3 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Date *
@@ -1162,7 +1386,7 @@ export default function EventDetailPage({
                 </div>
 
                 {/* Pricing */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Price per Adult ($)
@@ -1260,7 +1484,7 @@ export default function EventDetailPage({
                           className="p-3 bg-gray-50 rounded-lg border border-gray-200"
                         >
                           <div className="flex items-start gap-3">
-                            <div className="flex-1 grid grid-cols-2 gap-3">
+                            <div className="flex-1 grid grid-cols-1 sm:grid-cols-2 gap-3">
                               <input
                                 type="text"
                                 value={s.name}
@@ -1305,7 +1529,7 @@ export default function EventDetailPage({
                                   updated[i].description = e.target.value;
                                   setEditSponsorships(updated);
                                 }}
-                                className={`${inputClassName} col-span-2`}
+                                className={`${inputClassName} sm:col-span-2`}
                                 placeholder="Description (optional)"
                               />
                             </div>
@@ -1443,7 +1667,7 @@ export default function EventDetailPage({
                   />
                 </div>
 
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">
                       Adults
