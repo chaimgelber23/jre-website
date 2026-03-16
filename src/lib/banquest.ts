@@ -113,11 +113,6 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
     const requestBody = {
       amount: data.amount,
       source, // Nonce token with proper prefix
-      // Top-level name fields (required by Banquest/NMI v2 API)
-      first_name: data.firstName || "",
-      last_name: data.lastName || "",
-      email: data.email,
-      cardholder: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
       customer: {
         first_name: data.firstName || "",
         last_name: data.lastName || "",
