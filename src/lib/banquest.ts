@@ -113,7 +113,14 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
     const requestBody = {
       amount: data.amount,
       source, // Nonce token with proper prefix
+      // Top-level name fields (required by Banquest/NMI v2 API)
+      first_name: data.firstName || "",
+      last_name: data.lastName || "",
+      email: data.email,
+      cardholder: `${data.firstName || ""} ${data.lastName || ""}`.trim(),
       customer: {
+        first_name: data.firstName || "",
+        last_name: data.lastName || "",
         email: data.email,
         send_receipt: false,
       },
@@ -237,7 +244,14 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
       expiry_month: expMonth,
       expiry_year: expYear,
       cvv2: data.cardCvv,
+      // Top-level name fields (required by Banquest/NMI v2 API)
+      first_name: firstName,
+      last_name: lastName,
+      email: data.email,
+      cardholder: `${firstName} ${lastName}`.trim(),
       customer: {
+        first_name: firstName,
+        last_name: lastName,
         email: data.email,
         send_receipt: false,
       },
@@ -590,6 +604,10 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
+      // Top-level name fields (required by Banquest/NMI v2 API)
+      first_name: firstName,
+      last_name: lastName,
+      email: data.email,
       cardholder: fullName,
       customer: {
         first_name: firstName,
@@ -728,6 +746,10 @@ export async function setupRecurringPayment(data: RecurringPaymentSetupData): Pr
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
+      // Top-level name fields (required by Banquest/NMI v2 API)
+      first_name: firstName,
+      last_name: lastName,
+      email: data.email,
       cardholder: fullName,
       customer: {
         first_name: firstName,
