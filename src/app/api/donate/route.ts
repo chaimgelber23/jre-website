@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { syncDonationToSheets } from "@/lib/google-sheets/sync";
-import { processSquarePayment } from "@/lib/square";
-import { processTokenizedPayment } from "@/lib/banquest";
+import { processDirectPayment } from "@/lib/banquest";
 import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
 import type { Donation, DonationInsert } from "@/types/database";
 
@@ -28,9 +27,10 @@ export async function POST(request: NextRequest) {
       honorEmail,
       sponsorship,
       message,
-      paymentToken,
       cardName,
-      paymentProcessor,
+      cardNumber,
+      cardExpiry,
+      cardCvv,
     } = body;
 
     if (!amount || !name || !email) {
@@ -58,81 +58,36 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Process payment
-    let paymentStatus = "pending";
-    let paymentReference = "";
-    let cardRef: string | null = null; // For recurring payments
-
-    // Determine which processor to use (default to banquest)
-    const processor = paymentProcessor || "banquest";
-
-    if (!paymentToken) {
+    // Validate card fields
+    if (!cardNumber || !cardExpiry || !cardCvv) {
       return NextResponse.json(
-        { success: false, error: "Payment token is required" },
+        { success: false, error: "Card details are required" },
         { status: 400 }
       );
     }
 
-    // Parse name for first/last
-    const nameParts = (cardName || name).trim().split(" ");
-    const firstName = nameParts[0] || "";
-    const lastName = nameParts.slice(1).join(" ") || "";
+    // Process payment via Banquest (direct card - same as event pages)
+    const paymentResult = await processDirectPayment({
+      amount: numericAmount,
+      cardNumber,
+      cardExpiry,
+      cardCvv,
+      cardName: cardName || name,
+      email,
+      description: sponsorship
+        ? `JRE Donation - ${sponsorship}`
+        : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
+    });
 
-    if (processor === "banquest") {
-      // Process payment via Banquest (tokenized - PCI compliant)
-      const paymentResult = await processTokenizedPayment({
-        paymentToken,
-        amount: numericAmount,
-        email,
-        firstName,
-        lastName,
-        description: sponsorship
-          ? `JRE Donation - ${sponsorship}`
-          : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
-        saveCard: Boolean(isRecurring),
-      });
-
-      if (!paymentResult.success) {
-        return NextResponse.json(
-          { success: false, error: paymentResult.error || "Payment failed" },
-          { status: 400 }
-        );
-      }
-
-      paymentStatus = "success";
-      paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
-      cardRef = paymentResult.cardRef || null;
-
-      if (isRecurring && !cardRef) {
-        console.warn("Recurring payment processed but no card_ref returned - future charges may fail");
-      }
-    } else if (processor === "square") {
-      // Process payment via Square (backup - tokenized)
-      const paymentResult = await processSquarePayment({
-        sourceId: paymentToken,
-        amount: numericAmount,
-        email,
-        name: cardName || name,
-        description: sponsorship
-          ? `JRE Donation - ${sponsorship}`
-          : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
-      });
-
-      if (!paymentResult.success) {
-        return NextResponse.json(
-          { success: false, error: paymentResult.error || "Payment failed" },
-          { status: 400 }
-        );
-      }
-
-      paymentStatus = "success";
-      paymentReference = paymentResult.transactionId || `sq_${Date.now()}`;
-    } else {
+    if (!paymentResult.success) {
       return NextResponse.json(
-        { success: false, error: "Invalid payment processor" },
+        { success: false, error: paymentResult.error || "Payment failed" },
         { status: 400 }
       );
     }
+
+    const paymentStatus = "success";
+    const paymentReference = paymentResult.transactionId || `bq_${Date.now()}`;
 
     const supabase = createServerClient();
 
@@ -151,8 +106,8 @@ export async function POST(request: NextRequest) {
       message: message || null,
       payment_status: paymentStatus,
       payment_reference: paymentReference,
-      card_ref: cardRef, // Saved card for recurring charges
-      next_charge_date: isRecurring ? getNextChargeDate() : null, // Next charge date
+      card_ref: null,
+      next_charge_date: isRecurring ? getNextChargeDate() : null,
     };
 
     const { data: insertedData, error } = await supabase

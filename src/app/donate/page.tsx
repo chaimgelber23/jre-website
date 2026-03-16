@@ -1,11 +1,10 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Check, CreditCard, ChevronDown, Gift, MessageSquare } from "lucide-react";
+import { Heart, Check, CreditCard, ChevronDown, Gift, MessageSquare, Lock } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
-import CollectJsPayment, { useCollectJs } from "@/components/payment/CollectJsPayment";
 import { FadeUp } from "@/components/ui/motion";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
@@ -34,20 +33,22 @@ export default function DonatePage() {
     sponsorship: "",
     message: "",
     cardName: "",
+    cardNumber: "",
+    cardExpiry: "",
+    cardCvv: "",
   });
-  const [paymentToken, setPaymentToken] = useState<string | null>(null);
-  const [cardValid, setCardValid] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  // Collapsible optional sections
   const [showHonorSection, setShowHonorSection] = useState(false);
   const [showSponsorSection, setShowSponsorSection] = useState(false);
-  // Payment processor: "banquest" (primary) or "square" (backup)
-  const paymentProcessor = "banquest" as const;
 
-  // Banquest tokenization hook
-  const { requestToken } = useCollectJs();
+  // Card field refs for auto-jump
+  const cardNameRef = useRef<HTMLInputElement>(null);
+  const cardNumberRef = useRef<HTMLInputElement>(null);
+  const cardExpiryRef = useRef<HTMLInputElement>(null);
+  const cardCvvRef = useRef<HTMLInputElement>(null);
+  const submitRef = useRef<HTMLButtonElement>(null);
 
   const handleAmountClick = (value: number) => {
     setAmount(value);
@@ -69,26 +70,61 @@ export default function DonatePage() {
     });
   };
 
-  // Handle token received from Collect.js
-  const handleTokenReceived = useCallback((token: string) => {
-    setPaymentToken(token);
-  }, []);
+  // Card formatting helpers (same as event pages)
+  const formatCardNumber = (value: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 16);
+    return digits.replace(/(\d{4})(?=\d)/g, "$1 ");
+  };
 
-  // Handle payment errors from Collect.js
-  const handlePaymentError = useCallback((errorMsg: string) => {
-    setError(errorMsg);
-    setIsSubmitting(false);
-  }, []);
+  const formatExpiry = (value: string, prevValue: string) => {
+    const digits = value.replace(/\D/g, "").slice(0, 4);
+    if (digits.length >= 2 && value.length > prevValue.length) {
+      return digits.slice(0, 2) + "/" + digits.slice(2);
+    }
+    if (digits.length >= 3) {
+      return digits.slice(0, 2) + "/" + digits.slice(2);
+    }
+    return digits;
+  };
 
-  // Handle card validation changes
-  const handleValidationChange = useCallback((isValid: boolean) => {
-    setCardValid(isValid);
-  }, []);
+  const handleCardKeyDown = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    nextRef: React.RefObject<HTMLInputElement | HTMLButtonElement | null> | null
+  ) => {
+    if (e.key === "Enter" && nextRef?.current) {
+      e.preventDefault();
+      nextRef.current.focus();
+    }
+  };
 
-  // Submit form with token
-  const doSubmit = useCallback(async (token: string | null) => {
+  // Submit form with direct card data
+  const doSubmit = useCallback(async () => {
     try {
-      const payload: Record<string, unknown> = {
+      // Validate card fields
+      const cardNum = formState.cardNumber.replace(/\s/g, "");
+      if (!cardNum || cardNum.length < 13) {
+        setError("Please enter a valid card number.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formState.cardExpiry || !formState.cardExpiry.includes("/")) {
+        setError("Please enter the card expiry date (MM/YY).");
+        setIsSubmitting(false);
+        return;
+      }
+      const [mm, yy] = formState.cardExpiry.split("/");
+      if (!mm || !yy || parseInt(mm) < 1 || parseInt(mm) > 12) {
+        setError("Invalid expiry month. Please use MM/YY format.");
+        setIsSubmitting(false);
+        return;
+      }
+      if (!formState.cardCvv || formState.cardCvv.length < 3) {
+        setError("Please enter the CVV.");
+        setIsSubmitting(false);
+        return;
+      }
+
+      const payload = {
         amount,
         isRecurring,
         name: formState.name,
@@ -99,13 +135,10 @@ export default function DonatePage() {
         sponsorship: formState.sponsorship,
         message: formState.message,
         cardName: formState.cardName,
-        paymentProcessor,
+        cardNumber: cardNum,
+        cardExpiry: formState.cardExpiry,
+        cardCvv: formState.cardCvv,
       };
-
-      // Include payment token
-      if (token) {
-        payload.paymentToken = token;
-      }
 
       const response = await fetch("/api/donate", {
         method: "POST",
@@ -126,28 +159,13 @@ export default function DonatePage() {
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, isRecurring, formState, paymentProcessor]);
-
-  // When payment token is received, submit the form
-  useEffect(() => {
-    if (paymentToken && isSubmitting) {
-      doSubmit(paymentToken);
-      setPaymentToken(null); // Reset for next submission
-    }
-  }, [paymentToken, isSubmitting, doSubmit]);
+  }, [amount, isRecurring, formState]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
     setIsSubmitting(true);
-
-    // Tokenize the card first, then submit
-    const tokenStarted = requestToken();
-    if (!tokenStarted) {
-      setError("Payment system not ready. Please try again.");
-      setIsSubmitting(false);
-    }
-    // Token callback will trigger doSubmit via useEffect
+    doSubmit();
   };
 
   if (isSubmitted) {
@@ -415,13 +433,14 @@ export default function DonatePage() {
                   {/* Divider */}
                   <div className="border-t border-gray-200 my-6" />
 
-                  {/* Payment Details */}
+                  {/* Payment Details - Direct Card Input (matches event pages) */}
                   <div className="mb-6">
-                    <div className="flex items-center gap-2 mb-4">
-                      <CreditCard className="w-5 h-5 text-[#EF8046]" />
-                      <h3 className="text-xl font-bold text-gray-900">
-                        Payment
-                      </h3>
+                    <div className="flex items-center justify-between mb-5">
+                      <h3 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase">Payment Details</h3>
+                      <div className="flex items-center gap-1.5 text-xs text-gray-400">
+                        <Lock className="w-3 h-3 text-green-500" />
+                        <span>Secure</span>
+                      </div>
                     </div>
 
                     {error && (
@@ -430,45 +449,117 @@ export default function DonatePage() {
                       </div>
                     )}
 
-                    <div className="space-y-4">
+                    <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80 relative overflow-hidden">
+                      {/* Subtle shimmer on the card form border */}
+                      <motion.div
+                        className="absolute inset-0 rounded-2xl border border-[#EF8046]/20 pointer-events-none"
+                        animate={{ opacity: [0.3, 0.6, 0.3] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut" }}
+                      />
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Name on Card *
-                        </label>
+                        <label className="text-xs text-gray-500 mb-1 block font-medium">Name on Card</label>
                         <input
+                          ref={cardNameRef}
                           type="text"
                           name="cardName"
                           value={formState.cardName}
                           onChange={handleChange}
-                          required
-                          className="w-full px-4 py-2.5 rounded-xl border border-gray-200/80 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
-                          placeholder="Name on card"
+                          onKeyDown={(e) => handleCardKeyDown(e, cardNumberRef)}
+                          className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors"
+                          placeholder="Name on Card"
+                          autoComplete="cc-name"
                         />
                       </div>
-
-                      {/* Banquest Tokenized Payment (PCI Compliant) */}
                       <div>
-                        <label className="block text-sm font-medium text-gray-700 mb-1">
-                          Card Details *
-                        </label>
-                        <CollectJsPayment
-                          onTokenReceived={handleTokenReceived}
-                          onError={handlePaymentError}
-                          onValidationChange={handleValidationChange}
-                          disabled={isSubmitting}
-                        />
+                        <label className="text-xs text-gray-500 mb-1 block font-medium">Card Number</label>
+                        <div className="relative">
+                          <input
+                            ref={cardNumberRef}
+                            type="text"
+                            inputMode="numeric"
+                            value={formState.cardNumber}
+                            onChange={(e) => {
+                              const formatted = formatCardNumber(e.target.value);
+                              setFormState((prev) => ({ ...prev, cardNumber: formatted }));
+                              if (formatted.replace(/\s/g, "").length === 16) {
+                                cardExpiryRef.current?.focus();
+                              }
+                            }}
+                            onKeyDown={(e) => handleCardKeyDown(e, cardExpiryRef)}
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide pr-12"
+                            placeholder="Card Number"
+                            maxLength={19}
+                            autoComplete="cc-number"
+                          />
+                          <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-300" />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry Date</label>
+                          <input
+                            ref={cardExpiryRef}
+                            type="text"
+                            inputMode="numeric"
+                            value={formState.cardExpiry}
+                            onChange={(e) => {
+                              const formatted = formatExpiry(e.target.value, formState.cardExpiry);
+                              setFormState((prev) => ({ ...prev, cardExpiry: formatted }));
+                              if (formatted.length === 5) {
+                                cardCvvRef.current?.focus();
+                              }
+                            }}
+                            onKeyDown={(e) => handleCardKeyDown(e, cardCvvRef)}
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                            placeholder="MM / YY"
+                            maxLength={5}
+                            autoComplete="cc-exp"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Security Code</label>
+                          <input
+                            ref={cardCvvRef}
+                            type="text"
+                            inputMode="numeric"
+                            value={formState.cardCvv}
+                            onChange={(e) => {
+                              const digits = e.target.value.replace(/\D/g, "").slice(0, 4);
+                              setFormState((prev) => ({ ...prev, cardCvv: digits }));
+                            }}
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                submitRef.current?.focus();
+                              }
+                            }}
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                            placeholder="CVV"
+                            maxLength={4}
+                            autoComplete="cc-csc"
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
 
                   {/* Submit Button */}
                   <motion.button
+                    ref={submitRef}
                     type="submit"
                     disabled={!amount || isSubmitting}
-                    whileHover={{ scale: 1.01 }}
-                    whileTap={{ scale: 0.99 }}
-                    className="w-full bg-[#EF8046] text-white py-4 rounded-xl font-bold text-lg flex items-center justify-center gap-2 hover:bg-[#d96a2f] transition-colors disabled:opacity-50 disabled:cursor-not-allowed shadow-md"
+                    whileHover={{ scale: 1.02 }}
+                    whileTap={{ scale: 0.98 }}
+                    className="w-full bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white py-5 rounded-2xl font-bold text-lg flex items-center justify-center gap-2.5 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed shadow-lg relative overflow-hidden"
                   >
+                    {/* Shimmer sweep */}
+                    {!isSubmitting && (
+                      <motion.span
+                        className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                        animate={{ x: ["-150%", "250%"] }}
+                        transition={{ duration: 3, repeat: Infinity, ease: "easeInOut", repeatDelay: 2 }}
+                      />
+                    )}
                     {isSubmitting ? (
                       <>
                         <motion.div
