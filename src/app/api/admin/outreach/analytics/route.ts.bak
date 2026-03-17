@@ -1,0 +1,117 @@
+// @ts-nocheck
+import { NextRequest, NextResponse } from "next/server";
+import { createServerClient } from "@/lib/supabase/server";
+
+// GET /api/admin/outreach/analytics
+// Returns pipeline stats, interaction type breakdown, stage velocity, nobody-left-behind
+export async function GET(request: NextRequest) {
+  const supabase = createServerClient();
+
+  const [
+    { data: contacts },
+    { data: interactions },
+    { data: teamMembers },
+  ] = await Promise.all([
+    supabase.from("outreach_contacts").select("id, stage, gender, assigned_to, updated_at, engagement_score, source, created_at").eq("is_active", true),
+    supabase.from("outreach_interactions").select("id, type, date, contact_id, team_member_id, stage_before, stage_after"),
+    supabase.from("outreach_team_members").select("id, name, gender").eq("is_active", true),
+  ]);
+
+  if (!contacts || !interactions) {
+    return NextResponse.json({ error: "Failed to load data" }, { status: 500 });
+  }
+
+  // --- Pipeline by stage ---
+  const stageCounts: Record<string, number> = {};
+  for (const c of contacts) {
+    stageCounts[c.stage] = (stageCounts[c.stage] || 0) + 1;
+  }
+
+  // --- By gender ---
+  const maleContacts   = contacts.filter((c) => c.gender === "male").length;
+  const femaleContacts = contacts.filter((c) => c.gender === "female").length;
+  const unknownGender  = contacts.filter((c) => c.gender === "unknown").length;
+
+  // --- Nobody left behind: no interaction in 30+ days ---
+  const cutoff30 = new Date();
+  cutoff30.setDate(cutoff30.getDate() - 30);
+  const overdueContacts = contacts.filter(
+    (c) => new Date(c.updated_at) < cutoff30
+  ).length;
+
+  // --- Interaction type breakdown (last 90 days) ---
+  const cutoff90 = new Date();
+  cutoff90.setDate(cutoff90.getDate() - 90);
+  const recentInteractions = (interactions || []).filter(
+    (i) => new Date(i.date) >= cutoff90
+  );
+
+  const typeCounts: Record<string, number> = {};
+  for (const i of recentInteractions) {
+    typeCounts[i.type] = (typeCounts[i.type] || 0) + 1;
+  }
+
+  // --- Team activity (interactions per member, last 30 days) ---
+  const cutoff30i = new Date();
+  cutoff30i.setDate(cutoff30i.getDate() - 30);
+  const monthInteractions = (interactions || []).filter(
+    (i) => new Date(i.date) >= cutoff30i
+  );
+
+  const teamActivity = (teamMembers || []).map((m) => ({
+    id:           m.id,
+    name:         m.name,
+    gender:       m.gender,
+    interactions: monthInteractions.filter((i) => i.team_member_id === m.id).length,
+    contacts:     contacts.filter((c) => c.assigned_to === m.id).length,
+  }));
+
+  // --- What's working: conversion rates by interaction type ---
+  // For each interaction that was followed by a stage advance, count it
+  const stageAdvances: Record<string, number> = {};
+  const stageAttempts: Record<string, number> = {};
+  for (const i of interactions || []) {
+    if (i.stage_before && i.stage_after && i.stage_before !== i.stage_after) {
+      stageAttempts[i.type] = (stageAttempts[i.type] || 0) + 1;
+      stageAdvances[i.type] = (stageAdvances[i.type] || 0) + 1;
+    } else if (i.type) {
+      stageAttempts[i.type] = (stageAttempts[i.type] || 0) + 1;
+    }
+  }
+  const conversionRates = Object.entries(stageAttempts).map(([type, total]) => ({
+    type,
+    total,
+    advances: stageAdvances[type] || 0,
+    rate: total > 0 ? Math.round(((stageAdvances[type] || 0) / total) * 100) : 0,
+  })).sort((a, b) => b.rate - a.rate);
+
+  // --- Sources breakdown ---
+  const sourceCounts: Record<string, number> = {};
+  for (const c of contacts) {
+    sourceCounts[c.source || "manual"] = (sourceCounts[c.source || "manual"] || 0) + 1;
+  }
+
+  // --- New contacts last 30 days ---
+  const newLast30 = contacts.filter(
+    (c) => new Date(c.created_at) >= cutoff30i
+  ).length;
+
+  return NextResponse.json({
+    pipeline: {
+      stageCounts,
+      total: contacts.length,
+      maleContacts,
+      femaleContacts,
+      unknownGender,
+      overdueContacts,
+      newLast30,
+    },
+    interactions: {
+      typeCounts,
+      totalLast90Days: recentInteractions.length,
+      conversionRates,
+    },
+    team: teamActivity,
+    sources: sourceCounts,
+  });
+}
