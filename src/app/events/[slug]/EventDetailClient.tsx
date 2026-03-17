@@ -546,7 +546,7 @@ export default function EventDetailClient({
   }
 
   return (
-    <main className="min-h-screen bg-[#FBFBFB]" style={themeVars}>
+    <main className="min-h-screen bg-[#FBFBFB] overflow-x-hidden" style={themeVars}>
       <Header />
 
       {/* Hero Section */}
