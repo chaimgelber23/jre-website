@@ -3,13 +3,15 @@
  * Handles couples ("Mark & Kirsti Pesso"), sets engagement scores,
  * and assigns pipeline stages based on giving history.
  */
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createRequire } from 'module';
 import { createClient } from '@supabase/supabase-js';
 const require = createRequire(import.meta.url);
 const XLSX = require('xlsx');
 
 const SUPABASE_URL = 'https://yhckumlsxrvfvtwrluge.supabase.co';
-const SERVICE_KEY  = '';
+const SERVICE_KEY  = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
 const MALE_NAMES = new Set(['aaron','adam','alan','alex','andrew','andy','ari','ariel','asher','barry','ben','benjamin','brad','brian','bruce','carl','charles','chris','daniel','dave','david','dean','donald','doug','eli','eric','ethan','evan','frank','fred','gabe','gary','george','greg','harold','howard','isaac','jack','jacob','james','jason','jay','jeff','jeffrey','jeremy','joel','jonathan','josh','joshua','kenneth','kevin','larry','marc','mark','martin','matt','michael','mitch','mordechai','moshe','nathan','neil','noah','paul','peter','philip','randy','richard','robert','ron','ross','russel','ryan','sam','scott','sean','seth','shim','simon','sol','stanley','steve','steven','thomas','tim','todd','tom','warren','william','yehuda','zev','zusha','mitch','kenny','nechemia','zeev','menachem','avi','dov','eliyahu','gavriel','yitzchak','yosef','javier','bryan','adam','joel','joel','ouri','ravid','zev']);

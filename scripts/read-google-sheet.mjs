@@ -2,6 +2,8 @@
  * Read the JRE outreach Google Sheet and extract all contacts
  * Sheet: https://docs.google.com/spreadsheets/d/1NUOQLTodMTgl6zABdInE7RP5yfehYxKABCwaH5CUg0I
  */
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { google } from 'googleapis';
 
 const SHEET_ID = '1NUOQLTodMTgl6zABdInE7RP5yfehYxKABCwaH5CUg0I';
@@ -9,34 +11,7 @@ const SHEET_ID = '1NUOQLTodMTgl6zABdInE7RP5yfehYxKABCwaH5CUg0I';
 const auth = new google.auth.GoogleAuth({
   credentials: {
     client_email: 'jresignuptosheets@jresignuptosheets.iam.gserviceaccount.com',
-    private_key: `-----BEGIN PRIVATE KEY-----
-GOOGLE_PRIVATE_KEY_REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
-REMOVED
------END PRIVATE KEY-----`,
+    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   },
   scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
 });

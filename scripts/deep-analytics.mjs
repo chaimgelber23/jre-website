@@ -1,8 +1,10 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 
 const s = createClient(
   'https://yhckumlsxrvfvtwrluge.supabase.co',
-  ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 async function fetchAll() {

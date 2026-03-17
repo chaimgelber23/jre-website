@@ -2,12 +2,14 @@
  * Second pass — read the additional tabs we skipped from the JRE Google Sheet
  * These are newer 2024-2025 events not initially mapped.
  */
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { google } from 'googleapis';
 import { createClient } from '@supabase/supabase-js';
 
 const SHEET_ID = '1NUOQLTodMTgl6zABdInE7RP5yfehYxKABCwaH5CUg0I';
 const SUPABASE_URL = 'https://yhckumlsxrvfvtwrluge.supabase.co';
-const SERVICE_KEY = '';
+const SERVICE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);
 
@@ -60,7 +62,7 @@ function extractContact(row) {
 const auth = new google.auth.GoogleAuth({
   credentials: {
     client_email: 'jresignuptosheets@jresignuptosheets.iam.gserviceaccount.com',
-    private_key: `-----BEGIN PRIVATE KEY-----\nGOOGLE_PRIVATE_KEY_REMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\nREMOVED\n-----END PRIVATE KEY-----`,
+    private_key: process.env.GOOGLE_PRIVATE_KEY?.replace(/\\n/g, "\n"),
   },
   scopes: ['https://www.googleapis.com/auth/spreadsheets.readonly'],
 });

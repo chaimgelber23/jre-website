@@ -1,3 +1,5 @@
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createRequire } from 'module';
 import { createClient } from '@supabase/supabase-js';
 const require = createRequire(import.meta.url);
@@ -5,7 +7,7 @@ const XLSX = require('xlsx');
 
 const supabase = createClient(
   'https://yhckumlsxrvfvtwrluge.supabase.co',
-  ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 function parseFirstName(first) {

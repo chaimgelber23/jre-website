@@ -2,11 +2,13 @@
  * Import Constant Contact CSV export into the outreach CRM.
  * Detects gender from first name, cleans data, deduplicates by email.
  */
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 import { readFileSync } from 'fs';
 
 const SUPABASE_URL  = 'https://yhckumlsxrvfvtwrluge.supabase.co';
-const SERVICE_KEY   = '';
+const SERVICE_KEY   = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const CSV_PATH      = 'C:/Users/chaim/Downloads/contact_export_1102986889166_031126_120719.csv';
 
 const supabase = createClient(SUPABASE_URL, SERVICE_KEY);

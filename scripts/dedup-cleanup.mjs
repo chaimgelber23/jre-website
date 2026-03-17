@@ -1,11 +1,13 @@
 /**
  * Full deduplication — by email AND by name (for Banquest contacts with no email).
  */
+import dotenv from 'dotenv';
+dotenv.config({ path: '.env.local' });
 import { createClient } from '@supabase/supabase-js';
 
 const supabase = createClient(
   'https://yhckumlsxrvfvtwrluge.supabase.co',
-  ''
+  process.env.SUPABASE_SERVICE_ROLE_KEY
 );
 
 // Source priority — higher = keep
