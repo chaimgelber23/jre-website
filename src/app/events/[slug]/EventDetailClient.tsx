@@ -788,14 +788,19 @@ export default function EventDetailClient({
                         ${event.price_per_adult}
                       </span>
                     </div>
-                    {event.kids_price > 0 && (
+                    {event.kids_price > 0 ? (
                       <div className="flex justify-between items-center py-2">
                         <span className="text-gray-600">Per child</span>
                         <span className="font-semibold text-gray-900">
                           ${event.kids_price}
                         </span>
                       </div>
-                    )}
+                    ) : /kid/i.test(event.description || "") ? (
+                      <div className="flex justify-between items-center py-2 border-t border-gray-200">
+                        <span className="text-gray-600">Kids</span>
+                        <span className="font-semibold text-[var(--theme-primary)]">FREE</span>
+                      </div>
+                    ) : null}
                   </div>
                 </div>
 
