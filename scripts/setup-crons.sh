@@ -8,8 +8,8 @@
 #     bash scripts/setup-crons.sh
 # ============================================================================
 
-API_KEY="${CRON_JOB_ORG_API_KEY:-YumdGZ68vHCOy+m0l6O/SlDox/vfJBizoS98a72NAng=}"
-CRON_SECRET="${CRON_SECRET:-09a605fb3aa8df6892960eb6d5dea432f26999239d3f8e54909ea0285b43bf17}"
+API_KEY="${CRON_JOB_ORG_API_KEY:?set CRON_JOB_ORG_API_KEY in env}"
+CRON_SECRET="${CRON_SECRET:?set CRON_SECRET in env}"
 BASE_URL="${BASE_URL:-https://thejre.org}"
 
 create_cron() {
