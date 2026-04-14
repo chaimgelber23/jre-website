@@ -34,6 +34,7 @@
 /* Smooth scrolling */
 html {
   scroll-behavior: smooth;
+  overflow-x: clip;
 }
 
 body {
@@ -42,6 +43,17 @@ body {
   font-family: "Poppins", sans-serif;
   line-height: 1.7;
   font-size: 16px;
+  overflow-x: clip;
+  width: 100%;
+  position: relative;
+}
+
+/* Prevent any descendant from forcing horizontal overflow on mobile */
+@media (max-width: 1024px) {
+  main, section, header, footer {
+    max-width: 100%;
+    overflow-x: clip;
+  }
 }
 
 /* Custom scrollbar */

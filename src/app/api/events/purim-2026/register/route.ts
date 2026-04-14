@@ -5,6 +5,7 @@ import { processDirectCardPayment } from "@/lib/banquest";
 // KEPT FOR FALLBACK: Hosted Tokenization (has expiry encoding bug as of Feb 2026)
 // import { processTokenizedPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
+import { syncContactToConstantContact } from "@/lib/constant-contact";
 import { appendEventRegistration, type EventSheetConfig, type EventRegistrationRow } from "@/lib/google-sheets/event-sheets";
 
 // Purim event details (fallback if not in Supabase)
@@ -372,6 +373,19 @@ export async function POST(request: NextRequest) {
     } catch (emailError) {
       console.error("Failed to send confirmation email:", emailError);
       // Don't fail the registration if email fails
+    }
+
+    // Sync contact to Constant Contact (non-blocking)
+    try {
+      await syncContactToConstantContact({
+        email,
+        name,
+        phone: phone || undefined,
+        eventTitle: PURIM_EVENT.title,
+        eventType: "mens", // Purim event is mixed but defaults to general
+      });
+    } catch (ccError) {
+      console.error("Constant Contact sync error:", ccError);
     }
 
     return NextResponse.json({

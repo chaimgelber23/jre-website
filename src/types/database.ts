@@ -329,6 +329,62 @@ export interface Database {
           updated_at?: string;
         };
       };
+      personal_contacts: {
+        Row: {
+          id: string;
+          name: string;
+          phone: string | null;
+          email: string | null;
+          how_met: string;
+          location: string | null;
+          notes: string | null;
+          follow_up: string | null;
+          date_met: string;
+          jewish_background: string | null;
+          spouse_name: string | null;
+          kids: string | null;
+          interests: string | null;
+          is_active: boolean;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          name: string;
+          phone?: string | null;
+          email?: string | null;
+          how_met?: string;
+          location?: string | null;
+          notes?: string | null;
+          follow_up?: string | null;
+          date_met?: string;
+          jewish_background?: string | null;
+          spouse_name?: string | null;
+          kids?: string | null;
+          interests?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          name?: string;
+          phone?: string | null;
+          email?: string | null;
+          how_met?: string;
+          location?: string | null;
+          notes?: string | null;
+          follow_up?: string | null;
+          date_met?: string;
+          jewish_background?: string | null;
+          spouse_name?: string | null;
+          kids?: string | null;
+          interests?: string | null;
+          is_active?: boolean;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
       outreach_team_members: {
         Row: {
           id: string;

@@ -212,7 +212,7 @@ export default function EventDetailClient({
   const total = promoApplied ? 0 : (sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal);
 
   // For free events, every tier is eligible; otherwise sponsorship must be $180+ above cover
-  const isFreeEvent = event.price_per_adult === 0 && event.kids_price === 0;
+  const isFreeEvent = !!event && event.price_per_adult === 0 && event.kids_price === 0;
   const eligibleSponsorships = isFreeEvent
     ? sponsorships
     : sponsorships.filter(s => s.price >= baseTotal + 180);
