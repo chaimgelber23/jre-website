@@ -27,6 +27,12 @@ export async function GET(
 
     const event = eventData as Event;
 
+    // Split description on |||EMAIL||| delimiter — anything after is email-only (e.g. Zoom access block)
+    if (event.description && event.description.includes("|||EMAIL|||")) {
+      const [publicPart] = event.description.split("|||EMAIL|||");
+      event.description = publicPart.trim();
+    }
+
     // Get sponsorship tiers for this event
     const { data: sponsorshipsData } = await supabase
       .from("event_sponsorships")

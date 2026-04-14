@@ -33,6 +33,7 @@ interface RegistrationEmailData {
   eventTime: string;
   eventLocation: string;
   eventImageUrl?: string | null;
+  emailExtraHtml?: string | null;
   adults: number;
   kids: number;
   total: number;
@@ -316,6 +317,8 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                                 </td>
                               </tr>
                             </table>
+
+                            ${data.emailExtraHtml ? data.emailExtraHtml : ""}
 
                             <!-- Registration Summary -->
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fafafa; border-radius: 8px; padding: 24px; margin: 0 0 40px;">

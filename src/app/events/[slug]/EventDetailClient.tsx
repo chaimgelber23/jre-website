@@ -211,8 +211,11 @@ export default function EventDetailClient({
     : 0;
   const total = promoApplied ? 0 : (sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal);
 
-  // Only show sponsorships that are at least $180 above the registrant's cover total
-  const eligibleSponsorships = sponsorships.filter(s => s.price >= baseTotal + 180);
+  // For free events, every tier is eligible; otherwise sponsorship must be $180+ above cover
+  const isFreeEvent = event.price_per_adult === 0 && event.kids_price === 0;
+  const eligibleSponsorships = isFreeEvent
+    ? sponsorships
+    : sponsorships.filter(s => s.price >= baseTotal + 180);
   // Lowest eligible tier for upsell nudge (sponsorships come sorted desc by price, so last = cheapest)
   const lowestEligible = eligibleSponsorships.length > 0
     ? eligibleSponsorships[eligibleSponsorships.length - 1]
@@ -558,7 +561,7 @@ export default function EventDetailClient({
         <h1 className="sr-only">{event.title}</h1>
 
         {/* Image / Placeholder area */}
-        <div className={`relative ${hasEventImage ? "h-[85vh] min-h-[600px] overflow-hidden" : "h-[65vh] min-h-[480px]"}`}>
+        <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[50vh] min-h-[360px] md:h-[65vh] md:min-h-[480px]"}`}>
           {hasEventImage ? (
             <>
               {/* Blurred Background */}
@@ -573,7 +576,7 @@ export default function EventDetailClient({
                 <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
               </div>
               {/* Foreground flyer — floating card */}
-              <div className="absolute inset-0 z-10 p-4 pt-16 pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
+              <div className="absolute inset-0 z-10 p-3 pt-14 pb-24 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
                 <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
                   <Image
                     src={eventImage}
@@ -622,7 +625,7 @@ export default function EventDetailClient({
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
                   transition={{ delay: 0.2 }}
-                  className="flex flex-wrap items-center justify-center gap-x-6 gap-y-2 mb-5"
+                  className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:gap-x-6 mb-4 md:mb-5"
                 >
                   <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
                     <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
@@ -785,7 +788,7 @@ export default function EventDetailClient({
                     <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
                       <span className="text-gray-600">Per person</span>
                       <span className="font-semibold text-gray-900">
-                        ${event.price_per_adult}
+                        {event.price_per_adult === 0 ? "Free" : `$${event.price_per_adult}`}
                       </span>
                     </div>
                     {event.kids_price > 0 ? (
@@ -795,12 +798,12 @@ export default function EventDetailClient({
                           ${event.kids_price}
                         </span>
                       </div>
-                    ) : /kid/i.test(event.description || "") ? (
+                    ) : (
                       <div className="flex justify-between items-center py-2 border-t border-gray-200">
                         <span className="text-gray-600">Kids</span>
-                        <span className="font-semibold text-[var(--theme-primary)]">FREE</span>
+                        <span className="font-semibold text-gray-900">FREE</span>
                       </div>
-                    ) : null}
+                    )}
                   </div>
                 </div>
 
@@ -931,7 +934,7 @@ export default function EventDetailClient({
                         <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                           <div>
                             <span className="text-gray-800 text-sm font-medium">Adults</span>
-                            <span className="text-gray-400 text-xs ml-1.5">${event.price_per_adult} each</span>
+                            <span className="text-gray-400 text-xs ml-1.5">{event.price_per_adult === 0 ? "free" : `$${event.price_per_adult} each`}</span>
                           </div>
                           <div className="flex items-center gap-4">
                             <button
@@ -951,14 +954,13 @@ export default function EventDetailClient({
                             </button>
                           </div>
                         </div>
-                        {(event.kids_price > 0 || /kid/i.test(event.description || "")) && (
-                          <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
-                            <div>
-                              <span className="text-gray-800 text-sm font-medium">Kids</span>
-                              <span className="text-gray-400 text-xs ml-1.5">
-                                {event.kids_price > 0 ? `$${event.kids_price} each` : "free"}
-                              </span>
-                            </div>
+                        <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
+                          <div>
+                            <span className="text-gray-800 text-sm font-medium">Kids</span>
+                            <span className="text-gray-400 text-xs ml-1.5">
+                              {event.kids_price > 0 ? `$${event.kids_price} each` : "free"}
+                            </span>
+                          </div>
                             <div className="flex items-center gap-4">
                               <button
                                 type="button"
@@ -977,7 +979,6 @@ export default function EventDetailClient({
                               </button>
                             </div>
                           </div>
-                        )}
                       </div>
 
                       {/* Guest details for additional adults */}

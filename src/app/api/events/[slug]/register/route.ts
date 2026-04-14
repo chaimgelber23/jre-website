@@ -5,6 +5,7 @@ import { appendEventRegistration, slugToSheetName, type EventSheetConfig, type E
 // import { processSquarePayment } from "@/lib/square";
 import { processDirectCardPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
+import { syncContactToConstantContact } from "@/lib/constant-contact";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
 /** Convert 24-hour time (e.g. "19:30:00") to 12-hour (e.g. "7:30 PM") */
@@ -247,7 +248,10 @@ export async function POST(
       allAttendees = parts.join(" ");
     }
 
-    const taxDeductible = sponsorshipName ? Math.max(0, sponsorshipPrice - sponsorshipFMV) : undefined;
+    // FMV = what the sponsor actually receives (seats for their attendees)
+    // Tax deductible = sponsorship price minus FMV
+    const attendeeFMV = (numAdults * event.price_per_adult) + (numKids * event.kids_price);
+    const taxDeductible = sponsorshipName ? Math.max(0, sponsorshipPrice - attendeeFMV) : undefined;
 
     const sheetName = slugToSheetName(slug);
     const rowData: EventRegistrationRow = {
@@ -261,7 +265,7 @@ export async function POST(
       allAttendees,
       sponsorshipName: sponsorshipName || "",
       sponsorshipAmount: sponsorshipPrice,
-      fairMarketValue: sponsorshipFMV,
+      fairMarketValue: sponsorshipName ? attendeeFMV : 0,
       taxDeductible: taxDeductible ?? 0,
       total: subtotal,
       paymentMethod: promoApplied ? "promo" : (body.paymentMethod || "online"),
@@ -299,6 +303,9 @@ export async function POST(
         eventTime: formatEventTime(event.start_time, event.end_time),
         eventLocation: event.location || "See event details",
         eventImageUrl: event.image_url || null,
+        emailExtraHtml: (event.description && event.description.includes("|||EMAIL|||"))
+          ? event.description.split("|||EMAIL|||").slice(1).join("|||EMAIL|||").trim()
+          : null,
         adults: numAdults,
         kids: numKids,
         total: subtotal,
@@ -310,6 +317,19 @@ export async function POST(
       console.log("Email send result:", JSON.stringify(emailResult));
     } catch (emailError) {
       console.error("Failed to send confirmation email:", emailError);
+    }
+
+    // Sync contact to Constant Contact (non-blocking — don't fail registration if CC is down)
+    try {
+      await syncContactToConstantContact({
+        email,
+        name,
+        phone: normalizedPhone || undefined,
+        eventTitle: event.title,
+        eventType: (event as Record<string, unknown>).theme_color === "womens" ? "womens" : "mens",
+      });
+    } catch (ccError) {
+      console.error("Constant Contact sync error:", ccError);
     }
 
     return NextResponse.json({
