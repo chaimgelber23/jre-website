@@ -951,12 +951,12 @@ export default function EventDetailClient({
                             </button>
                           </div>
                         </div>
-                        {event.kids_price > 0 && (
+                        {(event.kids_price > 0 || /kid/i.test(event.description || "")) && (
                           <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
                             <div>
                               <span className="text-gray-800 text-sm font-medium">Kids</span>
                               <span className="text-gray-400 text-xs ml-1.5">
-                                ${event.kids_price} each
+                                {event.kids_price > 0 ? `$${event.kids_price} each` : "free"}
                               </span>
                             </div>
                             <div className="flex items-center gap-4">
