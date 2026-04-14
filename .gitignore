@@ -48,3 +48,7 @@ next-env.d.ts
 .env.check
 .env.vercel
 .env*.local
+
+# Binary tools (installed system-wide, not source)
+scripts/*.exe
+Lib/

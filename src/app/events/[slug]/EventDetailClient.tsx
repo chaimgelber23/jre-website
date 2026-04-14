@@ -700,7 +700,7 @@ export default function EventDetailClient({
       {/* Content */}
       <section className="pt-12 pb-24 bg-white relative">
         <div className="container mx-auto px-6 relative z-10">
-          <div className="grid lg:grid-cols-5 gap-10">
+          <div className="grid grid-cols-1 lg:grid-cols-5 gap-10">
             {/* Event Details - Left Column */}
             <div className="lg:col-span-3">
               <motion.div
