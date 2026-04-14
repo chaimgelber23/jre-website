@@ -791,17 +791,12 @@ export default function EventDetailClient({
                         {event.price_per_adult === 0 ? "Free" : `$${event.price_per_adult}`}
                       </span>
                     </div>
-                    {event.kids_price > 0 ? (
+                    {event.kids_price > 0 && (
                       <div className="flex justify-between items-center py-2">
                         <span className="text-gray-600">Per child</span>
                         <span className="font-semibold text-gray-900">
                           ${event.kids_price}
                         </span>
-                      </div>
-                    ) : (
-                      <div className="flex justify-between items-center py-2 border-t border-gray-200">
-                        <span className="text-gray-600">Kids</span>
-                        <span className="font-semibold text-gray-900">FREE</span>
                       </div>
                     )}
                   </div>
@@ -954,13 +949,14 @@ export default function EventDetailClient({
                             </button>
                           </div>
                         </div>
-                        <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
-                          <div>
-                            <span className="text-gray-800 text-sm font-medium">Kids</span>
-                            <span className="text-gray-400 text-xs ml-1.5">
-                              {event.kids_price > 0 ? `$${event.kids_price} each` : "free"}
-                            </span>
-                          </div>
+                        {event.kids_price > 0 && (
+                          <div className="flex items-center justify-between bg-[#FAFAFA] rounded-xl px-5 py-4">
+                            <div>
+                              <span className="text-gray-800 text-sm font-medium">Kids</span>
+                              <span className="text-gray-400 text-xs ml-1.5">
+                                ${event.kids_price} each
+                              </span>
+                            </div>
                             <div className="flex items-center gap-4">
                               <button
                                 type="button"
@@ -979,6 +975,7 @@ export default function EventDetailClient({
                               </button>
                             </div>
                           </div>
+                        )}
                       </div>
 
                       {/* Guest details for additional adults */}
