@@ -119,7 +119,7 @@ export default function Event2Page() {
         {/* Blurred background */}
         <div className="absolute inset-0 overflow-hidden">
           <Image
-            src="/images/events/bat-mitzvah-now-what.jpg"
+            src="/images/events/bat-mitzvah-now-what-2.png"
             alt=""
             fill
             className="object-cover blur-xl scale-110 opacity-40"
@@ -137,7 +137,7 @@ export default function Event2Page() {
             className="w-full max-w-sm rounded-2xl overflow-hidden shadow-2xl ring-1 ring-white/10"
           >
             <Image
-              src="/images/events/bat-mitzvah-now-what.jpg"
+              src="/images/events/bat-mitzvah-now-what-2.png"
               alt="I Had My Bat Mitzvah, Now What?"
               width={500}
               height={700}
