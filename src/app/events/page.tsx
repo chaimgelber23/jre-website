@@ -48,16 +48,30 @@ function eventToDisplay(event: Event, isFeatured: boolean, isPast = false): Disp
     ? !!event.image_url && /-(photo|recap|gallery)/.test(event.image_url)
     : !!event.image_url;
 
+  // Parse description markers used by multi-session events:
+  //   |||DATES|||...  → display-date override for the listing card
+  //   |||EMAIL|||...  → email-only block (never shown on listing)
+  let rawDesc = event.description || "";
+  let displayDateOverride: string | null = null;
+  if (rawDesc.includes("|||EMAIL|||")) {
+    rawDesc = rawDesc.substring(0, rawDesc.indexOf("|||EMAIL|||")).trim();
+  }
+  if (rawDesc.includes("|||DATES|||")) {
+    const idx = rawDesc.indexOf("|||DATES|||");
+    displayDateOverride = rawDesc.substring(idx + "|||DATES|||".length).trim();
+    rawDesc = rawDesc.substring(0, idx).trim();
+  }
+
   return {
     id: event.slug,
     title: event.title,
-    date: formatEventDate(event.date),
+    date: displayDateOverride || formatEventDate(event.date),
     time: formatEventTime(event.start_time, event.end_time),
     location: event.location || "See event details",
     price: event.price_per_adult,
     image: hasPostEventPhoto ? (event.image_url || "") : "",
     hasImage: hasPostEventPhoto,
-    description: event.description || "",
+    description: rawDesc,
     featured: isFeatured,
     themeColor: event.theme_color,
   };
