@@ -1274,7 +1274,8 @@ export default function EventDetailClient({
                       )}
                     </div>
 
-                    {/* Promo Code */}
+                    {/* Promo Code — only shown when there's actually something to discount */}
+                    {total > 0 && (
                     <div className="pt-4">
                       <button
                         type="button"
@@ -1343,6 +1344,7 @@ export default function EventDetailClient({
                         </motion.div>
                       )}
                     </div>
+                    )}
 
                     {/* Payment — Credit Card Only. Hidden when total is $0 (free registration, no sponsorship selected) */}
                     {!promoApplied && total > 0 && (
