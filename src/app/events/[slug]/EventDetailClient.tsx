@@ -287,8 +287,8 @@ export default function EventDetailClient({
         promoCode: promoApplied ? promoCode : undefined,
       };
 
-      // Include card data for online payment (skip if promo covers it)
-      if (paymentMethod === "online" && !promoApplied) {
+      // Include card data for online payment (skip if promo covers it or total is $0)
+      if (paymentMethod === "online" && !promoApplied && total > 0) {
         payload.cardName = formState.cardName;
         payload.cardNumber = formState.cardNumber.replace(/\s/g, "");
         payload.cardExpiry = formState.cardExpiry;
@@ -320,8 +320,9 @@ export default function EventDetailClient({
     e.preventDefault();
     setError("");
 
-    // Skip card validation if promo code covers full amount
-    if (!promoApplied) {
+    // Skip card validation if promo code covers full amount OR total is $0
+    // (free registration with no sponsorship selected — no payment needed)
+    if (!promoApplied && total > 0) {
       // Validate card fields (credit card only)
       const cardNum = formState.cardNumber.replace(/\s/g, "");
       if (cardNum.length < 14) {
@@ -1343,8 +1344,8 @@ export default function EventDetailClient({
                       )}
                     </div>
 
-                    {/* Payment — Credit Card Only */}
-                    {!promoApplied && (
+                    {/* Payment — Credit Card Only. Hidden when total is $0 (free registration, no sponsorship selected) */}
+                    {!promoApplied && total > 0 && (
                     <div className="pt-6 border-t border-gray-100/80">
                       <div className="flex items-center justify-between mb-5">
                         <h4 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase">Payment Details</h4>
