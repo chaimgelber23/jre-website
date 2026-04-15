@@ -423,7 +423,9 @@ export default function EventDetailClient({
     );
   }
 
-  const eventDate = formatDate(event.date);
+  // If the event API returned a display_date override (multi-session events), use that verbatim
+  const displayDateOverride = (event as { display_date?: string | null }).display_date;
+  const eventDate = displayDateOverride || formatDate(event.date);
   const eventTime = formatTime(event.start_time, event.end_time);
   const hasEventImage = !!event.image_url && !imageError;
   const eventImage = event.image_url || "";

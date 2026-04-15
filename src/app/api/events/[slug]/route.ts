@@ -27,11 +27,22 @@ export async function GET(
 
     const event = eventData as Event;
 
-    // Split description on |||EMAIL||| delimiter — anything after is email-only (e.g. Zoom access block)
-    if (event.description && event.description.includes("|||EMAIL|||")) {
-      const [publicPart] = event.description.split("|||EMAIL|||");
-      event.description = publicPart.trim();
+    // Parse description markers:
+    //   |||DATES|||...   → displayDate override (shown instead of formatted event.date)
+    //   |||EMAIL|||...   → email-only HTML (stripped from public page, used by confirmation email)
+    let desc = event.description || "";
+    let displayDate: string | null = null;
+    if (desc.includes("|||EMAIL|||")) {
+      const idx = desc.indexOf("|||EMAIL|||");
+      desc = desc.substring(0, idx).trim();
     }
+    if (desc.includes("|||DATES|||")) {
+      const idx = desc.indexOf("|||DATES|||");
+      displayDate = desc.substring(idx + "|||DATES|||".length).trim();
+      desc = desc.substring(0, idx).trim();
+    }
+    event.description = desc;
+    (event as Event & { display_date?: string | null }).display_date = displayDate;
 
     // Get sponsorship tiers for this event
     const { data: sponsorshipsData } = await supabase

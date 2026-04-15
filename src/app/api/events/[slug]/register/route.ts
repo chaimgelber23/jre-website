@@ -292,6 +292,13 @@ export async function POST(
         name,
         eventTitle: event.title,
         eventDate: (() => {
+          // If description carries a |||DATES||| override (multi-session events), use it in the email
+          const desc = event.description || "";
+          if (desc.includes("|||DATES|||")) {
+            const afterDates = desc.substring(desc.indexOf("|||DATES|||") + "|||DATES|||".length);
+            const override = afterDates.split("|||EMAIL|||")[0].trim();
+            if (override) return override;
+          }
           const [y, m, d] = event.date.split("-").map(Number);
           return new Date(y, m - 1, d).toLocaleDateString("en-US", {
             weekday: "long",
