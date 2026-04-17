@@ -51,4 +51,4 @@ next-env.d.ts
 
 # Binary tools (installed system-wide, not source)
 scripts/*.exe
-Lib/
+/Lib/
