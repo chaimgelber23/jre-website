@@ -10,6 +10,7 @@ const tabs = [
   { name: "People", href: "/admin/people" },
   { name: "Gallery", href: "/admin/gallery" },
   { name: "Outreach", href: "/admin/outreach" },
+  { name: "Secretary", href: "/admin/secretary" },
 ];
 
 export default function AdminTabs() {

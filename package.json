@@ -8,10 +8,15 @@
     "start": "next start",
     "lint": "eslint",
     "mcp:build": "tsc mcp/outreach-server.ts --outDir mcp/dist --module commonjs --target es2020 --esModuleInterop --resolveJsonModule --skipLibCheck",
-    "mcp:dev": "npx ts-node --esm mcp/outreach-server.ts"
+    "mcp:dev": "npx ts-node --esm mcp/outreach-server.ts",
+    "seed:jre-speakers": "tsx scripts/seed-jre-speakers.ts",
+    "seed:jre-speaker-contacts": "tsx scripts/seed-jre-speaker-contacts.ts",
+    "seed:jre-cc-history": "tsx scripts/seed-jre-cc-history.ts",
+    "seed:jre-all": "npm run seed:jre-speakers && npm run seed:jre-speaker-contacts && npm run seed:jre-cc-history"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.78.0",
+    "@hebcal/core": "^5.10.1",
     "@modelcontextprotocol/sdk": "^1.27.1",
     "@supabase/supabase-js": "^2.94.1",
     "canvas-confetti": "^1.9.4",
@@ -36,6 +41,7 @@
     "eslint": "^9",
     "eslint-config-next": "16.1.6",
     "tailwindcss": "^4",
+    "tsx": "^4.21.0",
     "typescript": "^5",
     "xlsx": "^0.18.5"
   }
