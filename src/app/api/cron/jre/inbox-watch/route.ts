@@ -24,6 +24,7 @@ import {
 } from "@/lib/db/secretary";
 import { sendTelegram } from "@/lib/telegram/sender";
 import { createClient } from "@supabase/supabase-js";
+import { listOpenMoneyOwed, markMoneyOwedPaid } from "@/lib/secretary/money-owed";
 
 export const maxDuration = 60;
 
@@ -94,13 +95,85 @@ If this is NOT a speaker confirmation (or is ambiguous), return exactly: NONE`,
   }
 }
 
+/**
+ * Parse a payer's reply (e.g. Elisheva or Yossi) to figure out which open
+ * money_owed items they paid. Returns array of {id, paid:true} matches.
+ *
+ *   "paid all"             → mark every open item paid
+ *   "paid Yocheved"        → fuzzy match by recipient_name
+ *   "Yocheved done"        → same
+ *   "1, 3 done"            → mark items 1 and 3 from the original digest
+ *
+ * Falls back to fuzzy substring matching if Claude unavailable.
+ */
+async function parsePaidReply(
+  body: string,
+  openItems: Array<{ id: string; recipient_name: string; amount_usd: number }>
+): Promise<string[]> {
+  if (openItems.length === 0) return [];
+  const lc = body.toLowerCase();
+
+  // Cheap "paid all" detection first
+  if (/\bpaid (all|everything|them all|both)\b/.test(lc) || /\ball (sent|paid|done|zelled)\b/.test(lc)) {
+    return openItems.map((i) => i.id);
+  }
+
+  // Try fuzzy substring match per item
+  const matched: string[] = [];
+  for (const item of openItems) {
+    const firstName = item.recipient_name.split(/\s+/)[0].toLowerCase();
+    const fullName = item.recipient_name.toLowerCase();
+    if (lc.includes(fullName) || (firstName.length >= 4 && lc.includes(firstName))) {
+      matched.push(item.id);
+    }
+  }
+  if (matched.length > 0) return matched;
+
+  // Fall back to Claude Haiku for ambiguous cases
+  const key = process.env.ANTHROPIC_API_KEY;
+  if (!key) return [];
+  try {
+    const client = new Anthropic({ apiKey: key });
+    const itemList = openItems.map((i, idx) => `${idx + 1}. ${i.recipient_name} ($${i.amount_usd})`).join("\n");
+    const res = await client.messages.create(
+      {
+        model: "claude-haiku-4-5-20251001",
+        max_tokens: 200,
+        messages: [
+          {
+            role: "user",
+            content: `Gitty sent a Zelle digest with these open payments:
+${itemList}
+
+The payer replied:
+"""
+${body.slice(0, 2000)}
+"""
+
+Which items did they pay? Return ONLY a JSON array of 1-based indexes (e.g. [1,3]) or [] if none. Return [0] if they said "all" or "everything".`,
+          },
+        ],
+      },
+      { timeout: 15_000 }
+    );
+    const text = res.content.map((b) => (b.type === "text" ? b.text : "")).join("").trim();
+    const m = text.match(/\[[\d,\s]*\]/);
+    if (!m) return [];
+    const arr: number[] = JSON.parse(m[0]);
+    if (arr.includes(0)) return openItems.map((i) => i.id);
+    return arr.map((idx) => openItems[idx - 1]?.id).filter(Boolean) as string[];
+  } catch {
+    return [];
+  }
+}
+
 export async function GET(req: NextRequest) {
   const unauthorized = assertCronAuth(req);
   if (unauthorized) return unauthorized;
   const shabbos = enforceShabbos();
   if (shabbos) return shabbos;
 
-  const results = { mrsOratzMatches: 0, rabbiOratzMatches: 0, skipped: 0 };
+  const results = { mrsOratzMatches: 0, rabbiOratzMatches: 0, moneyOwedPaid: 0, skipped: 0 };
 
   // --- 1. Mrs. Oratz → speaker confirmation ------------------------------
   const lastSpeakerCheck = await getLastCheck("jre_last_mrs_oratz_check");
@@ -182,6 +255,44 @@ export async function GET(req: NextRequest) {
         results.rabbiOratzMatches++;
         break;
       }
+    }
+  }
+
+  // --- 3. Money-owed digest replies (from Mrs. Oratz OR Rabbi Oratz) -----
+  // We pull replies from EITHER address since either may be the configured payee_email.
+  const lastDigestCheck = await getLastCheck("jre_last_money_owed_check");
+  const cutoffTs = Math.floor(Date.now() / 1000);
+  const digestReplyMsgs = [
+    ...(await listInboxSince(MRS_ORATZ, lastDigestCheck)),
+    ...(await listInboxSince(RABBI_ORATZ, lastDigestCheck)),
+  ];
+  await setLastCheck("jre_last_money_owed_check", cutoffTs);
+
+  for (const msg of digestReplyMsgs) {
+    const body = msg.bodyText || msg.bodyHtml || "";
+    const senderEmail = msg.from.replace(/.*</, "").replace(/>.*/, "").toLowerCase().trim();
+    // Only consider replies that mention payment language
+    if (!/paid|zelled|sent|done|all set|finished/i.test(body)) {
+      continue;
+    }
+    const open = await listOpenMoneyOwed(senderEmail);
+    if (open.length === 0) continue;
+
+    const paidIds = await parsePaidReply(body, open);
+    for (const id of paidIds) {
+      await markMoneyOwedPaid(id, { source: "inbox_reply", method: "zelle" });
+      results.moneyOwedPaid++;
+    }
+
+    if (paidIds.length > 0) {
+      const paidItems = open.filter((i) => paidIds.includes(i.id));
+      const totalPaid = paidItems.reduce((s, i) => s + i.amount_usd, 0);
+      const stillOpen = open.length - paidIds.length;
+      await sendTelegram(
+        "jre",
+        `<b>Payment(s) confirmed</b>\n${paidIds.length} item(s) marked paid: $${totalPaid.toLocaleString()}\nFrom: ${senderEmail}\n${stillOpen > 0 ? `Still open: ${stillOpen}` : "✅ all clear"}`,
+        { severity: "info" }
+      );
     }
   }
 
