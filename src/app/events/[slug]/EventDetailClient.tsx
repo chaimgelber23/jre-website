@@ -782,28 +782,30 @@ export default function EventDetailClient({
                   </div>
                 )}
 
-                {/* Cover */}
-                <div className="bg-[#FBFBFB] rounded-2xl px-6 py-4 mb-6">
-                  <h3 className="text-lg font-bold text-gray-900 mb-3">
-                    Cover
-                  </h3>
-                  <div className="space-y-1">
-                    <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
-                      <span className="text-gray-600">Per person</span>
-                      <span className="font-semibold text-gray-900">
-                        {event.price_per_adult === 0 ? "Free" : `$${event.price_per_adult}`}
-                      </span>
-                    </div>
-                    {event.kids_price > 0 && (
-                      <div className="flex justify-between items-center py-2">
-                        <span className="text-gray-600">Per child</span>
+                {/* Cover — hidden entirely for free events (nothing to show) */}
+                {!isFreeEvent && (
+                  <div className="bg-[#FBFBFB] rounded-2xl px-6 py-4 mb-6">
+                    <h3 className="text-lg font-bold text-gray-900 mb-3">
+                      Cover
+                    </h3>
+                    <div className="space-y-1">
+                      <div className={`flex justify-between items-center py-2${event.kids_price > 0 ? " border-b border-gray-200" : ""}`}>
+                        <span className="text-gray-600">Per person</span>
                         <span className="font-semibold text-gray-900">
-                          ${event.kids_price}
+                          ${event.price_per_adult}
                         </span>
                       </div>
-                    )}
+                      {event.kids_price > 0 && (
+                        <div className="flex justify-between items-center py-2">
+                          <span className="text-gray-600">Per child</span>
+                          <span className="font-semibold text-gray-900">
+                            ${event.kids_price}
+                          </span>
+                        </div>
+                      )}
+                    </div>
                   </div>
-                </div>
+                )}
 
                 {/* Sponsorship Tiers Preview — clickable to select */}
                 {sponsorships.length > 0 && (
@@ -1210,7 +1212,30 @@ export default function EventDetailClient({
                       </div>
                     )}
 
-                    {/* Total */}
+                    {/* Free event with no sponsorship: show a "Become a Sponsor" CTA instead of a pointless "$0" total */}
+                    {isFreeEvent && !selectedSponsorship ? (
+                      <motion.button
+                        type="button"
+                        ref={totalRef}
+                        onClick={() => {
+                          setShowSponsorship(true);
+                          setTimeout(() => sponsorshipRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
+                        }}
+                        whileHover={{ scale: 1.01 }}
+                        whileTap={{ scale: 0.99 }}
+                        className="w-full bg-gradient-to-br from-[var(--theme-primary)]/10 via-[var(--theme-primary)]/5 to-transparent rounded-2xl p-6 border border-dashed border-[var(--theme-primary)]/30 hover:border-[var(--theme-primary)]/60 hover:bg-[var(--theme-primary)]/8 transition-all group cursor-pointer text-left"
+                      >
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="text-[var(--theme-primary)] font-bold text-lg">Become a Sponsor</p>
+                            <p className="text-xs text-gray-500 mt-0.5">Optional — click to choose a tier</p>
+                          </div>
+                          <svg className="w-5 h-5 text-[var(--theme-primary)] group-hover:translate-x-1 transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+                          </svg>
+                        </div>
+                      </motion.button>
+                    ) : (
                     <div ref={totalRef} className="bg-gradient-to-br from-[var(--theme-primary)]/8 via-[var(--theme-primary)]/5 to-transparent rounded-2xl p-6 border border-[var(--theme-primary)]/10">
                       <div className="flex justify-between items-center">
                         <span className="text-gray-700 font-medium">Total</span>
@@ -1273,6 +1298,7 @@ export default function EventDetailClient({
                         </motion.div>
                       )}
                     </div>
+                    )}
 
                     {/* Promo Code — only shown when there's actually something to discount */}
                     {total > 0 && (

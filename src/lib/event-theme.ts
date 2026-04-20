@@ -46,12 +46,25 @@ const blackOrangeTheme: EventTheme = {
   confettiColors: ["#EF8046", "#F5A623", "#FFD700", "#FFA500"],
 };
 
+// Warm sunrise theme — pairs with sunset/sky/orange-gold flyers.
+// Uses a cream hero bg (triggers the light-hero code path) and a bold pumpkin primary.
+const sunriseTheme: EventTheme = {
+  primary: "#E8743A", // Pumpkin (matches flyer CTA buttons)
+  primaryHover: "#C85F28",
+  darkBg: "#fafafa", // Warm near-white — activates isLightHero mode
+  darkerBg: "#F5E4CE", // Soft peach gradient end
+  primaryRgb: "232, 116, 58",
+  confettiColors: ["#E8743A", "#F5B970", "#E8A05C", "#C5A158", "#3E5A6B"],
+};
+
 export function getEventTheme(themeColor: string | null | undefined): EventTheme {
   switch (themeColor) {
     case "womens":
       return womensTheme;
     case "black":
       return blackOrangeTheme;
+    case "sunrise":
+      return sunriseTheme;
     default:
       return defaultTheme;
   }
