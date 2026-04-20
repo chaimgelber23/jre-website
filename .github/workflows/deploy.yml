@@ -23,8 +23,9 @@ concurrency:
 
 jobs:
   deploy:
-    # Switch to `self-hosted` once the Mac Mini runner is registered.
-    runs-on: ubuntu-latest
+    # Mac Mini self-hosted runner — zero build cost.
+    # Fallback to ubuntu-latest by swapping the array below if the Mac is offline.
+    runs-on: [self-hosted, mac-mini]
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
