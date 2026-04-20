@@ -1216,7 +1216,6 @@ export default function EventDetailClient({
                     {isFreeEvent && !selectedSponsorship ? (
                       <motion.button
                         type="button"
-                        ref={totalRef}
                         onClick={() => {
                           setShowSponsorship(true);
                           setTimeout(() => sponsorshipRef.current?.scrollIntoView({ behavior: "smooth", block: "nearest" }), 200);
