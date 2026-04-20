@@ -23,9 +23,10 @@ concurrency:
 
 jobs:
   deploy:
-    # Mac Mini self-hosted runner — zero build cost.
-    # Fallback to ubuntu-latest by swapping the array below if the Mac is offline.
-    runs-on: [self-hosted, mac-mini]
+    # Cloud runner for now — Mac Mini self-hosted runner is configured at
+    # ~/actions-runner-jre/ but hit a GitHub-side job-lock issue on first
+    # switch. Swap back to `[self-hosted, mac-mini]` once that's cleaned up.
+    runs-on: ubuntu-latest
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
