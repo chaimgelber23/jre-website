@@ -1,0 +1,49 @@
+# Production deploy via Vercel CLI with prebuilt artifact.
+# Builds run on GitHub Actions (or self-hosted Mac Mini runner — just flip `runs-on`).
+# Vercel receives the prebuilt output and ships it — ZERO Vercel build minutes consumed.
+#
+# Required repo secrets (GitHub → Settings → Secrets and variables → Actions):
+#   VERCEL_TOKEN       — https://vercel.com/account/tokens (scope: chaimgelber23s-projects)
+#   VERCEL_ORG_ID      — team_q6U6HYFGXi98ymrHgafFWpPC
+#   VERCEL_PROJECT_ID  — prj_Zsim2kMsr20aVoUywVnGIdwieYvW
+#
+# Also: disable Vercel's Git auto-deploy in the dashboard
+# (Project → Settings → Git → Ignored Build Step: `exit 0` so Vercel auto-trigger is neutralized).
+
+name: Deploy to Vercel (prebuilt)
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-prod
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    # Switch to `self-hosted` once the Mac Mini runner is registered.
+    runs-on: ubuntu-latest
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install Vercel CLI
+        run: npm install -g vercel@latest
+
+      - name: Pull Vercel environment
+        run: vercel pull --yes --environment=production --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Build with Vercel (produces .vercel/output)
+        run: vercel build --prod --token=${{ secrets.VERCEL_TOKEN }}
+
+      - name: Deploy prebuilt output
+        run: vercel deploy --prebuilt --prod --token=${{ secrets.VERCEL_TOKEN }}
