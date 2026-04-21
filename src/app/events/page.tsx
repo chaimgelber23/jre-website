@@ -1,6 +1,7 @@
 import { createServerClient } from "@/lib/supabase/server";
 import type { Event } from "@/types/database";
 import type { Metadata } from "next";
+import { UNLISTED_EVENT_SLUGS } from "@/lib/unlisted-events";
 import EventsClient, { type DisplayEvent } from "./EventsClient";
 
 export const dynamic = "force-dynamic";
@@ -220,7 +221,9 @@ export default async function EventsPage() {
       .order("date", { ascending: true });
 
     if (!error && eventsData) {
-      const events = eventsData as Event[];
+      const events = (eventsData as Event[]).filter(
+        (e) => !UNLISTED_EVENT_SLUGS.has(e.slug)
+      );
 
       const today = new Date();
       today.setHours(0, 0, 0, 0);

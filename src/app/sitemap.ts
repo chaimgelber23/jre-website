@@ -1,5 +1,6 @@
 import type { MetadataRoute } from "next";
 import { createServerClient } from "@/lib/supabase/server";
+import { UNLISTED_EVENT_SLUGS } from "@/lib/unlisted-events";
 import type { Event } from "@/types/database";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -66,7 +67,9 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .select("*")
       .eq("is_active", true);
 
-    const typedEvents = (events || []) as Event[];
+    const typedEvents = ((events || []) as Event[]).filter(
+      (e) => !UNLISTED_EVENT_SLUGS.has(e.slug)
+    );
     eventPages = typedEvents.map((event) => ({
       url: `${baseUrl}/events/${event.slug}`,
       lastModified: new Date(event.updated_at),

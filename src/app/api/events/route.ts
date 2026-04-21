@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
+import { UNLISTED_EVENT_SLUGS } from "@/lib/unlisted-events";
 import type { Event } from "@/types/database";
 
 export async function GET() {
@@ -21,7 +22,9 @@ export async function GET() {
       );
     }
 
-    const events = (eventsData || []) as Event[];
+    const events = ((eventsData || []) as Event[]).filter(
+      (e) => !UNLISTED_EVENT_SLUGS.has(e.slug)
+    );
 
     // Split into upcoming and past based on today's date
     const today = new Date();

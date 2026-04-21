@@ -1212,8 +1212,10 @@ export default function EventDetailClient({
                       </div>
                     )}
 
-                    {/* Free event with no sponsorship: show a "Become a Sponsor" CTA instead of a pointless "$0" total */}
-                    {isFreeEvent && !selectedSponsorship ? (
+                    {/* Totally free event with no sponsorship tiers at all: skip the whole $0 Total card — there's nothing to sum. */}
+                    {isFreeEvent && sponsorships.length === 0 ? null :
+                    /* Free event with no sponsorship: show a "Become a Sponsor" CTA instead of a pointless "$0" total. */
+                    isFreeEvent && !selectedSponsorship ? (
                       <motion.button
                         type="button"
                         onClick={() => {
