@@ -1522,7 +1522,7 @@ export default function EventDetailClient({
         </div>
       </section>
 
-      <Footer bgColor={theme.darkBg} accentColor={theme.primary} />
+      <Footer bgColor={isLightHero ? undefined : theme.darkBg} accentColor={theme.primary} />
     </main >
   );
 }
