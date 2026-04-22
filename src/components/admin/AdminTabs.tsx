@@ -6,6 +6,7 @@ import { motion } from "framer-motion";
 
 const tabs = [
   { name: "Events", href: "/admin/events" },
+  { name: "Campaigns", href: "/admin/campaigns" },
   { name: "Donations", href: "/admin/donations" },
   { name: "People", href: "/admin/people" },
   { name: "Gallery", href: "/admin/gallery" },
