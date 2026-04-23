@@ -56,20 +56,25 @@ const drive = google.drive({ version: "v3", auth: oauth2 });
 // CONTENT
 // ============================================================================
 
-// All times are ET unless noted. Status: AUTO=runs without her, SEMI=auto-drafted but needs her approve tap, MANUAL=she still does it.
+// All times are ET. Statuses:
+//   AUTO ✅       runs without anyone touching it (cron + send happen automatically)
+//   SEMI 📝      system drafts, Chaim approves with one tap before send
+//   BETA 🧪      code is built but NOT yet scheduled / not yet firing in production
+//   MANUAL ✋    Gitty / Chaim still does this by hand
 const TUESDAY_CLASS_ROWS = [
   ["#", "Day / Time", "Task", "Status", "Channel", "Recipient", "Source data", "Template (see Templates tab)", "Notes"],
-  ["1", "Sunday AM", "Ask Elisheva who's speaking this Tuesday", "AUTO ✅", "Gmail", "elishevaoratz@gmail.com", "jre_weekly_classes table", "T1 — Sun ask Elisheva", "Cron: /api/cron/jre/draft-elisheva-ask. Skipped if speaker already known."],
-  ["2", "Sunday-Monday", "When Elisheva replies with name → look up speaker in past CC campaigns + Speakers sheet", "AUTO ✅", "—", "(internal)", "Tuesday Morning/Ladies Class Speakers sheet", "—", "inbox-watch parses her reply with Claude Haiku, attaches speaker to class"],
-  ["3", "Monday AM", "Send speaker confirmation w/ Zoom link + payment-info request", "SEMI 📝", "Gmail", "{speaker email}", "jre_speakers (last_fee_usd, email, phone)", "T2 — Speaker confirmation", "Cron: /api/cron/jre/draft-speaker-email. Clones past send to same speaker if exists; falls back to canonical SOP template."],
-  ["4", "Sunday night → Mon 8am", "Constant Contact email #1 (date + speaker + bio + Zoom link)", "SEMI 📝", "Constant Contact", "JRE Ladies list", "Past CC campaign for same speaker", "T3 — CC #1 (clone of past)", "Cron: /api/cron/jre/draft-cc-email-1. Clones speaker's most recent CC campaign and swaps date."],
-  ["5", "Tuesday 9am (1h before)", "Constant Contact email #2 (\"{Speaker} Live on Zoom in One Hour\")", "SEMI 📝", "Constant Contact", "JRE Ladies list", "CC #1 above", "T4 — CC #2 (1h reminder)", "Cron: /api/cron/jre/draft-cc-email-2. Clones #1, rewrites subject + intro for day-of."],
-  ["6", "Tuesday 10am", "Class happens", "—", "Zoom", "—", "Canonical Zoom link in app_settings", "—", "Live event."],
-  ["7", "Tuesday PM", "Send Zelle payment request to Rabbi Oratz", "SEMI 📝", "Gmail", "yoratz@thejre.org (cc Elisheva)", "jre_speakers fee + jre_payments", "T5 — Payment request to Yossi", "Cron: /api/cron/jre/draft-payment-email. Subject includes amount + speaker for easy scan."],
-  ["8", "Wed-Thu", "Watch inbox for Yossi's \"paid\" reply → mark paid", "AUTO ✅", "Gmail watch", "—", "jre_payments table", "—", "Cron: /api/cron/jre/inbox-watch. Detects \"paid / zelled / sent\" near speaker name; Telegram one-tap to confirm."],
-  ["9", "Friday 10am", "Payment reminder if not yet paid", "SEMI 📝", "Gmail", "yoratz@thejre.org", "jre_payments WHERE paid=FALSE", "T6 — Payment reminder Friday", "Cron: /api/cron/jre/draft-payment-reminder. Skipped if already marked paid."],
-  ["10", "M/W/F 9:07 AM", "Zelle digest (all open money_owed grouped by payee)", "AUTO ✅", "Gmail", "elishevaoratz@gmail.com (or per item)", "jre_money_owed WHERE status='open'", "T7 — Zelle digest", "Cron: /api/cron/jre/zelle-digest. Auto-stops when zero open. Reply parser marks items paid."],
-  ["11", "Saturday 8pm", "Weekly self-audit of every draft (was it edited? sent on time? meaningful?)", "AUTO ✅", "Telegram report", "Chaim", "jre_audit_log", "—", "Cron: /api/cron/jre/weekly-audit. After 4 perfect weeks per draft type, system asks if you want to flip to full auto-send."],
+  ["1", "Thursday 9:07am ET", "Ask Elisheva who's speaking next Tuesday — ONLY if no speaker yet booked in the Tuesday Speakers sheet", "SEMI 📝 (LIVE)", "Gmail", "elishevaoratz@gmail.com", "Tuesday Morning/Ladies Class Speakers sheet (source of truth)", "T1 — Ask Elisheva", "WIRED 2026-04-23: cron-job.org #7519185 (Thu 13:07 UTC). Code at /api/cron/jre/ensure-next-class now reads Speakers sheet FIRST — if a name is filled in, imports the speaker into DB and skips the ask. Drafted email goes to admin dashboard + Telegram for one-tap approval (no auto-send). State today: 4/28 = Rebbetzin Fink (skipped), 5/5 empty (ask fires Thu 5/1), 5/12-5/26 already booked (skipped)."],
+  ["2", "Sunday-Monday", "When Elisheva replies with name → look up speaker in past CC campaigns + Speakers sheet", "BETA 🧪", "—", "(internal)", "Tuesday Morning/Ladies Class Speakers sheet", "—", "Inbox-watch + Haiku reply parser built. Not yet scheduled."],
+  ["3", "Monday AM", "Send speaker initial confirmation w/ Zoom link + payment-info request", "BETA 🧪", "Gmail", "{speaker email}", "jre_speakers (last_fee_usd, email, phone)", "T2 — Speaker confirmation (Mon)", "Code at /api/cron/jre/draft-speaker-email. Clones past send if exists; falls back to canonical SOP template. NOT YET scheduled."],
+  ["4", "Sunday night → Mon 8am", "Constant Contact email #1 (date + speaker + bio + Zoom link)", "BETA 🧪", "Constant Contact", "JRE Ladies list", "Past CC campaign for same speaker", "T3 — CC #1 (clone of past)", "Code at /api/cron/jre/draft-cc-email-1. Clones speaker's most recent CC campaign + swaps date. NOT YET scheduled."],
+  ["5", "Tuesday 8am", "Day-of speaker reminder w/ Zoom link", "MANUAL ✋ (NEEDS BUILD)", "Gmail", "{speaker email}", "jre_speakers + canonical zoom", "T4a — Speaker day-of reminder", "NEW workflow surfaced 2026-04-23. She sends a fresh Zoom link the morning of class. Need to build /api/cron/jre/draft-speaker-dayof + schedule Tuesday 7:55 AM."],
+  ["6", "Tuesday 8am", "Constant Contact email #2 to ladies w/ Zoom link (\"{Speaker} Live on Zoom Today\")", "BETA 🧪", "Constant Contact", "JRE Ladies list", "CC #1 above", "T4b — CC #2 (day-of, ladies)", "Code at /api/cron/jre/draft-cc-email-2. Clones #1, rewrites subject + intro for day-of. NOTE: was 9am in old SOP, corrected to 8am per current practice. NOT YET scheduled at the right time."],
+  ["7", "Tuesday 10am", "Class happens", "—", "Zoom", "—", "Canonical Zoom link in app_settings", "—", "Live event."],
+  ["8", "Tuesday PM", "Send Zelle payment request to Rabbi Oratz", "BETA 🧪", "Gmail", "yoratz@thejre.org (cc Elisheva)", "jre_speakers fee + jre_payments", "T5 — Payment request to Yossi", "Code at /api/cron/jre/draft-payment-email. Subject includes amount + speaker for easy scan. NOT YET scheduled."],
+  ["9", "Wed-Thu", "Watch inbox for Yossi's \"paid\" reply → mark paid", "BETA 🧪", "Gmail watch", "—", "jre_payments table", "—", "Code at /api/cron/jre/inbox-watch. Detects \"paid / zelled / sent\" near speaker name; Telegram one-tap to confirm. NOT YET scheduled."],
+  ["10", "Friday 10am", "Payment reminder if not yet paid", "BETA 🧪", "Gmail", "yoratz@thejre.org", "jre_payments WHERE paid=FALSE", "T6 — Payment reminder Friday", "Code at /api/cron/jre/draft-payment-reminder. Skipped if already marked paid. NOT YET scheduled."],
+  ["11", "M/W/F 9:07 AM", "Zelle digest (all open money_owed grouped by payee)", "BETA 🧪", "Gmail", "elishevaoratz@gmail.com (or per item)", "jre_money_owed WHERE status='open'", "T7 — Zelle digest", "Code at /api/cron/jre/zelle-digest. Auto-stops when zero open. Reply parser marks items paid. NOT YET scheduled."],
+  ["12", "Saturday 8pm", "Weekly self-audit of every draft (was it edited? sent on time? meaningful?)", "BETA 🧪", "Telegram report", "Chaim", "jre_audit_log", "—", "Code at /api/cron/jre/weekly-audit. After 4 perfect weeks per draft type, system asks if you want to flip to full auto-send. NOT YET scheduled."],
 ];
 
 const WOMEN_EVENTS_ROWS = [
@@ -85,13 +90,13 @@ const WOMEN_EVENTS_ROWS = [
 const TEMPLATES = [
   {
     id: "T1",
-    name: "Sun — Ask Elisheva who's speaking",
-    when: "Sunday AM",
+    name: "Thu — Ask Elisheva who's speaking next Tuesday",
+    when: "Thursday AM (5 days before class). SKIP if Tuesday Speakers sheet already has a name in the row for that date.",
     to: "elishevaoratz@gmail.com",
     subject: "Who's speaking Tuesday {mm/dd}?",
     body: `Hi Elisheva,
 
-Just checking in — who is speaking at this Tuesday's class ({mm/dd} at 10am)?
+Just checking in — who is speaking at next Tuesday's class ({mm/dd} at 10am)?
 
 If you can send over the speaker's name, email, and fee, I'll take it from there and send out the confirmation and Ladies emails.
 
@@ -101,7 +106,7 @@ Gitty Levi`,
   },
   {
     id: "T2",
-    name: "Mon — Speaker confirmation w/ Zoom link",
+    name: "Mon — Speaker confirmation w/ Zoom link (initial)",
     when: "Monday AM",
     to: "{speaker email}",
     subject: "JRE Tuesday {mm/dd} — Zoom confirmation",
@@ -115,6 +120,30 @@ Meeting ID: 919 8594 2050
 Passcode: 101643
 
 Please provide your updated billing information in reply to this email to ensure prompt payment. Thank you!
+
+All the best,
+
+Gitty Levi
+1495 Weaver Street
+Scarsdale, NY 10583
+(323) 329-9445`,
+  },
+  {
+    id: "T4a",
+    name: "Tue 8am — Speaker day-of reminder w/ Zoom link",
+    when: "Tuesday 8am (day of class)",
+    to: "{speaker email}",
+    subject: "JRE Class TODAY — Zoom link",
+    body: `Hi {first name},
+
+Looking forward to your class at 10am today! Here's the Zoom link one more time so you have it handy:
+
+Join Zoom Meeting
+https://zoom.us/j/91985942050?pwd=NW5LWHRKeEZBaGZvOFNqVHB1ZGpxdz09
+Meeting ID: 919 8594 2050
+Passcode: 101643
+
+Please join a few minutes early so we can let you in on time. Talk soon!
 
 All the best,
 
@@ -157,18 +186,20 @@ Body: speaker bio + photo + topic + Zoom link + dedication
 Build pattern: duplicate the speaker's prior CC email, change date, change Zoom link if needed, schedule for 8am Monday.`,
   },
   {
-    id: "T4",
-    name: "CC #2 — Tuesday 1-hour reminder",
-    when: "Tuesday 9am",
+    id: "T4b",
+    name: "CC #2 — Tuesday 8am day-of (ladies)",
+    when: "Tuesday 8am (day of class)",
     to: "JRE Ladies (Constant Contact list)",
-    subject: "{Speaker name} Live on Zoom in One Hour",
-    body: `(Constant Contact campaign — duplicate of CC #1 with day-of subject)
+    subject: "{Speaker name} Live on Zoom Today",
+    body: `(Constant Contact campaign — duplicate of CC #1 with day-of subject + Zoom link prominent)
 
 Sender: Gitty Levi
 From email: glevi@thejre.org
-Subject pattern: "{Speaker} Live on Zoom in One Hour"
+Subject pattern: "{Speaker} Live on Zoom Today" (was previously "...In One Hour" at 9am, now 8am)
 
-Body: same speaker bio + Zoom link, but copy edited for "today" rather than "tomorrow".`,
+Body: same speaker bio + Zoom link, copy edited for "today" / "this morning".
+
+NOTE: Old SOP / Training Manual says 9am 1-hour-before. Current practice is 8am day-of so ladies have time to plan their morning. Codify the 8am time in the cron schedule.`,
   },
   {
     id: "T5",
@@ -303,23 +334,42 @@ const RESOURCES = [
 // BUILD
 // ============================================================================
 
-console.log("Creating new spreadsheet...");
-const created = await sheets.spreadsheets.create({
-  requestBody: {
-    properties: { title: "JRE Women's Events — Workflow & Templates" },
-    sheets: [
-      { properties: { title: "README", gridProperties: { rowCount: 30, columnCount: 4 } } },
-      { properties: { title: "Tuesday Class", gridProperties: { rowCount: 25, columnCount: 9, frozenRowCount: 1 } } },
-      { properties: { title: "Women Events", gridProperties: { rowCount: 20, columnCount: 8, frozenRowCount: 1 } } },
-      { properties: { title: "Templates", gridProperties: { rowCount: 80, columnCount: 5, frozenRowCount: 1 } } },
-      { properties: { title: "Resources", gridProperties: { rowCount: 25, columnCount: 4, frozenRowCount: 1 } } },
-    ],
-  },
-});
+// Mode: update existing sheet if SHEET_ID env var set, otherwise create new
+const EXISTING_SHEET_ID = process.env.SHEET_ID;
 
-const sheetId = created.data.spreadsheetId;
-const sheetUrl = created.data.spreadsheetUrl;
-console.log(`✅ Created sheet ${sheetId}`);
+let sheetId, sheetUrl, created;
+if (EXISTING_SHEET_ID) {
+  console.log(`Updating existing sheet ${EXISTING_SHEET_ID}...`);
+  sheetId = EXISTING_SHEET_ID;
+  sheetUrl = `https://docs.google.com/spreadsheets/d/${sheetId}/edit`;
+  // Clear all five tabs first so stale rows don't linger
+  for (const tab of ["README", "Tuesday Class", "Women Events", "Templates", "Resources"]) {
+    try {
+      await sheets.spreadsheets.values.clear({ spreadsheetId: sheetId, range: tab });
+    } catch (err) {
+      console.warn(`   could not clear ${tab}: ${err.message}`);
+    }
+  }
+  const meta = await sheets.spreadsheets.get({ spreadsheetId: sheetId });
+  created = { data: { spreadsheetId: sheetId, spreadsheetUrl: sheetUrl, properties: meta.data.properties } };
+} else {
+  console.log("Creating new spreadsheet...");
+  created = await sheets.spreadsheets.create({
+    requestBody: {
+      properties: { title: "JRE Women's Events — Workflow & Templates" },
+      sheets: [
+        { properties: { title: "README", gridProperties: { rowCount: 30, columnCount: 4 } } },
+        { properties: { title: "Tuesday Class", gridProperties: { rowCount: 25, columnCount: 9, frozenRowCount: 1 } } },
+        { properties: { title: "Women Events", gridProperties: { rowCount: 20, columnCount: 8, frozenRowCount: 1 } } },
+        { properties: { title: "Templates", gridProperties: { rowCount: 80, columnCount: 5, frozenRowCount: 1 } } },
+        { properties: { title: "Resources", gridProperties: { rowCount: 25, columnCount: 4, frozenRowCount: 1 } } },
+      ],
+    },
+  });
+  sheetId = created.data.spreadsheetId;
+  sheetUrl = created.data.spreadsheetUrl;
+  console.log(`✅ Created sheet ${sheetId}`);
+}
 console.log(`   ${sheetUrl}\n`);
 
 // ----- Populate -----
@@ -344,9 +394,12 @@ await sheets.spreadsheets.values.update({
       ["• Resources tab — links to source sheets, dashboard, cron schedules"],
       [""],
       ["Status legend:"],
-      ["• AUTO ✅      — runs without anyone touching it"],
+      ["• AUTO ✅      — runs without anyone touching it (cron firing + sending in production)"],
       ["• SEMI 📝      — system drafts, Chaim approves with one tap (Telegram or admin dashboard)"],
-      ["• MANUAL ✋    — Gitty / Chaim still does it by hand"],
+      ["• BETA 🧪     — code is built but NOT yet scheduled. Nothing is firing yet."],
+      ["• MANUAL ✋    — Gitty / Chaim still does it by hand. May or may not be planned for automation."],
+      [""],
+      ["⚠️  Current overall state: BETA. Nothing is sending live yet. Phase 1 code exists; cron-job.org schedules need to be wired up before anything actually fires."],
       [""],
       ["Source of truth:"],
       ["JRE secretary repo: https://github.com/chaimgelber23/jre-website"],
