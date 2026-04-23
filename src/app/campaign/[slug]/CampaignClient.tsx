@@ -563,7 +563,7 @@ export default function CampaignClient({
 
             {tab === "matchers" && <MatchersPanel matchers={matchers} accent={accent} />}
             {tab === "about" && <AboutPanel campaign={campaign} accent={accent} />}
-            {tab === "teams" && <TeamsPanel teams={teams} accent={accent} onDonate={(teamId) => openDonate({ teamId })} />}
+            {tab === "teams" && <TeamsPanel teams={teams} campaignSlug={campaign.slug} accent={accent} onDonate={(teamId) => openDonate({ teamId })} />}
             {tab === "communities" && (
               <div className="text-center py-12 text-gray-400 text-sm">No communities yet.</div>
             )}
@@ -855,10 +855,10 @@ function InlineVideo({ url, accent, campaignTitle }: { url: string; accent: stri
 }
 
 /**
- * Horizontal Sponsor Tier Strip — compact Charidy-style row of tier pills.
- * Each tier is a button: big $ amount on top, label under it. The strip itself
- * is a subtle gray band so it visually bridges the colored title band and the
- * white progress block. Tier cards pop with the accent color on hover/selection.
+ * Horizontal Sponsor Tier Strip — premium Charidy-style row of tier cards.
+ * Mobile-first: snap-x scroll with edge peek + fade hints so the user
+ * perceives the row as scrollable, not clipped. Desktop: centered row.
+ * Featured tier gets a raised, accent-tinted card with a flame pulse.
  */
 function TierStrip({
   tiers, accent, onPickTier,
@@ -870,57 +870,115 @@ function TierStrip({
   const reduced = useReducedMotion();
   const accentRgb = useMemo(() => hexToRgb(accent), [accent]);
   return (
-    <section className="bg-gray-50 border-b border-gray-200">
-      <div className="container mx-auto px-4 py-5 md:py-6">
-        <motion.div
-          className="flex items-stretch gap-2 md:gap-3 overflow-x-auto no-scrollbar justify-center"
-          variants={STAGGER_PARENT}
-          initial={reduced ? undefined : "hidden"}
-          whileInView={reduced ? undefined : "show"}
-          viewport={{ once: true, margin: "-60px" }}
-        >
-          {tiers.map((t) => (
-            <motion.button
-              key={t.id}
-              type="button"
-              onClick={() => onPickTier(t)}
-              variants={STAGGER_CHILD}
-              whileHover={reduced ? undefined : {
-                y: -4,
-                scale: 1.04,
-                borderColor: accent,
-                boxShadow: `0 12px 28px -10px rgba(${accentRgb}, 0.45)`,
-              }}
-              whileTap={reduced ? undefined : { scale: 0.97 }}
-              transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
-              className="group flex-shrink-0 min-w-[110px] md:min-w-[140px] bg-white border border-gray-200 rounded-lg px-3 md:px-4 py-3 md:py-4 text-center relative"
-            >
-              {t.is_featured && (
-                <motion.span
-                  className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white whitespace-nowrap"
-                  style={{ background: accent, originX: 0.5, originY: 0.5 }}
-                  animate={reduced ? undefined : { scale: [1, 1.06, 1] }}
-                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+    <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
+      <div className="container mx-auto px-4 pt-6 pb-7 md:pt-8 md:pb-8">
+        <div className="text-center mb-4 md:mb-5">
+          <div className="text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-gray-500 font-semibold">
+            Pick a level
+          </div>
+        </div>
+
+        {/* Edge fades hint that the row scrolls on mobile */}
+        <div className="relative">
+          <div
+            aria-hidden
+            className="md:hidden pointer-events-none absolute inset-y-0 left-0 w-6 z-10 bg-gradient-to-r from-gray-50 to-transparent"
+          />
+          <div
+            aria-hidden
+            className="md:hidden pointer-events-none absolute inset-y-0 right-0 w-6 z-10 bg-gradient-to-l from-gray-50 to-transparent"
+          />
+
+          <motion.div
+            className="flex items-stretch gap-3 md:gap-4 overflow-x-auto no-scrollbar snap-x snap-mandatory md:snap-none md:justify-center px-3 md:px-0 py-2 md:py-3"
+            variants={STAGGER_PARENT}
+            initial={reduced ? undefined : "hidden"}
+            whileInView={reduced ? undefined : "show"}
+            viewport={{ once: true, margin: "-60px" }}
+          >
+            {tiers.map((t) => {
+              const featured = t.is_featured;
+              return (
+                <motion.button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onPickTier(t)}
+                  variants={STAGGER_CHILD}
+                  whileHover={reduced ? undefined : {
+                    y: -4,
+                    scale: featured ? 1.06 : 1.04,
+                    boxShadow: featured
+                      ? `0 20px 40px -14px rgba(${accentRgb}, 0.55)`
+                      : `0 14px 30px -12px rgba(${accentRgb}, 0.4)`,
+                  }}
+                  whileTap={reduced ? undefined : { scale: 0.97 }}
+                  transition={{ duration: 0.22, ease: EASE_OUT_EXPO }}
+                  className={[
+                    "group relative flex-shrink-0 snap-center rounded-2xl text-center",
+                    "min-w-[128px] sm:min-w-[140px] md:min-w-[156px] lg:min-w-[168px]",
+                    "px-4 md:px-5",
+                    featured ? "py-5 md:py-6" : "py-4 md:py-5",
+                    "active:scale-[0.98] transition-[transform,box-shadow]",
+                    featured
+                      ? "border-2 text-white shadow-lg"
+                      : "bg-white border border-gray-200 text-gray-900 hover:border-gray-300",
+                  ].join(" ")}
+                  style={featured ? {
+                    background: `linear-gradient(160deg, ${accent} 0%, rgba(${accentRgb}, 0.92) 100%)`,
+                    borderColor: accent,
+                    boxShadow: `0 14px 30px -12px rgba(${accentRgb}, 0.55)`,
+                  } : undefined}
+                  aria-label={`Pick ${formatUsd(t.amount_cents)}${t.label ? ` — ${t.label}` : ""}`}
                 >
-                  Popular
-                </motion.span>
-              )}
-              <div className="text-lg md:text-2xl font-bold text-gray-900 tabular-nums leading-none">
-                {formatUsd(t.amount_cents)}
-              </div>
-              {t.label && (
-                <div className="text-[10px] md:text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-500 mt-1.5 md:mt-2 leading-tight">
-                  {t.label}
-                </div>
-              )}
-              {t.hebrew_value && (
-                <div dir="rtl" className="text-xs font-semibold mt-1" style={{ color: accent }}>
-                  {t.hebrew_value}
-                </div>
-              )}
-            </motion.button>
-          ))}
-        </motion.div>
+                  {featured && (
+                    <motion.span
+                      className="absolute -top-2.5 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 text-[10px] md:text-[11px] font-extrabold uppercase tracking-[0.14em] px-2.5 py-1 rounded-full bg-white text-gray-900 shadow-md ring-1 ring-black/5 whitespace-nowrap"
+                      animate={reduced ? undefined : { scale: [1, 1.05, 1] }}
+                      transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <span aria-hidden>🔥</span>
+                      <span>Popular</span>
+                    </motion.span>
+                  )}
+
+                  <div
+                    className={[
+                      "font-extrabold tabular-nums leading-none",
+                      featured ? "text-2xl md:text-3xl" : "text-xl md:text-2xl",
+                    ].join(" ")}
+                  >
+                    {formatUsd(t.amount_cents)}
+                  </div>
+
+                  {t.label && (
+                    <div
+                      className={[
+                        "uppercase tracking-[0.12em] font-bold leading-tight mt-2",
+                        "text-[11px] md:text-[12px]",
+                        featured ? "text-white/90" : "text-gray-500",
+                      ].join(" ")}
+                    >
+                      {t.label}
+                    </div>
+                  )}
+
+                  {t.hebrew_value && (
+                    <div
+                      dir="rtl"
+                      className={[
+                        "mt-2 pt-2 border-t text-sm font-semibold tabular-nums",
+                        featured ? "border-white/25 text-white" : "border-gray-100",
+                      ].join(" ")}
+                      style={featured ? undefined : { color: accent }}
+                    >
+                      {t.hebrew_value}
+                    </div>
+                  )}
+                </motion.button>
+              );
+            })}
+          </motion.div>
+        </div>
       </div>
     </section>
   );
@@ -1701,9 +1759,10 @@ function renderInline(text: string): React.ReactNode {
 }
 
 function TeamsPanel({
-  teams, accent, onDonate,
+  teams, campaignSlug, accent, onDonate,
 }: {
   teams: CampaignTeamWithProgress[];
+  campaignSlug: string;
   accent: string;
   onDonate: (teamId: string) => void;
 }) {
@@ -1721,6 +1780,7 @@ function TeamsPanel({
       {sorted.map((t, i) => {
         const pct = t.goal_cents && t.goal_cents > 0 ? Math.min(100, (t.raised_cents / t.goal_cents) * 100) : 0;
         const isLeader = i === 0;
+        const teamHref = `/campaign/${campaignSlug}/team/${t.slug}`;
         return (
           <motion.div
             key={t.id}
@@ -1736,7 +1796,7 @@ function TeamsPanel({
                 aria-hidden="true"
               />
             )}
-            <div className="flex items-center gap-4 mb-3">
+            <a href={teamHref} className="flex items-center gap-4 mb-3 group">
               <div className={`text-lg font-bold tabular-nums w-6 text-center ${isLeader ? "" : "text-gray-300"}`}
                 style={isLeader ? { color: accent } : undefined}>
                 {i + 1}
@@ -1750,7 +1810,7 @@ function TeamsPanel({
                 </div>
               )}
               <div className="flex-1 min-w-0">
-                <div className="font-semibold text-gray-900 text-sm">{t.name}</div>
+                <div className="font-semibold text-gray-900 text-sm group-hover:underline">{t.name}</div>
                 {t.leader_name && <div className="text-xs text-gray-400">Led by {t.leader_name}</div>}
               </div>
               <div className="text-right">
@@ -1759,7 +1819,7 @@ function TeamsPanel({
                   <div className="text-xs text-gray-400 tabular-nums">of {formatUsd(t.goal_cents)}</div>
                 ) : null}
               </div>
-            </div>
+            </a>
             {t.goal_cents ? (
               <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
                 <motion.div
@@ -1774,14 +1834,22 @@ function TeamsPanel({
             ) : null}
             <div className="flex items-center justify-between text-xs">
               <span className="text-gray-400">{t.donor_count} {t.donor_count === 1 ? "donor" : "donors"}</span>
-              <button
-                type="button"
-                onClick={() => onDonate(t.id)}
-                className="font-semibold uppercase tracking-wide hover:underline"
-                style={{ color: accent }}
-              >
-                Give to this team →
-              </button>
+              <div className="flex items-center gap-4">
+                <a
+                  href={teamHref}
+                  className="font-semibold uppercase tracking-wide hover:underline text-gray-500"
+                >
+                  View page
+                </a>
+                <button
+                  type="button"
+                  onClick={() => onDonate(t.id)}
+                  className="font-semibold uppercase tracking-wide hover:underline"
+                  style={{ color: accent }}
+                >
+                  Give to this team →
+                </button>
+              </div>
             </div>
           </motion.div>
         );
