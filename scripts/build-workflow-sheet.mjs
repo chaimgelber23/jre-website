@@ -63,9 +63,9 @@ const drive = google.drive({ version: "v3", auth: oauth2 });
 //   MANUAL ✋    Gitty / Chaim still does this by hand
 const TUESDAY_CLASS_ROWS = [
   ["#", "Day / Time", "Task", "Status", "Channel", "Recipient", "Source data", "Template (see Templates tab)", "Notes"],
-  ["1", "Thursday 9:07am ET", "Ask Elisheva who's speaking next Tuesday — ONLY if no speaker yet booked in the Tuesday Speakers sheet", "SEMI 📝 (LIVE)", "Gmail", "elishevaoratz@gmail.com", "Tuesday Morning/Ladies Class Speakers sheet (source of truth)", "T1 — Ask Elisheva", "WIRED 2026-04-23: cron-job.org #7519185 (Thu 13:07 UTC). Code at /api/cron/jre/ensure-next-class now reads Speakers sheet FIRST — if a name is filled in, imports the speaker into DB and skips the ask. Drafted email goes to admin dashboard + Telegram for one-tap approval (no auto-send). State today: 4/28 = Rebbetzin Fink (skipped), 5/5 empty (ask fires Thu 5/1), 5/12-5/26 already booked (skipped)."],
-  ["2", "Sunday-Monday", "When Elisheva replies with name → look up speaker in past CC campaigns + Speakers sheet", "BETA 🧪", "—", "(internal)", "Tuesday Morning/Ladies Class Speakers sheet", "—", "Inbox-watch + Haiku reply parser built. Not yet scheduled."],
-  ["3", "Thursday (after Elisheva replies)", "Send speaker initial confirmation w/ Zoom link + payment-info request", "MANUAL ✋", "Gmail (from glevi@thejre.org)", "{speaker email}", "jre_speakers (last_fee_usd, email, phone)", "T2 — Speaker confirmation (Thu)", "Per Gitty 2026-04-23: she sends this Thursday from her personal email, NOT Monday. Until June: she pre-scheduled all of these for known speakers. May 5 is the exception — Chaim must do this manually after Elisheva confirms speaker."],
+  ["1", "Thursday 9:07am ET", "Ask Mrs. Oratz (Elisheva) who she suggests for next Tuesday — ONLY if no speaker yet booked in the Tuesday Speakers sheet", "SEMI 📝 (LIVE)", "Gmail", "elishevaoratz@gmail.com", "Tuesday Morning/Ladies Class Speakers sheet (source of truth)", "T1 — Ask Elisheva", "WIRED 2026-04-23: cron-job.org #7519185. Code at /api/cron/jre/ensure-next-class reads Speakers sheet FIRST — if a name is filled in, imports speaker and skips the ask. Today's state: 4/28 = Rebbetzin Fink (skipped), 5/5 empty (ask fires Thu 5/1), 5/12-5/26 already booked (skipped)."],
+  ["2", "TRIGGERED by Elisheva's reply", "Email the SUGGESTED SPEAKER asking if she's available to teach (invitation)", "BETA 🧪 + NEEDS WIRING", "Gmail (from glevi@thejre.org)", "{speaker email Elisheva provided}", "Elisheva's reply email", "T2 — Speaker invitation", "When Elisheva replies with a recommendation, auto-draft an invitation to that speaker ('are you available to teach our JRE Ladies Parsha class on Tue X/X?'). Inbox-watch sees the reply and Telegrams a Confirm button — needs to ALSO auto-draft this invitation email."],
+  ["3", "TRIGGERED by speaker's YES reply", "Once speaker agrees → add her name + email + fee to the Tuesday Speakers sheet AND save to jre_speakers table", "MANUAL ✋", "(internal)", "Speaker reply", "Tuesday Morning/Ladies Class Speakers sheet + jre_speakers", "—", "Currently manual: Chaim adds row to Speakers sheet, system imports it next Thursday. FUTURE: inbox-watch could detect speaker's YES reply and auto-update both."],
   ["4", "Mon 8am", "Constant Contact email #1 (date + speaker + bio + Zoom link)", "PRE-SCHEDULED IN CC ✅", "Constant Contact", "JRE Ladies list", "CC platform (already loaded)", "T3 — CC #1 (clone of past)", "Per Gitty 2026-04-23: CC #1 is scheduled in the Constant Contact platform itself for every Tuesday through June EXCEPT May 5. For May 5, Chaim must build & send manually in CC."],
   ["5", "Tuesday 7am", "Day-of speaker reminder w/ Zoom link (personal email)", "MANUAL ✋", "Gmail (from glevi@thejre.org)", "{speaker email}", "jre_speakers + canonical zoom", "T4a — Speaker day-of reminder", "Per Gitty 2026-04-23: 7am (NOT 8am as I'd guessed). She pre-scheduled these through June except May 5. For May 5, Chaim must do manually."],
   ["6", "Tuesday 8am", "Constant Contact email #2 to ladies w/ Zoom link", "PRE-SCHEDULED IN CC ✅", "Constant Contact", "JRE Ladies list", "CC platform (already loaded)", "T4b — CC #2 (day-of, ladies)", "Per Gitty 2026-04-23: CC #2 is scheduled in Constant Contact through June EXCEPT May 5. For May 5, Chaim must build & send manually in CC."],
@@ -106,20 +106,15 @@ Gitty Levi`,
   },
   {
     id: "T2",
-    name: "Mon — Speaker confirmation w/ Zoom link (initial)",
-    when: "Monday AM",
+    name: "Speaker invitation — TRIGGERED after Elisheva suggests a name",
+    when: "AS SOON AS Elisheva replies with a recommendation. Same day if possible. Speaker has NOT agreed yet — this is the ask.",
     to: "{speaker email}",
-    subject: "JRE Tuesday {mm/dd} — Zoom confirmation",
-    body: `Hi {first name},
+    subject: "JRE Parsha Class teaching availability? – {Date}",
+    body: `Dear Mrs. {Last name},
 
-I hope you are doing well! We are excited for your upcoming class at the JRE this {Tuesday, Month DD} at 10am. Click the link below to join the Zoom.
+I hope you're doing well. I wanted to ask if you might be available to teach our JRE Ladies Parsha class on Tuesday, {Month DDth}, at 10 am? The ladies truly enjoy learning from you, and we would be delighted to have you teach this session.
 
-Join Zoom Meeting
-https://zoom.us/j/91985942050?pwd=NW5LWHRKeEZBaGZvOFNqVHB1ZGpxdz09
-Meeting ID: 919 8594 2050
-Passcode: 101643
-
-Please provide your updated billing information in reply to this email to ensure prompt payment. Thank you!
+Please let me know if this can work for your schedule.
 
 All the best,
 
@@ -130,8 +125,8 @@ Scarsdale, NY 10583
   },
   {
     id: "T4a",
-    name: "Tue 8am — Speaker day-of reminder w/ Zoom link",
-    when: "Tuesday 8am (day of class)",
+    name: "Tue 7am — Speaker day-of reminder w/ Zoom link",
+    when: "Tuesday 7am (day of class). After speaker has agreed and is on the sheet.",
     to: "{speaker email}",
     subject: "JRE Class TODAY — Zoom link",
     body: `Hi {first name},
@@ -144,25 +139,6 @@ Meeting ID: 919 8594 2050
 Passcode: 101643
 
 Please join a few minutes early so we can let you in on time. Talk soon!
-
-All the best,
-
-Gitty Levi
-1495 Weaver Street
-Scarsdale, NY 10583
-(323) 329-9445`,
-  },
-  {
-    id: "T2b",
-    name: "Speaker invitation (when first booking)",
-    when: "When booking a new speaker",
-    to: "{speaker email}",
-    subject: "JRE Parsha Class teaching availability? – {Date 1} & {Date 2}",
-    body: `Dear Mrs. {Last name},
-
-I hope you're doing well. I wanted to ask if you might be available to teach our JRE Ladies Parsha class on Tuesday, {Month DDth}, at 10 am, and the following Tuesday, {Month DDth}, also at 10 am? The ladies truly enjoy learning from you, and we would be delighted to have you teach these sessions.
-
-Please let me know if this can work for your schedule.
 
 All the best,
 
