@@ -871,8 +871,8 @@ function TierStrip({
   const accentRgb = useMemo(() => hexToRgb(accent), [accent]);
   return (
     <section className="bg-gradient-to-b from-gray-50 to-white border-b border-gray-200">
-      <div className="container mx-auto px-4 pt-6 pb-7 md:pt-8 md:pb-8">
-        <div className="text-center mb-4 md:mb-5">
+      <div className="container mx-auto px-4 pt-12 pb-8 md:pt-16 md:pb-10">
+        <div className="text-center mb-5 md:mb-6">
           <div className="text-[10px] md:text-[11px] uppercase tracking-[0.22em] text-gray-500 font-semibold">
             Pick a level
           </div>

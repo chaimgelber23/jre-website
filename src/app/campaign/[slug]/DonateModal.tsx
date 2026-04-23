@@ -553,27 +553,53 @@ function DetailsStep({
       {/* Amount */}
       <Fieldset label="Your Amount">
         {tiers.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-3">
-            {tiers.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => onPickTier(t)}
-                className={`relative py-2.5 px-2 rounded-xl font-bold text-sm transition-all ${
-                  tierId === t.id
-                    ? "bg-[#EF8046] text-white shadow-md"
-                    : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-[#EF8046]"
-                }`}
-              >
-                {t.is_featured && (
-                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded">
-                    Popular
-                  </span>
-                )}
-                <div>{formatUsd(t.amount_cents)}</div>
-                {t.label && <div className="text-[10px] font-medium opacity-80 mt-0.5">{t.label}</div>}
-              </button>
-            ))}
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+            {tiers.map((t) => {
+              const selected = tierId === t.id;
+              return (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => onPickTier(t)}
+                  aria-pressed={selected}
+                  className={[
+                    "relative rounded-xl text-center font-bold transition-all min-h-[68px] px-3 py-3",
+                    "active:scale-[0.98]",
+                    selected
+                      ? "bg-[#EF8046] text-white shadow-md ring-2 ring-[#EF8046]/30"
+                      : "bg-gray-50 border border-gray-200 text-gray-900 hover:border-[#EF8046] hover:bg-white",
+                  ].join(" ")}
+                >
+                  {t.is_featured && (
+                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-white text-gray-900 text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full shadow ring-1 ring-black/5 whitespace-nowrap">
+                      <span aria-hidden>🔥</span>Popular
+                    </span>
+                  )}
+                  <div className="text-base tabular-nums leading-none">{formatUsd(t.amount_cents)}</div>
+                  {t.label && (
+                    <div
+                      className={[
+                        "text-[10px] font-semibold uppercase tracking-wide mt-1 leading-tight",
+                        selected ? "text-white/85" : "text-gray-500",
+                      ].join(" ")}
+                    >
+                      {t.label}
+                    </div>
+                  )}
+                  {t.hebrew_value && (
+                    <div
+                      dir="rtl"
+                      className={[
+                        "text-[11px] font-semibold mt-1 tabular-nums",
+                        selected ? "text-white/90" : "text-[#EF8046]",
+                      ].join(" ")}
+                    >
+                      {t.hebrew_value}
+                    </div>
+                  )}
+                </button>
+              );
+            })}
           </div>
         )}
 
