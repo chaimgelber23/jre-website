@@ -1,22 +1,29 @@
 "use client";
 
-import { useState, useEffect, useCallback, useMemo } from "react";
-import { motion } from "framer-motion";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
 import {
-  Search, Share2, Heart, Facebook, Twitter, Mail,
+  motion,
+  AnimatePresence,
+  useInView,
+  useReducedMotion,
+  animate,
+  type Variants,
+} from "framer-motion";
+import confetti from "canvas-confetti";
+import {
+  Search, Share2, Heart, Mail,
   MessageCircle, Copy, Check,
 } from "lucide-react";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { formatUsd, getActiveMatcher, getTimeRemaining } from "@/lib/campaign";
-import type { CampaignSnapshot, CampaignTeamWithProgress, CampaignMatcher, Campaign } from "@/types/campaign";
+import type { CampaignSnapshot, CampaignTeamWithProgress, CampaignMatcher, Campaign, CampaignTier } from "@/types/campaign";
 import DonateModal from "./DonateModal";
 import DonorCard from "./DonorCard";
-import HeroCarousel from "./HeroCarousel";
-import VideoModal from "./VideoModal";
+import type { RecentPhoto } from "./page";
 
 interface Props {
   snapshot: CampaignSnapshot;
+  recentPhotos?: RecentPhoto[];
   orgName?: string;
   contactEmail?: string;
   contactPhone?: string;
@@ -27,33 +34,142 @@ type Sort = "default" | "latest" | "oldest" | "highest";
 
 const DEFAULT_ACCENT = "#DA98B1";
 
+// ============ MOTION UTILITIES ============
+
+const EASE_OUT_EXPO: [number, number, number, number] = [0.22, 1, 0.36, 1];
+
+/** Scroll-triggered reveal. Honors prefers-reduced-motion. */
+function Reveal({
+  children, delay = 0, y = 22, className, as: As = "div",
+}: {
+  children: React.ReactNode;
+  delay?: number;
+  y?: number;
+  className?: string;
+  as?: "div" | "section";
+}) {
+  const reduced = useReducedMotion();
+  const MotionTag = As === "section" ? motion.section : motion.div;
+  return (
+    <MotionTag
+      initial={reduced ? false : { opacity: 0, y }}
+      whileInView={reduced ? undefined : { opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-80px" }}
+      transition={{ duration: 0.6, ease: EASE_OUT_EXPO, delay }}
+      className={className}
+    >
+      {children}
+    </MotionTag>
+  );
+}
+
+/** Animated integer that counts up from 0 → target when it enters the viewport. */
+function CountUp({
+  value, format = (n) => Math.round(n).toLocaleString(), className, durationMs = 1400,
+}: {
+  value: number;
+  format?: (n: number) => string;
+  className?: string;
+  durationMs?: number;
+}) {
+  const reduced = useReducedMotion();
+  const ref = useRef<HTMLSpanElement>(null);
+  const inView = useInView(ref, { once: true, margin: "-40px" });
+  const [display, setDisplay] = useState<number>(reduced ? value : 0);
+
+  useEffect(() => {
+    if (!inView) return;
+    if (reduced) { setDisplay(value); return; }
+    const controls = animate(0, value, {
+      duration: durationMs / 1000,
+      ease: EASE_OUT_EXPO,
+      onUpdate: (v) => setDisplay(v),
+    });
+    return () => controls.stop();
+  }, [inView, value, durationMs, reduced]);
+
+  return <span ref={ref} className={className} aria-live="polite">{format(display)}</span>;
+}
+
+/** Standard stagger parent for card grids. */
+const STAGGER_PARENT: Variants = {
+  hidden: { opacity: 1 },
+  show: {
+    opacity: 1,
+    transition: { staggerChildren: 0.04, delayChildren: 0.05 },
+  },
+};
+
+const STAGGER_CHILD: Variants = {
+  hidden: { opacity: 0, y: 14 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.45, ease: EASE_OUT_EXPO } },
+};
+
+/** Fire confetti sourced from the theme color. */
+function fireConfetti(accent: string, intensity: "small" | "big" = "big") {
+  if (typeof window === "undefined") return;
+  if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+  const colors = [accent, "#ffffff", shiftColor(accent, 30), shiftColor(accent, -30)];
+  const count = intensity === "big" ? 120 : 60;
+  confetti({ particleCount: count, spread: 80, origin: { y: 0.6 }, colors, scalar: 0.9 });
+  if (intensity === "big") {
+    setTimeout(() => confetti({ particleCount: 60, angle: 60, spread: 55, origin: { x: 0, y: 0.7 }, colors }), 200);
+    setTimeout(() => confetti({ particleCount: 60, angle: 120, spread: 55, origin: { x: 1, y: 0.7 }, colors }), 300);
+  }
+}
+
+function shiftColor(hex: string, percent: number): string {
+  const m = /^#?([a-f\d]{6})$/i.exec(hex.trim());
+  if (!m) return hex;
+  const num = parseInt(m[1], 16);
+  const r = Math.max(0, Math.min(255, (num >> 16) + Math.round(255 * percent / 100)));
+  const g = Math.max(0, Math.min(255, ((num >> 8) & 0xff) + Math.round(255 * percent / 100)));
+  const b = Math.max(0, Math.min(255, (num & 0xff) + Math.round(255 * percent / 100)));
+  return `#${((r << 16) | (g << 8) | b).toString(16).padStart(6, "0")}`;
+}
+
+/** Parse a hex color like "#DA98B1" → "218, 152, 177". Used for box-shadow glow alphas. */
+function hexToRgb(hex: string): string {
+  const m = /^#?([a-f\d]{6})$/i.exec(hex.trim());
+  if (!m) return "0, 0, 0";
+  const num = parseInt(m[1], 16);
+  return `${num >> 16}, ${(num >> 8) & 0xff}, ${num & 0xff}`;
+}
+
+const HERO_PARENT: Variants = {
+  hidden: {},
+  show: { transition: { staggerChildren: 0.08, delayChildren: 0.1 } },
+};
+const HERO_CHILD: Variants = {
+  hidden: { opacity: 0, y: 16 },
+  show: { opacity: 1, y: 0, transition: { duration: 0.6, ease: EASE_OUT_EXPO } },
+};
+
 export default function CampaignClient({
   snapshot: initial,
+  recentPhotos = [],
   orgName = "Jewish Renaissance Experience",
   contactEmail = "office@thejre.org",
   contactPhone = "(914) 359-2200",
 }: Props) {
   const [snapshot, setSnapshot] = useState(initial);
   const [modalOpen, setModalOpen] = useState(false);
-  const [videoOpen, setVideoOpen] = useState(false);
   const [preselectedTier, setPreselectedTier] = useState<string | null>(null);
   const [preselectedTeam, setPreselectedTeam] = useState<string | null>(null);
+  const [preselectedAmount, setPreselectedAmount] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("donors");
   const [sortBy, setSortBy] = useState<Sort>("default");
   const [search, setSearch] = useState("");
   const [showAllDonors, setShowAllDonors] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // live inline amount input (drives the big $ display and the modal preload)
+  const [inlineAmount, setInlineAmount] = useState<string>("");
+
   const { campaign, tiers, matchers, teams, progress, recent_donations } = snapshot;
   const accent = campaign.theme_color || DEFAULT_ACCENT;
   const activeMatcher = getActiveMatcher(matchers);
   const multiplier = activeMatcher ? Number(activeMatcher.multiplier) : 1;
-
-  const heroImages = useMemo(() => {
-    const list = (campaign.hero_image_urls ?? []).filter(Boolean);
-    if (list.length > 0) return list;
-    return campaign.hero_image_url ? [campaign.hero_image_url] : [];
-  }, [campaign.hero_image_urls, campaign.hero_image_url]);
 
   const refresh = useCallback(async () => {
     try {
@@ -69,22 +185,35 @@ export default function CampaignClient({
     return () => clearInterval(id);
   }, [refresh]);
 
-  const total = progress.raised_cents + progress.matched_cents;
-  const pctRaw = progress.goal_cents > 0 ? (total / progress.goal_cents) * 100 : 0;
+  const totalRaisedCents = progress.raised_cents + progress.matched_cents;
+  const pctRaw = progress.goal_cents > 0 ? (totalRaisedCents / progress.goal_cents) * 100 : 0;
 
-  const openDonate = () => {
-    setPreselectedTier(null);
-    setPreselectedTeam(null);
-    setModalOpen(true);
-  };
-  const openWithTier = (tierId: string) => {
-    setPreselectedTier(tierId);
-    setPreselectedTeam(null);
-    setModalOpen(true);
-  };
-  const openWithTeam = (teamId: string) => {
-    setPreselectedTeam(teamId);
-    setPreselectedTier(null);
+  // Milestone confetti: track crossings live, skip the initial mount so the
+  // page doesn't explode with confetti just for loading at 40%.
+  const milestonesSeenRef = useRef<Set<number> | null>(null);
+  useEffect(() => {
+    const thresholds = [25, 50, 75, 100];
+    if (milestonesSeenRef.current === null) {
+      milestonesSeenRef.current = new Set(thresholds.filter((t) => pctRaw >= t));
+      return;
+    }
+    for (const t of thresholds) {
+      if (pctRaw >= t && !milestonesSeenRef.current.has(t)) {
+        milestonesSeenRef.current.add(t);
+        fireConfetti(accent, t === 100 ? "big" : "small");
+      }
+    }
+  }, [pctRaw, accent]);
+
+  const inlineDollars = parseInt(inlineAmount, 10);
+  const inlineCents = Number.isFinite(inlineDollars) && inlineDollars > 0 ? inlineDollars * 100 : 0;
+  const inlineMatchedCents = Math.round(inlineCents * Math.max(0, multiplier - 1));
+  const inlineTotalCents = inlineCents + inlineMatchedCents;
+
+  const openDonate = (opts?: { tierId?: string; teamId?: string; amount?: number }) => {
+    setPreselectedTier(opts?.tierId ?? null);
+    setPreselectedTeam(opts?.teamId ?? null);
+    setPreselectedAmount(opts?.amount ?? null);
     setModalOpen(true);
   };
 
@@ -106,11 +235,10 @@ export default function CampaignClient({
       const bt = new Date(b.created_at).getTime();
       if (sortBy === "oldest") return at - bt;
       if (sortBy === "latest") return bt - at;
-      // "default" — featured/highest gifts first, then recency
       if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
       return bt - at;
     });
-  const visibleDonations = showAllDonors ? filteredDonations : filteredDonations.slice(0, 10);
+  const visibleDonations = showAllDonors ? filteredDonations : filteredDonations.slice(0, 24);
 
   const counts: Record<Tab, number | null> = {
     donors: progress.donor_count,
@@ -122,182 +250,195 @@ export default function CampaignClient({
 
   return (
     <main className="min-h-screen bg-white">
-      <Header />
-
-      {/* ============ FULL-WIDTH HERO CAROUSEL / VIDEO ============ */}
-      <section className="relative w-full bg-gray-100">
-        {heroImages.length > 0 ? (
-          <HeroCarousel
-            images={heroImages}
-            alt={campaign.title}
-            videoUrl={campaign.video_url}
-            onPlayVideo={() => setVideoOpen(true)}
-          />
-        ) : (
-          <div className="relative w-full aspect-[21/9] md:aspect-[21/8] overflow-hidden">
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 text-gray-300">
-              <Heart className="w-24 h-24" />
-            </div>
-          </div>
-        )}
-      </section>
-
-      {/* ============ NARROW TITLE BAND ============ */}
-      <section className="text-center text-white" style={{ background: accent }}>
-        <div className="container mx-auto px-6 py-6">
-          <div className="text-[11px] uppercase tracking-[0.22em] opacity-90 mb-1">{orgName}</div>
-          <h1 className="text-2xl md:text-3xl font-bold mb-3">{campaign.title}</h1>
-          <button
+      {/* ============ TEXT-ONLY TITLE BAND (hero image removed per design-pending note) ============ */}
+      <section className="text-white relative overflow-hidden" style={{ background: accent }}>
+        <motion.div
+          className="absolute inset-0 pointer-events-none"
+          aria-hidden="true"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 0.22 }}
+          transition={{ duration: 1.6, ease: "easeOut" }}
+          style={{
+            backgroundImage:
+              "radial-gradient(circle at 20% 30%, rgba(255,255,255,0.35) 0, rgba(255,255,255,0) 40%), radial-gradient(circle at 80% 70%, rgba(0,0,0,0.25) 0, rgba(0,0,0,0) 40%)",
+          }}
+        />
+        <motion.div
+          className="relative container mx-auto px-6 pt-28 pb-14 md:pt-40 md:pb-20 text-center"
+          variants={HERO_PARENT}
+          initial="hidden"
+          animate="show"
+        >
+          <motion.div
+            variants={HERO_CHILD}
+            className="text-[11px] md:text-xs uppercase tracking-[0.3em] text-white/80 mb-3"
+          >
+            {orgName}
+          </motion.div>
+          <motion.h1
+            variants={HERO_CHILD}
+            className="text-3xl md:text-5xl font-bold leading-tight max-w-3xl mx-auto text-white"
+          >
+            {campaign.title}
+          </motion.h1>
+          {campaign.tagline && (
+            <motion.div variants={HERO_CHILD} className="mt-7 max-w-2xl mx-auto space-y-3">
+              <TaglineLines tagline={campaign.tagline} />
+            </motion.div>
+          )}
+          <motion.div
+            variants={HERO_CHILD}
+            className="mt-5 text-[11px] uppercase tracking-[0.2em] text-white/60 tabular-nums"
+          >
+            {formatDateRange(campaign.start_at, campaign.end_at)}
+          </motion.div>
+          <motion.button
+            variants={HERO_CHILD}
             type="button"
             onClick={() => setTab("about")}
-            className="inline-flex items-center px-5 py-1.5 rounded-md bg-white/15 hover:bg-white/25 border border-white/40 text-xs font-medium uppercase tracking-wide transition"
+            whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.22)" }}
+            whileTap={{ scale: 0.97 }}
+            transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+            className="mt-6 inline-flex items-center px-5 py-2 rounded-md bg-white/15 border border-white/40 text-xs font-medium uppercase tracking-wide"
           >
             About Campaign
-          </button>
-        </div>
+          </motion.button>
+        </motion.div>
       </section>
 
-      {/* ============ 3-COL STATS ROW: PROGRESS | ACTION | COUNTDOWN ============ */}
-      <section className="border-b border-gray-100">
-        <div className="grid md:grid-cols-3 items-stretch divide-y md:divide-y-0 md:divide-x divide-gray-100">
-          {/* LEFT — progress with arc */}
-          <div className="px-6 py-8 md:py-10 flex flex-col items-center justify-center">
-            <ArcProgress percent={pctRaw} accent={accent} />
-            <div className="text-center mt-3">
-              <div className="text-[11px] uppercase tracking-[0.18em] text-gray-500">
-                <span className="font-bold text-gray-900 tabular-nums">{pctRaw.toFixed(0)}%</span> of {formatUsd(progress.goal_cents)} goal
-              </div>
-              <div className="text-xs text-gray-400 mt-1 tabular-nums">{formatUsd(total)} raised</div>
-            </div>
-          </div>
-
-          {/* MIDDLE — pink action band */}
-          <div className="px-6 py-8 md:py-10 flex items-center justify-center" style={{ background: accent }}>
-            <div className="flex flex-col gap-3 w-full max-w-xs">
-              <button
-                type="button"
-                onClick={openDonate}
-                className="w-full px-6 py-3 bg-white font-bold rounded-md text-sm tracking-[0.1em] uppercase shadow-sm hover:bg-gray-50 transition"
-                style={{ color: accent }}
-              >
-                Donate Now
-              </button>
-              <button
-                type="button"
-                onClick={copyLink}
-                className="w-full px-6 py-3 bg-gray-700 hover:bg-gray-800 text-white font-medium rounded-md text-sm uppercase tracking-[0.1em] transition inline-flex items-center justify-center gap-2"
-              >
-                {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
-                {copied ? "Copied" : "Share"}
-              </button>
-            </div>
-          </div>
-
-          {/* RIGHT — countdown */}
-          <div className="px-6 py-8 md:py-10 flex flex-col items-center justify-center">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-3">Time Remaining</div>
-            <CountdownStrip startAt={campaign.start_at} endAt={campaign.end_at} accent={accent} />
-          </div>
-        </div>
-      </section>
-
-      {/* ============ SPONSOR TIER CARDS ============ */}
+      {/* ============ HORIZONTAL SPONSOR TIER STRIP (Charidy-style) ============ */}
       {tiers.length > 0 && (
-        <section className="py-10 md:py-12 bg-gray-50 border-b border-gray-100">
-          <div className="container mx-auto px-6">
-            <div className="text-center mb-6">
-              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-1">Sponsorship Levels</div>
-              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Choose how you&apos;ll give</h2>
-              {multiplier > 1 && (
-                <p className="text-sm text-gray-600 mt-2">
-                  Every gift is <span className="font-semibold" style={{ color: accent }}>multiplied {multiplier}×</span> thanks to our matcher.
-                </p>
-              )}
-            </div>
-            <div className={`grid grid-cols-1 sm:grid-cols-2 ${tiers.length >= 3 ? "lg:grid-cols-3" : ""} ${tiers.length >= 4 ? "xl:grid-cols-4" : ""} gap-4 max-w-6xl mx-auto`}>
-              {tiers.map((t) => (
-                <button
-                  key={t.id}
-                  type="button"
-                  onClick={() => openWithTier(t.id)}
-                  className={`relative text-left bg-white border rounded-xl p-5 transition-all hover:shadow-lg ${
-                    t.is_featured ? "border-2" : "border border-gray-200"
-                  }`}
-                  style={t.is_featured ? { borderColor: accent } : undefined}
-                >
-                  {t.is_featured && (
-                    <span
-                      className="absolute -top-2 left-5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
-                      style={{ background: accent }}
-                    >
-                      Popular
-                    </span>
-                  )}
-                  <div className="flex items-baseline justify-between mb-1">
-                    <div className="text-2xl md:text-3xl font-bold text-gray-900 tabular-nums">{formatUsd(t.amount_cents)}</div>
-                    {t.hebrew_value && (
-                      <div dir="rtl" className="text-sm font-semibold" style={{ color: accent }}>
-                        {t.hebrew_value}
-                      </div>
-                    )}
-                  </div>
-                  {t.label && <div className="text-sm font-semibold text-gray-800 mb-1">{t.label}</div>}
-                  {t.description && <div className="text-xs text-gray-600 leading-relaxed">{t.description}</div>}
-                  {multiplier > 1 && (
-                    <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
-                      Becomes <span className="font-semibold tabular-nums" style={{ color: accent }}>{formatUsd(t.amount_cents * multiplier)}</span> with match
-                    </div>
-                  )}
-                </button>
-              ))}
-            </div>
-          </div>
-        </section>
+        <TierStrip tiers={tiers} accent={accent} onPickTier={(t) => openDonate({ tierId: t.id, amount: Math.round(t.amount_cents / 100) })} />
       )}
 
-      {/* ============ 3-COL DONATION WIDGET: SHARE | $AMOUNT | DONATE ============ */}
-      <section className="py-12 md:py-16">
+      {/* ============ HERO PROGRESS BLOCK — 2-col: $ raised | clock ============ */}
+      <section className="pt-10 md:pt-14 pb-8 bg-white">
+        <div className="container mx-auto px-6">
+          {activeMatcher && (
+            <div className="text-center mb-8">
+              <div className="inline-flex items-center gap-2 px-4 py-1 rounded-full text-[11px] font-bold uppercase tracking-[0.18em] text-white" style={{ background: accent }}>
+                <span className="tabular-nums">x{multiplier}</span>
+                <span>{activeMatcher.name ? `${activeMatcher.name} Match` : "Campaign Match"}</span>
+              </div>
+            </div>
+          )}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 items-center gap-10 md:gap-6 max-w-5xl mx-auto">
+            {/* LEFT — pencil squiggle + big raised amount */}
+            <div className="text-center md:border-r md:border-gray-100 md:pr-6 md:py-4">
+              <PencilSquiggle accent={accent} />
+              <div className="mt-1 text-5xl md:text-6xl lg:text-7xl font-bold text-gray-900 tabular-nums leading-none">
+                <CountUp
+                  value={totalRaisedCents / 100}
+                  durationMs={1600}
+                  format={(n) => formatUsd(Math.round(n) * 100)}
+                />
+              </div>
+              <div className="mt-3 text-[12px] uppercase tracking-[0.15em] text-gray-500">
+                <CountUp
+                  value={pctRaw}
+                  durationMs={1400}
+                  format={(n) => `${n.toFixed(0)}%`}
+                  className="font-bold text-gray-900 tabular-nums"
+                />
+                <span className="mx-1.5 text-gray-400">of</span>
+                <span className="font-semibold text-gray-700 tabular-nums normal-case">{formatUsd(progress.goal_cents)}</span>
+                <span className="ml-1.5 text-gray-400">goal</span>
+              </div>
+              <ProgressBar pctRaw={pctRaw} accent={accent} />
+            </div>
+
+            {/* RIGHT — clock ring + countdown digits */}
+            <div className="flex flex-col items-center md:pl-6 md:py-4">
+              <ClockRing startAt={campaign.start_at} endAt={campaign.end_at} accent={accent} />
+              <div className="mt-4">
+                <CountdownStrip startAt={campaign.start_at} endAt={campaign.end_at} accent={accent} />
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* ============ INLINE DONATION ROW: SHARE | $ INPUT | DONATE ============ */}
+      <section className="pb-12 md:pb-16 bg-white">
         <div className="container mx-auto px-6">
           <div className="text-center text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-6">
             Start Your Donation
           </div>
-          <div className="grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-center gap-6 md:gap-10 max-w-4xl mx-auto">
-            {/* Share pill (left) */}
-            <button
+
+          <div className="max-w-4xl mx-auto grid grid-cols-1 md:grid-cols-[auto_1fr_auto] items-stretch gap-3 md:gap-4">
+            <motion.button
               type="button"
               onClick={copyLink}
-              className="hidden md:inline-flex items-center gap-2 px-5 py-3 border border-gray-200 rounded-md text-xs font-semibold uppercase tracking-[0.1em] text-gray-700 hover:border-gray-400 transition"
+              whileHover={{ scale: 1.03, borderColor: "#9ca3af" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.18, ease: EASE_OUT_EXPO }}
+              className="hidden md:inline-flex items-center justify-center gap-2 px-5 py-3 border-2 border-gray-200 rounded-md text-xs font-semibold uppercase tracking-[0.1em] text-gray-700"
             >
               {copied ? <Check className="w-4 h-4" /> : <Share2 className="w-4 h-4" />}
               {copied ? "Copied" : "Share"}
-            </button>
+            </motion.button>
 
-            {/* Center — amount */}
-            <div className="text-center">
-              <div className="text-6xl md:text-7xl font-bold text-gray-900 tabular-nums leading-none">$0</div>
-              <div className="text-xs text-gray-600 mt-3">
-                {orgName} gets:{" "}
-                <span className="font-semibold">(x{Number(activeMatcher?.multiplier ?? 1)})</span>{" "}
-                = <span className="font-semibold text-gray-900">$0</span>
-              </div>
+            <div className="relative">
+              <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl md:text-3xl font-bold text-gray-400">$</span>
+              <input
+                type="text"
+                inputMode="numeric"
+                pattern="[0-9]*"
+                value={inlineAmount}
+                onChange={(e) => {
+                  const digits = e.target.value.replace(/\D/g, "").slice(0, 9);
+                  setInlineAmount(digits);
+                }}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter" && inlineDollars > 0) {
+                    openDonate({ amount: inlineDollars });
+                  }
+                }}
+                placeholder="0"
+                aria-label="Donation amount in dollars"
+                className="w-full h-full pl-12 pr-4 py-3 text-2xl md:text-3xl font-bold text-gray-900 tabular-nums border-2 border-gray-200 rounded-md focus:outline-none bg-white text-center transition-[border-color,box-shadow] duration-200"
+                style={{ ["--tw-ring-color" as string]: accent }}
+                onFocus={(e) => {
+                  e.currentTarget.style.borderColor = accent;
+                  e.currentTarget.style.boxShadow = `0 0 0 4px rgba(${hexToRgb(accent)}, 0.15)`;
+                }}
+                onBlur={(e) => {
+                  e.currentTarget.style.borderColor = "";
+                  e.currentTarget.style.boxShadow = "";
+                }}
+              />
             </div>
 
-            {/* Donate button (right) */}
-            <button
+            <motion.button
               type="button"
-              onClick={openDonate}
-              className="px-10 py-4 text-white font-bold rounded-md text-sm uppercase tracking-[0.1em] shadow-lg hover:shadow-xl transition"
+              onClick={() => openDonate(inlineDollars > 0 ? { amount: inlineDollars } : undefined)}
+              whileHover={{
+                y: -2,
+                scale: 1.03,
+                boxShadow: `0 18px 40px -12px rgba(${hexToRgb(accent)}, 0.55)`,
+              }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+              className="px-10 py-4 text-white font-bold rounded-md text-sm uppercase tracking-[0.1em] shadow-lg whitespace-nowrap"
               style={{ background: accent }}
             >
-              Donate Now
-            </button>
+              Donate
+            </motion.button>
           </div>
+
+          <p className="text-center text-xs text-gray-500 mt-4 tabular-nums">
+            {orgName} gets:{" "}
+            <span className="font-semibold">(x{multiplier})</span>
+            <span className="mx-1.5">=</span>
+            <span className="font-bold text-gray-900">{formatUsd(inlineTotalCents)}</span>
+          </p>
         </div>
       </section>
 
       {/* ============ CONTACT STRIP ============ */}
-      <section className="border-t border-b border-gray-100 py-6 bg-white">
-        <div className="container mx-auto px-6 text-center text-sm text-gray-600 space-y-1.5">
+      <Reveal as="section" className="border-t border-b border-gray-100 py-6 bg-white">
+        <div className="container mx-auto px-6 text-center text-sm text-gray-500 space-y-1.5">
           <div>
             Campaign Contact Email:{" "}
             <a href={`mailto:${contactEmail}`} className="underline font-medium" style={{ color: accent }}>
@@ -311,7 +452,7 @@ export default function CampaignClient({
             </a>
           </div>
         </div>
-      </section>
+      </Reveal>
 
       {/* ============ TABS STRIP — NUMBER STACKED ABOVE LABEL ============ */}
       <section className="bg-gray-50 border-b border-gray-200">
@@ -339,8 +480,12 @@ export default function CampaignClient({
                 >
                   {count !== null ? (
                     <>
-                      <span className="text-xl font-bold tabular-nums leading-none">{count.toLocaleString()}</span>
-                      <span className="text-[11px] uppercase tracking-[0.15em] mt-1.5">{t.label}</span>
+                      <CountUp
+                        value={count}
+                        durationMs={1200}
+                        className="text-xl font-bold tabular-nums leading-none"
+                      />
+                      <span className="text-[11px] uppercase tracking-[0.15em] mt-1.5 opacity-70">{t.label}</span>
                     </>
                   ) : (
                     <span className="text-[11px] uppercase tracking-[0.15em] py-1.5">{t.label}</span>
@@ -354,100 +499,161 @@ export default function CampaignClient({
 
       {/* ============ TAB BODY ============ */}
       <section className="container mx-auto px-6 py-10 max-w-5xl">
-        {tab === "donors" && (
-          <>
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-              <div className="relative flex-1 max-w-md">
-                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                <input
-                  value={search}
-                  onChange={(e) => setSearch(e.target.value)}
-                  placeholder="Search"
-                  className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-gray-400 bg-white"
-                />
-              </div>
-              <div className="flex items-center gap-2 text-sm">
-                <span className="text-gray-500 uppercase tracking-wide text-xs">Sort By:</span>
-                <select
-                  value={sortBy}
-                  onChange={(e) => setSortBy(e.target.value as Sort)}
-                  className="px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-gray-400 text-sm"
-                >
-                  <option value="default">Default</option>
-                  <option value="latest">Latest</option>
-                  <option value="oldest">Oldest</option>
-                  <option value="highest">Highest</option>
-                </select>
-              </div>
-            </div>
+        <AnimatePresence mode="wait">
+          <motion.div
+            key={tab}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -4 }}
+            transition={{ duration: 0.25, ease: EASE_OUT_EXPO }}
+          >
+            {tab === "donors" && (
+              <>
+                <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-gray-400 bg-white"
+                    />
+                  </div>
+                  <div className="flex items-center gap-2 text-sm">
+                    <span className="text-gray-400 uppercase tracking-wide text-xs">Sort By:</span>
+                    <select
+                      value={sortBy}
+                      onChange={(e) => setSortBy(e.target.value as Sort)}
+                      className="px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-gray-400 text-sm"
+                    >
+                      <option value="default">Default</option>
+                      <option value="latest">Latest</option>
+                      <option value="oldest">Oldest</option>
+                      <option value="highest">Highest</option>
+                    </select>
+                  </div>
+                </div>
 
-            {visibleDonations.length === 0 ? (
-              <div className="text-center py-16 bg-white border border-gray-100 rounded-xl">
-                <Heart className="w-8 h-8 mx-auto mb-3" style={{ color: accent }} />
-                <p className="text-gray-700 font-medium">Be the first to donate</p>
-                <p className="text-gray-500 text-sm mt-1">Your gift kicks off this campaign.</p>
-              </div>
-            ) : (
-              <div className="grid sm:grid-cols-2 gap-3">
-                {visibleDonations.map((d) => (
-                  <DonorCard key={d.id} d={d} accent={accent} />
-                ))}
-              </div>
+                {visibleDonations.length === 0 ? (
+                  <div className="text-center py-16 bg-white border border-gray-100 rounded-xl">
+                    <Heart className="w-8 h-8 mx-auto mb-3" style={{ color: accent }} />
+                    <p className="text-gray-700 font-medium">Be the first to donate</p>
+                    <p className="text-gray-500 text-sm mt-1">Your gift kicks off this campaign.</p>
+                  </div>
+                ) : (
+                  <motion.div
+                    className="grid sm:grid-cols-2 gap-3"
+                    variants={STAGGER_PARENT}
+                    initial="hidden"
+                    animate="show"
+                  >
+                    {visibleDonations.map((d) => (
+                      <motion.div key={d.id} variants={STAGGER_CHILD} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                        <DonorCard d={d} accent={accent} />
+                      </motion.div>
+                    ))}
+                  </motion.div>
+                )}
+
+                {filteredDonations.length > 24 && (
+                  <div className="text-center mt-8">
+                    <button
+                      type="button"
+                      onClick={() => setShowAllDonors((v) => !v)}
+                      className="text-sm font-semibold uppercase tracking-[0.18em] underline"
+                      style={{ color: accent }}
+                    >
+                      {showAllDonors ? "Show Less" : "See More"}
+                    </button>
+                  </div>
+                )}
+              </>
             )}
 
-            {filteredDonations.length > 10 && (
-              <div className="text-center mt-8">
-                <button
-                  type="button"
-                  onClick={() => setShowAllDonors((v) => !v)}
-                  className="text-sm font-semibold uppercase tracking-[0.18em] underline"
-                  style={{ color: accent }}
-                >
-                  {showAllDonors ? "Show Less" : "See More"}
-                </button>
-              </div>
+            {tab === "matchers" && <MatchersPanel matchers={matchers} accent={accent} />}
+            {tab === "about" && <AboutPanel campaign={campaign} accent={accent} />}
+            {tab === "teams" && <TeamsPanel teams={teams} accent={accent} onDonate={(teamId) => openDonate({ teamId })} />}
+            {tab === "communities" && (
+              <div className="text-center py-12 text-gray-400 text-sm">No communities yet.</div>
             )}
-          </>
-        )}
-
-        {tab === "matchers" && <MatchersPanel matchers={matchers} accent={accent} />}
-        {tab === "about" && <AboutPanel campaign={campaign} accent={accent} />}
-        {tab === "teams" && <TeamsPanel teams={teams} accent={accent} onDonate={openWithTeam} />}
-        {tab === "communities" && (
-          <div className="text-center py-12 text-gray-500 text-sm">No communities yet.</div>
-        )}
+          </motion.div>
+        </AnimatePresence>
       </section>
 
+
+      {/* ============ EVENT PHOTO CAROUSEL (below donor wall) ============ */}
+      {recentPhotos.length > 0 && (
+        <section className="bg-white py-14 md:py-20 border-t border-gray-100">
+          <div className="container mx-auto px-6">
+            <Reveal className="text-center mb-8">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-400 mb-2">From Our Community</div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">This is what you&apos;re powering</h2>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <PhotoCarousel photos={recentPhotos} accent={accent} />
+            </Reveal>
+          </div>
+        </section>
+      )}
+
+      {/* ============ VIDEO STORY (below donor wall) ============ */}
+      {campaign.video_url && (
+        <section className="bg-gray-50 border-t border-gray-100 py-14 md:py-20">
+          <div className="container mx-auto px-6">
+            <Reveal className="text-center mb-8">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-400 mb-2">Watch</div>
+              <h2 className="text-2xl md:text-3xl font-bold text-gray-900">Why JRE is On Fire</h2>
+              <p className="text-sm text-gray-500 mt-2 max-w-lg mx-auto">Hear it straight from our community — classes, events, and experiences that are changing lives across Westchester.</p>
+            </Reveal>
+            <Reveal delay={0.08}>
+              <InlineVideo url={campaign.video_url} accent={accent} campaignTitle={campaign.title} />
+            </Reveal>
+          </div>
+        </section>
+      )}
+
       {/* ============ BOTTOM SHARE BAND ============ */}
-      <section className="border-t border-gray-100 bg-white py-10">
+      <Reveal as="section" className="border-t border-gray-100 bg-white py-10">
         <div className="container mx-auto px-6 text-center">
           <div className="inline-flex items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-gray-700 mb-4">
             <Share2 className="w-4 h-4" /> Share this campaign
           </div>
-          <div className="flex items-center justify-center gap-2 flex-wrap">
-            <ShareBtn href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} label="Facebook" Icon={Facebook} accent={accent} />
-            <ShareBtn href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`} label="X" Icon={Twitter} accent={accent} />
-            <ShareBtn href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`} label="WhatsApp" Icon={MessageCircle} accent={accent} />
-            <ShareBtn href={`mailto:?subject=${encodeURIComponent(campaign.title)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`} label="Email" Icon={Mail} accent={accent} />
-            <button
+          <motion.div
+            className="flex items-center justify-center gap-2 flex-wrap"
+            variants={STAGGER_PARENT}
+            initial="hidden"
+            whileInView="show"
+            viewport={{ once: true, margin: "-40px" }}
+          >
+            <motion.div variants={STAGGER_CHILD}>
+              <ShareBtn href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`} label="WhatsApp" Icon={MessageCircle} accent={accent} />
+            </motion.div>
+            <motion.div variants={STAGGER_CHILD}>
+              <ShareBtn href={`mailto:?subject=${encodeURIComponent(campaign.title)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`} label="Email" Icon={Mail} accent={accent} />
+            </motion.div>
+            <motion.button
+              variants={STAGGER_CHILD}
               type="button"
               onClick={copyLink}
-              className="inline-flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-md text-sm font-medium hover:border-gray-400 transition"
+              whileHover={{ y: -2, scale: 1.04, borderColor: "#9ca3af" }}
+              whileTap={{ scale: 0.97 }}
+              transition={{ duration: 0.18, ease: EASE_OUT_EXPO }}
+              className="inline-flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-md text-sm font-medium"
             >
               {copied ? <Check className="w-4 h-4 text-green-500" /> : <Copy className="w-4 h-4" />}
               {copied ? "Copied" : "Copy link"}
-            </button>
-          </div>
+            </motion.button>
+          </motion.div>
           <p className="text-xs text-gray-400 mt-6 max-w-xl mx-auto">
             {campaign.tax_deductible_note || "JRE is a 501(c)(3) nonprofit. All donations are tax-deductible to the fullest extent permitted by law."}
             {campaign.tax_id ? ` ${campaign.tax_id}.` : ""}
           </p>
         </div>
-      </section>
+      </Reveal>
 
       <Footer />
 
-      <StickyMobileBar accent={accent} pct={pctRaw} total={total} goal={progress.goal_cents} onDonate={openDonate} />
+      <StickyMobileBar accent={accent} pct={pctRaw} total={totalRaisedCents} goal={progress.goal_cents} onDonate={() => openDonate(inlineDollars > 0 ? { amount: inlineDollars } : undefined)} />
 
       <DonateModal
         open={modalOpen}
@@ -455,15 +661,512 @@ export default function CampaignClient({
         snapshot={snapshot}
         preselectedTierId={preselectedTier}
         preselectedTeamId={preselectedTeam}
+        preselectedAmountDollars={preselectedAmount}
         onDonated={refresh}
       />
 
-      <VideoModal open={videoOpen} url={campaign.video_url} onClose={() => setVideoOpen(false)} />
     </main>
   );
 }
 
 // ============ SUBCOMPONENTS ============
+
+/**
+ * 3-up sliding photo strip. On desktop it shows three photos side-by-side
+ * inside a clipped viewport; the arrows (and the 5 s auto-advance) shift the
+ * whole row by exactly one card width, so photos glide past one at a time.
+ * Mobile falls back to 1 photo visible.
+ *
+ * Photos loop infinitely via modular index + % total, so there's no awkward
+ * "end of rail" state.
+ */
+function PhotoCarousel({ photos, accent }: { photos: RecentPhoto[]; accent: string }) {
+  const [i, setI] = useState(0);
+  const [paused, setPaused] = useState(false);
+  const total = photos.length;
+
+  useEffect(() => {
+    if (paused || total < 2) return;
+    const id = setInterval(() => setI((v) => (v + 1) % total), 5000);
+    return () => clearInterval(id);
+  }, [paused, total]);
+
+  if (total === 0) return null;
+  const prev = () => setI((v) => (v - 1 + total) % total);
+  const next = () => setI((v) => (v + 1) % total);
+
+  // Render photos looped 3× so no matter where we scroll, there's always
+  // content to the right of the visible window (prevents empty-space flash).
+  const loop = [...photos, ...photos, ...photos];
+
+  return (
+    <div
+      className="relative max-w-5xl mx-auto"
+      onMouseEnter={() => setPaused(true)}
+      onMouseLeave={() => setPaused(false)}
+    >
+      <div className="overflow-hidden rounded-xl">
+        <motion.div
+          className="flex"
+          animate={{ x: `-${(i + total) * (100 / loop.length)}%` }}
+          transition={{ duration: 0.7, ease: EASE_OUT_EXPO }}
+          style={{ width: `${(loop.length * 100) / 3}%` }}
+        >
+          {loop.map((p, idx) => (
+            <div
+              key={`${p.id}-${idx}`}
+              className="flex-shrink-0 px-2"
+              style={{ width: `${100 / loop.length}%` }}
+            >
+              <div className="relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 shadow-md group">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img
+                  src={p.image_url}
+                  alt={p.title || p.category || "JRE event"}
+                  loading="lazy"
+                  className="absolute inset-0 w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+                />
+                {p.category && (
+                  <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent p-3">
+                    <div className="text-white text-xs font-semibold leading-tight drop-shadow">{p.category}</div>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </motion.div>
+      </div>
+
+      {total > 1 && (
+        <>
+          <button
+            type="button"
+            onClick={prev}
+            aria-label="Previous photo"
+            className="absolute left-0 md:-left-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white shadow-lg hover:scale-110 transition flex items-center justify-center z-10"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-gray-800"><polyline points="15 18 9 12 15 6" /></svg>
+          </button>
+          <button
+            type="button"
+            onClick={next}
+            aria-label="Next photo"
+            className="absolute right-0 md:-right-6 top-1/2 -translate-y-1/2 w-11 h-11 rounded-full bg-white shadow-lg hover:scale-110 transition flex items-center justify-center z-10"
+          >
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" className="w-5 h-5 text-gray-800"><polyline points="9 18 15 12 9 6" /></svg>
+          </button>
+
+          <div className="mt-5 flex items-center justify-center gap-1.5">
+            {photos.map((_, idx) => (
+              <button
+                key={idx}
+                type="button"
+                onClick={() => setI(idx)}
+                aria-label={`Go to photo ${idx + 1}`}
+                className="h-1.5 rounded-full transition-all"
+                style={{
+                  width: idx === i ? 22 : 6,
+                  background: idx === i ? accent : "#d1d5db",
+                }}
+              />
+            ))}
+          </div>
+        </>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Campaign video with a text-based poster — no blurry YouTube auto-thumbnail.
+ * Uses the same design language as the `/events` placeholder (corner brackets,
+ * dot-pattern texture, diagonal hatch, "The JRE Presents" eyebrow) themed to
+ * the campaign's accent color. Click swaps the poster for the autoplaying embed.
+ */
+function InlineVideo({ url, accent, campaignTitle }: { url: string; accent: string; campaignTitle: string }) {
+  const [playing, setPlaying] = useState(false);
+  const yt = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([A-Za-z0-9_-]{11})/);
+  const vm = url.match(/vimeo\.com\/(?:video\/)?(\d+)/);
+  const ytId = yt?.[1] ?? null;
+  const embedSrc = ytId
+    ? `https://www.youtube.com/embed/${ytId}?autoplay=1&rel=0&modestbranding=1&playsinline=1`
+    : vm
+    ? `https://player.vimeo.com/video/${vm[1]}?autoplay=1`
+    : null;
+  const accentRgb = hexToRgb(accent);
+
+  return (
+    <div className="relative max-w-4xl mx-auto aspect-video rounded-xl overflow-hidden shadow-2xl bg-black">
+      {playing && embedSrc ? (
+        <iframe
+          src={embedSrc}
+          title="Campaign video"
+          allow="autoplay; encrypted-media; picture-in-picture; fullscreen"
+          allowFullScreen
+          className="absolute inset-0 w-full h-full border-0"
+        />
+      ) : playing ? (
+        // eslint-disable-next-line jsx-a11y/media-has-caption
+        <video src={url} controls autoPlay className="absolute inset-0 w-full h-full bg-black" />
+      ) : (
+        <button
+          type="button"
+          onClick={() => setPlaying(true)}
+          aria-label="Play campaign video"
+          className="group absolute inset-0 w-full h-full overflow-hidden"
+          style={{
+            background: `linear-gradient(160deg, #ffffff 0%, #fafafa 45%, rgba(${accentRgb}, 0.06) 100%)`,
+          }}
+        >
+          {/* Very subtle accent glow top-right */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{
+              background: `radial-gradient(circle at 85% 12%, rgba(${accentRgb}, 0.18) 0%, transparent 45%)`,
+            }}
+          />
+          {/* Delicate top accent rule */}
+          <div
+            aria-hidden="true"
+            className="absolute top-0 left-1/2 -translate-x-1/2 h-[3px] w-24 rounded-b-full"
+            style={{ background: accent }}
+          />
+
+          <div className="relative z-10 h-full flex flex-col items-center justify-center text-center px-8">
+            <div className="text-[10px] md:text-[11px] font-semibold tracking-[0.3em] uppercase mb-5" style={{ color: accent }}>
+              Watch
+            </div>
+            <h3 className="text-2xl md:text-4xl font-semibold text-gray-900 leading-tight max-w-xl tracking-tight">
+              {campaignTitle}
+            </h3>
+            <p className="mt-3 text-sm md:text-base text-gray-500 max-w-md">
+              Press play for the story.
+            </p>
+          </div>
+
+          {/* Centered play button — orange pill with soft ring */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div
+              className="w-20 h-20 md:w-24 md:h-24 rounded-full flex items-center justify-center transition-transform duration-300 group-hover:scale-110"
+              style={{
+                background: accent,
+                boxShadow: `0 12px 36px rgba(${accentRgb}, 0.35), 0 0 0 10px rgba(${accentRgb}, 0.08)`,
+              }}
+            >
+              <svg viewBox="0 0 24 24" fill="currentColor" className="w-9 h-9 md:w-11 md:h-11 text-white ml-1"><path d="M8 5v14l11-7L8 5z" /></svg>
+            </div>
+          </div>
+        </button>
+      )}
+    </div>
+  );
+}
+
+/**
+ * Horizontal Sponsor Tier Strip — compact Charidy-style row of tier pills.
+ * Each tier is a button: big $ amount on top, label under it. The strip itself
+ * is a subtle gray band so it visually bridges the colored title band and the
+ * white progress block. Tier cards pop with the accent color on hover/selection.
+ */
+function TierStrip({
+  tiers, accent, onPickTier,
+}: {
+  tiers: CampaignTier[];
+  accent: string;
+  onPickTier: (t: CampaignTier) => void;
+}) {
+  const reduced = useReducedMotion();
+  const accentRgb = useMemo(() => hexToRgb(accent), [accent]);
+  return (
+    <section className="bg-gray-50 border-b border-gray-200">
+      <div className="container mx-auto px-4 py-5 md:py-6">
+        <motion.div
+          className="flex items-stretch gap-2 md:gap-3 overflow-x-auto no-scrollbar justify-center"
+          variants={STAGGER_PARENT}
+          initial={reduced ? undefined : "hidden"}
+          whileInView={reduced ? undefined : "show"}
+          viewport={{ once: true, margin: "-60px" }}
+        >
+          {tiers.map((t) => (
+            <motion.button
+              key={t.id}
+              type="button"
+              onClick={() => onPickTier(t)}
+              variants={STAGGER_CHILD}
+              whileHover={reduced ? undefined : {
+                y: -4,
+                scale: 1.04,
+                borderColor: accent,
+                boxShadow: `0 12px 28px -10px rgba(${accentRgb}, 0.45)`,
+              }}
+              whileTap={reduced ? undefined : { scale: 0.97 }}
+              transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+              className="group flex-shrink-0 min-w-[110px] md:min-w-[140px] bg-white border border-gray-200 rounded-lg px-3 md:px-4 py-3 md:py-4 text-center relative"
+            >
+              {t.is_featured && (
+                <motion.span
+                  className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white whitespace-nowrap"
+                  style={{ background: accent, originX: 0.5, originY: 0.5 }}
+                  animate={reduced ? undefined : { scale: [1, 1.06, 1] }}
+                  transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+                >
+                  Popular
+                </motion.span>
+              )}
+              <div className="text-lg md:text-2xl font-bold text-gray-900 tabular-nums leading-none">
+                {formatUsd(t.amount_cents)}
+              </div>
+              {t.label && (
+                <div className="text-[10px] md:text-[11px] uppercase tracking-[0.1em] font-semibold text-gray-500 mt-1.5 md:mt-2 leading-tight">
+                  {t.label}
+                </div>
+              )}
+              {t.hebrew_value && (
+                <div dir="rtl" className="text-xs font-semibold mt-1" style={{ color: accent }}>
+                  {t.hebrew_value}
+                </div>
+              )}
+            </motion.button>
+          ))}
+        </motion.div>
+      </div>
+    </section>
+  );
+}
+
+type ClockState = "pre" | "live" | "ended";
+
+/**
+ * Circular clock ring scaled to the full campaign window. Full ring = total
+ * duration (start_at → end_at), so a 2-day campaign is a 2-day clock and a
+ * 36-hour campaign is a 36-hour clock. Auto-switches between three states:
+ *   - "pre"   → campaign hasn't started. Label: STARTS IN. Ring is empty.
+ *   - "live"  → currently running. Label: TIME REMAINING. Arc fills + running
+ *               dot tracks the elapsed fraction; re-renders every second.
+ *   - "ended" → past end_at. Label: CAMPAIGN ENDED. Ring is full.
+ */
+/**
+ * "Jun 7 – 8, 2026" style formatter that collapses same-month ranges and
+ * only shows the year when it'd be ambiguous (campaign spans a year boundary
+ * or isn't the current year).
+ */
+function formatDateRange(startIso: string, endIso: string): string {
+  const s = new Date(startIso);
+  const e = new Date(endIso);
+  const sameDay = s.toDateString() === e.toDateString();
+  const sameMonth = s.getMonth() === e.getMonth() && s.getFullYear() === e.getFullYear();
+  const sameYear = s.getFullYear() === e.getFullYear();
+  const monthShort = (d: Date) => d.toLocaleString("en-US", { month: "short" });
+  const y = s.getFullYear();
+  if (sameDay) return `${monthShort(s)} ${s.getDate()}, ${y}`;
+  if (sameMonth) return `${monthShort(s)} ${s.getDate()}–${e.getDate()}, ${y}`;
+  if (sameYear) return `${monthShort(s)} ${s.getDate()} – ${monthShort(e)} ${e.getDate()}, ${y}`;
+  return `${monthShort(s)} ${s.getDate()}, ${y} – ${monthShort(e)} ${e.getDate()}, ${e.getFullYear()}`;
+}
+
+/**
+ * Render the tagline as three visual lines: opening sentence, the middle
+ * staccato "Torah. Events. Teachers. Brisket." burst, and a loud closing "All
+ * On Fire." If the tagline doesn't match that shape, fall back to a single line.
+ */
+function TaglineLines({ tagline }: { tagline: string }) {
+  const m = tagline.match(/^(.+?\.)\s+(.+?\.)\s+(All\s+On\s+Fire\.?)$/i);
+  if (!m) {
+    return <p className="text-sm md:text-lg text-white/80 leading-relaxed">{tagline}</p>;
+  }
+  return (
+    <>
+      <p className="text-base md:text-xl text-white/90 leading-snug">{m[1]}</p>
+      <p className="text-sm md:text-base text-white/75 tracking-wide italic">{m[2]}</p>
+      <p className="pt-2 text-2xl md:text-4xl font-extrabold text-white tracking-tight">{m[3]}</p>
+    </>
+  );
+}
+
+function ClockRing({ startAt, endAt, accent }: { startAt: string; endAt: string; accent: string }) {
+  const [elapsedPct, setElapsedPct] = useState(0);
+  const [state, setState] = useState<ClockState>("pre");
+
+  useEffect(() => {
+    const tick = () => {
+      const s = new Date(startAt).getTime();
+      const e = new Date(endAt).getTime();
+      const now = Date.now();
+      if (now >= e) { setElapsedPct(100); setState("ended"); return; }
+      if (now < s) { setElapsedPct(0); setState("pre"); return; }
+      const total = Math.max(1, e - s);
+      const used = Math.max(0, now - s);
+      setElapsedPct(Math.min(100, (used / total) * 100));
+      setState("live");
+    };
+    tick();
+    const id = setInterval(tick, 1000);
+    return () => clearInterval(id);
+  }, [startAt, endAt]);
+
+  const size = 200;
+  const stroke = 10;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const offset = c - (c * elapsedPct) / 100;
+
+  // dot position along the arc — starts at 12 o'clock, rotates clockwise.
+  const angle = (elapsedPct / 100) * 2 * Math.PI - Math.PI / 2;
+  const cx = size / 2 + r * Math.cos(angle);
+  const cy = size / 2 + r * Math.sin(angle);
+
+  const label =
+    state === "ended" ? (<>Campaign<br />ended</>) :
+    state === "pre"   ? (<>Starts<br />in</>) :
+                        (<>Time<br />Remaining</>);
+
+  const reduced = useReducedMotion();
+  return (
+    <motion.div
+      className="relative"
+      style={{ width: size, height: size }}
+      initial={reduced ? false : { opacity: 0, scale: 0.92 }}
+      animate={{ opacity: 1, scale: 1 }}
+      transition={{ duration: 0.7, ease: EASE_OUT_EXPO, delay: 0.2 }}
+    >
+      <svg width={size} height={size} viewBox={`0 0 ${size} ${size}`}>
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="#e5e7eb" strokeWidth={stroke} />
+        <motion.circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke={accent}
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={c}
+          initial={reduced ? false : { strokeDashoffset: c }}
+          animate={{ strokeDashoffset: offset }}
+          transition={{ duration: 1.4, ease: EASE_OUT_EXPO, delay: 0.3 }}
+          transform={`rotate(-90 ${size / 2} ${size / 2})`}
+        />
+        {state === "live" && (
+          <motion.circle
+            initial={reduced ? false : { opacity: 0 }}
+            animate={{ cx, cy, opacity: 1 }}
+            transition={{
+              cx: { duration: 1, ease: "linear" },
+              cy: { duration: 1, ease: "linear" },
+              opacity: { duration: 0.4, delay: 1.4 },
+            }}
+            r={stroke / 2 + 2}
+            fill={accent}
+            stroke="white"
+            strokeWidth={2}
+          />
+        )}
+      </svg>
+
+      {/* decorative push-pin at 12 o'clock */}
+      <div
+        className="absolute left-1/2 -translate-x-1/2 flex flex-col items-center"
+        style={{ top: -10 }}
+        aria-hidden="true"
+      >
+        <div className="w-3 h-3 rounded-full" style={{ background: "#374151" }} />
+        <div className="w-px h-2.5" style={{ background: "#374151" }} />
+      </div>
+
+      <div className="absolute inset-0 flex items-center justify-center text-center">
+        <div className="text-[11px] uppercase tracking-[0.22em] font-bold text-gray-800 leading-tight">
+          {label}
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
+/**
+ * Hand-drawn style pencil squiggle — the Charidy signature flourish that sits
+ * above the big raised-dollar amount. Subtle, accent-colored, slightly rotated
+ * for a sketched feel.
+ */
+function PencilSquiggle({ accent }: { accent: string }) {
+  const reduced = useReducedMotion();
+  return (
+    <svg
+      width="120"
+      height="22"
+      viewBox="0 0 120 22"
+      aria-hidden="true"
+      className="mx-auto"
+      style={{ color: accent }}
+    >
+      <motion.path
+        d="M3 14 C 18 3, 34 3, 48 12 S 78 22, 92 10 S 114 4, 117 8"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        initial={reduced ? false : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 1.2, ease: EASE_OUT_EXPO, delay: 0.3 }}
+      />
+      <motion.path
+        d="M113 5 L119 11"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+        initial={reduced ? false : { pathLength: 0 }}
+        animate={{ pathLength: 1 }}
+        transition={{ duration: 0.3, ease: "easeOut", delay: 1.4 }}
+      />
+    </svg>
+  );
+}
+
+/**
+ * Progress bar with animated fill, subtle shimmer sweep, and a brief scale pulse
+ * when the bar crosses 25/50/75/100% milestones during the session.
+ */
+function ProgressBar({ pctRaw, accent }: { pctRaw: number; accent: string }) {
+  const reduced = useReducedMotion();
+
+  const thresholds = [25, 50, 75, 100];
+  const [initialCrossed] = useState(() => thresholds.filter((t) => pctRaw >= t).length);
+  const crossedNow = thresholds.filter((t) => pctRaw >= t).length;
+  const pulseKey = Math.max(0, crossedNow - initialCrossed);
+
+  const pct = Math.min(100, pctRaw);
+  return (
+    <motion.div
+      key={pulseKey}
+      className="max-w-xs mx-auto mt-4 h-1.5 bg-gray-100 rounded-full overflow-hidden relative"
+      animate={pulseKey > 0 && !reduced ? { scaleY: [1, 1.6, 1] } : undefined}
+      transition={{ duration: 0.45, ease: "easeOut" }}
+      style={{ originY: 0.5 }}
+    >
+      <motion.div
+        initial={reduced ? { width: `${pct}%` } : { width: 0 }}
+        animate={{ width: `${pct}%` }}
+        transition={{ duration: 1.4, ease: EASE_OUT_EXPO }}
+        className="h-full rounded-full relative"
+        style={{ background: accent }}
+      >
+        {!reduced && (
+          <motion.div
+            aria-hidden="true"
+            className="absolute inset-y-0 w-1/3 pointer-events-none"
+            initial={{ x: "-100%" }}
+            animate={{ x: "300%" }}
+            transition={{ duration: 2.4, repeat: Infinity, repeatDelay: 2.2, ease: "easeInOut" }}
+            style={{
+              background: "linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.55) 50%, transparent 100%)",
+            }}
+          />
+        )}
+      </motion.div>
+    </motion.div>
+  );
+}
 
 /** Charidy-style horizontal countdown: HH | MM | SS with thin vertical dividers, label under each. */
 function CountdownStrip({ startAt, endAt, accent }: { startAt: string; endAt: string; accent: string }) {
@@ -476,23 +1179,30 @@ function CountdownStrip({ startAt, endAt, accent }: { startAt: string; endAt: st
   if (t.isEnded) {
     return (
       <div className="text-center">
-        <div className="text-2xl font-bold text-gray-900">Thank you!</div>
+        <div className="text-xl font-bold text-gray-900">Thank you!</div>
         <div className="text-xs text-gray-500 mt-1">Campaign ended</div>
       </div>
     );
   }
 
-  // If days > 0, show D/H/M, otherwise H/M/S — Charidy shows up to 3 segments.
+  // Pick the unit scale automatically so it "feels right" for the remaining
+  // window: multi-day → D/H/M, sub-day → H/M/S, last hour → M/S.
   const totalHours = t.days * 24 + t.hours;
+  const totalMinutes = totalHours * 60 + t.minutes;
   const segments = t.days > 0
     ? [
         { value: t.days, label: "Days" },
         { value: t.hours, label: "Hours" },
         { value: t.minutes, label: "Minutes" },
       ]
-    : [
+    : totalHours > 0
+    ? [
         { value: totalHours, label: "Hours" },
         { value: t.minutes, label: "Minutes" },
+        { value: t.seconds, label: "Seconds" },
+      ]
+    : [
+        { value: totalMinutes, label: "Minutes" },
         { value: t.seconds, label: "Seconds" },
       ];
 
@@ -500,14 +1210,14 @@ function CountdownStrip({ startAt, endAt, accent }: { startAt: string; endAt: st
     <div className="flex items-stretch gap-0">
       {segments.map((s, i) => (
         <div key={s.label} className="flex items-stretch">
-          <div className="px-4 md:px-5 text-center min-w-[68px]">
-            <div className="text-3xl md:text-4xl font-bold tabular-nums text-gray-900 leading-none">
+          <div className="px-4 md:px-5 text-center min-w-[64px]">
+            <div className="text-xl md:text-2xl font-bold tabular-nums text-gray-900 leading-none">
               {String(s.value).padStart(2, "0")}
             </div>
-            <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 mt-2">{s.label}</div>
+            <div className="text-[10px] uppercase tracking-[0.15em] text-gray-400 mt-1.5">{s.label}</div>
           </div>
           {i < segments.length - 1 && (
-            <div className="w-px self-stretch" style={{ background: accent, opacity: 0.5 }} />
+            <div className="w-px self-stretch" style={{ background: accent, opacity: 0.4 }} />
           )}
         </div>
       ))}
@@ -515,45 +1225,10 @@ function CountdownStrip({ startAt, endAt, accent }: { startAt: string; endAt: st
   );
 }
 
-/** Charidy-style circular arc progress (thick semi-circle). */
-function ArcProgress({ percent, accent }: { percent: number; accent: string }) {
-  const size = 140;
-  const stroke = 14;
-  const radius = (size - stroke) / 2;
-  const circ = Math.PI * radius; // semicircle circumference
-  const clamped = Math.max(0, Math.min(100, percent));
-  const offset = circ - (circ * clamped) / 100;
-
-  return (
-    <svg width={size} height={size / 2 + 10} viewBox={`0 0 ${size} ${size / 2 + 10}`} className="overflow-visible">
-      {/* track */}
-      <path
-        d={`M ${stroke / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - stroke / 2} ${size / 2}`}
-        fill="none"
-        stroke="#f3f4f6"
-        strokeWidth={stroke}
-        strokeLinecap="round"
-      />
-      {/* fill */}
-      <motion.path
-        d={`M ${stroke / 2} ${size / 2} A ${radius} ${radius} 0 0 1 ${size - stroke / 2} ${size / 2}`}
-        fill="none"
-        stroke={accent}
-        strokeWidth={stroke}
-        strokeLinecap="round"
-        strokeDasharray={circ}
-        initial={{ strokeDashoffset: circ }}
-        animate={{ strokeDashoffset: offset }}
-        transition={{ duration: 1.4, ease: "easeOut" }}
-      />
-    </svg>
-  );
-}
-
-
 function MatchersPanel({ matchers, accent }: { matchers: CampaignMatcher[]; accent: string }) {
+  const accentRgb = useMemo(() => hexToRgb(accent), [accent]);
   if (matchers.length === 0) {
-    return <div className="text-center py-12 text-gray-500 text-sm">No matchers announced yet.</div>;
+    return <div className="text-center py-12 text-gray-400 text-sm">No matchers announced yet.</div>;
   }
   return (
     <div>
@@ -562,9 +1237,24 @@ function MatchersPanel({ matchers, accent }: { matchers: CampaignMatcher[]; acce
           x{Math.max(...matchers.map((m) => Number(m.multiplier)))} CAMPAIGN MATCHERS
         </div>
       </div>
-      <div className="grid sm:grid-cols-2 gap-4">
+      <motion.div
+        className="grid sm:grid-cols-2 gap-4"
+        variants={STAGGER_PARENT}
+        initial="hidden"
+        animate="show"
+      >
         {matchers.map((m) => (
-          <div key={m.id} className="bg-white border border-gray-100 rounded-lg p-5 flex items-start gap-4">
+          <motion.div
+            key={m.id}
+            variants={STAGGER_CHILD}
+            whileHover={{
+              y: -3,
+              boxShadow: `0 18px 40px -16px rgba(${accentRgb}, 0.35)`,
+              borderColor: accent,
+            }}
+            transition={{ duration: 0.25, ease: EASE_OUT_EXPO }}
+            className="bg-white border border-gray-100 rounded-lg p-5 flex items-start gap-4"
+          >
             {m.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
               <img src={m.logo_url} alt={m.name} className="w-14 h-14 rounded-lg object-contain bg-gray-50" />
@@ -581,42 +1271,286 @@ function MatchersPanel({ matchers, accent }: { matchers: CampaignMatcher[]; acce
                 </div>
               </div>
               {m.cap_cents != null && (
-                <div className="text-xs text-gray-500 mt-1">Match cap: {formatUsd(m.cap_cents)}</div>
+                <div className="text-xs text-gray-400 mt-1">Match cap: {formatUsd(m.cap_cents)}</div>
               )}
               {m.story && <p className="text-sm text-gray-600 mt-2 leading-relaxed">{m.story}</p>}
             </div>
-          </div>
+          </motion.div>
         ))}
-      </div>
+      </motion.div>
     </div>
   );
 }
 
+/**
+ * Editorial About panel — magazine-feel layout.
+ *
+ * Sections (top → bottom):
+ *   1. Opening pull-quote — tagline rendered with serif display flourishes
+ *   2. Eyebrow + "Empower. Engage. Inspire." split-word banner
+ *   3. Three pillar cards with lucide icons (Empower / Engage / Inspire)
+ *   4. Narrative article with drop-cap on first paragraph
+ *   5. "Since YEAR" stat ribbon (extracted from story text)
+ *   6. Matcher Tiers as 4-card grid with medal-inspired gradient badges
+ *   7. FAQ accordion with polished hover/open states
+ */
 function AboutPanel({ campaign, accent }: { campaign: Campaign; accent: string }) {
+  const blocks = parseStoryMd(campaign.story_md ?? "");
+  const accentRgb = hexToRgb(accent);
+
+  // Partition blocks by section. Matcher Tiers heading triggers a new section
+  // that we render as a grid, not the default paragraph/bullet rendering.
+  // Also drop any heading that echoes the pillar words — the card grid
+  // already conveys "Empower / Engage / Inspire", so repeating it in the
+  // narrative heading is visual noise.
+  const PILLAR_ECHO = /empower|engage|inspire/i;
+  const narrativeBlocks: StoryBlock[] = [];
+  const tierBullets: string[] = [];
+  let inTiers = false;
+  for (const b of blocks) {
+    if ((b.kind === "h1" || b.kind === "h2") && /matcher\s*tiers?/i.test(b.text)) {
+      inTiers = true;
+      continue;
+    }
+    if (inTiers && b.kind === "bullets") {
+      tierBullets.push(...b.items);
+      continue;
+    }
+    if (!inTiers) {
+      if ((b.kind === "h1" || b.kind === "h2") && PILLAR_ECHO.test(b.text)) continue;
+      narrativeBlocks.push(b);
+    }
+  }
+
+  // Year mention for the stat ribbon — look for the first "Since YYYY" in
+  // any paragraph. Renders a big "N years" callout.
+  const sinceMatch = narrativeBlocks
+    .map((b) => (b.kind === "p" ? b.text : ""))
+    .join(" ")
+    .match(/since\s+(19|20)\d{2}/i);
+  const sinceYear = sinceMatch ? parseInt(sinceMatch[0].replace(/\D/g, ""), 10) : null;
+  const yearsActive = sinceYear ? new Date().getFullYear() - sinceYear : null;
+
+  const PILLARS = [
+    { label: "Empower", blurb: "Deep, sophisticated Torah wisdom — made relevant for modern life." },
+    { label: "Engage",  blurb: "Classes, events, and community gatherings that bring people together." },
+    { label: "Inspire", blurb: "Meaningful Jewish experiences that spark curiosity and connection." },
+  ];
+
   return (
     <div className="max-w-3xl mx-auto">
+      {/* ---------- 1. OPENING PULL-QUOTE ---------- */}
       {campaign.tagline && (
-        <p className="text-lg text-gray-700 mb-6 italic text-center">{campaign.tagline}</p>
-      )}
-      {campaign.story_md ? (
-        <div className="prose prose-lg max-w-none text-gray-700 whitespace-pre-line leading-relaxed">
-          {campaign.story_md}
-        </div>
-      ) : (
-        <p className="text-gray-500 text-center py-8">Story coming soon.</p>
+        <figure
+          className="relative mb-14 px-6 md:px-10 py-10 md:py-12 text-center overflow-hidden rounded-3xl border border-gray-100"
+          style={{ background: `linear-gradient(160deg, #ffffff 0%, rgba(${accentRgb}, 0.06) 100%)` }}
+        >
+          <div
+            aria-hidden="true"
+            className="absolute -top-10 -right-10 w-40 h-40 rounded-full opacity-[0.12] blur-2xl"
+            style={{ background: accent }}
+          />
+          <span
+            aria-hidden="true"
+            className="absolute top-4 left-6 text-7xl leading-none font-serif select-none"
+            style={{ color: `rgba(${accentRgb}, 0.35)` }}
+          >
+            &ldquo;
+          </span>
+          <blockquote className="relative text-xl md:text-2xl font-medium text-gray-800 leading-snug max-w-2xl mx-auto">
+            <TaglineEditorial tagline={campaign.tagline} accent={accent} />
+          </blockquote>
+        </figure>
       )}
 
+      {/* ---------- 2. PILLAR CARDS (mission stated through the cards themselves) ---------- */}
+      <div className="text-center mb-8">
+        <div className="text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase mb-2" style={{ color: accent }}>
+          Our Mission
+        </div>
+        <h2 className="text-2xl md:text-3xl font-bold text-gray-900 tracking-tight max-w-xl mx-auto">
+          Three commitments. One community.
+        </h2>
+      </div>
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-14">
+        {PILLARS.map((p, i) => (
+          <motion.div
+            key={p.label}
+            initial={{ opacity: 0, y: 14 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true, margin: "-60px" }}
+            transition={{ duration: 0.5, delay: i * 0.08, ease: EASE_OUT_EXPO }}
+            className="relative rounded-2xl border border-gray-100 bg-white p-7 pt-8 shadow-sm hover:shadow-md hover:-translate-y-0.5 transition-all overflow-hidden"
+          >
+            {/* Watermark number in the corner — darker so it reads as design */}
+            <div
+              aria-hidden="true"
+              className="absolute -top-1 right-3 text-7xl md:text-8xl font-extrabold leading-none select-none tabular-nums"
+              style={{ color: `rgba(${accentRgb}, 0.28)` }}
+            >
+              {String(i + 1).padStart(2, "0")}
+            </div>
+
+            <div className="relative">
+              <div className="text-xl md:text-2xl font-bold text-gray-900 mb-2 tracking-tight">{p.label}</div>
+              <div className="h-0.5 w-8 rounded-full mb-3" style={{ background: accent }} />
+              <p className="text-sm text-gray-600 leading-relaxed">{p.blurb}</p>
+            </div>
+          </motion.div>
+        ))}
+      </div>
+
+      {/* ---------- 4. NARRATIVE ARTICLE ---------- */}
+      {narrativeBlocks.length > 0 && (
+        <article className="space-y-5 text-gray-700 leading-relaxed">
+          {narrativeBlocks.map((b, i) => {
+            if (b.kind === "h1" || b.kind === "h2") {
+              return (
+                <div key={i} className="pt-6">
+                  <div className="h-1 w-8 rounded-full mb-3" style={{ background: accent }} />
+                  <h2 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight leading-tight">
+                    {b.text}
+                  </h2>
+                </div>
+              );
+            }
+            if (b.kind === "h3") {
+              return <h3 key={i} className="text-lg font-bold text-gray-900 pt-2">{b.text}</h3>;
+            }
+            if (b.kind === "bullets") {
+              return (
+                <ul key={i} className="space-y-2.5 pl-0">
+                  {b.items.map((item, j) => (
+                    <li key={j} className="flex gap-3 items-start">
+                      <span className="mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: accent }} />
+                      <span>{renderInline(item)}</span>
+                    </li>
+                  ))}
+                </ul>
+              );
+            }
+            // paragraph — drop-cap the first, normal body after
+            const isFirstPara = narrativeBlocks.findIndex((x) => x.kind === "p") === i;
+            return (
+              <p
+                key={i}
+                className={
+                  isFirstPara
+                    ? "text-lg first-letter:text-5xl first-letter:font-bold first-letter:float-left first-letter:mr-3 first-letter:mt-1 first-letter:leading-[0.9]"
+                    : "text-base"
+                }
+                style={isFirstPara ? ({ ["--dc" as string]: accent } as React.CSSProperties) : undefined}
+              >
+                {renderInline(b.text)}
+              </p>
+            );
+          })}
+        </article>
+      )}
+
+      {/* ---------- 5. "SINCE YEAR" STAT RIBBON ---------- */}
+      {yearsActive && yearsActive > 0 && (
+        <div
+          className="mt-12 rounded-2xl px-6 md:px-10 py-8 md:py-10 text-center border"
+          style={{
+            background: `linear-gradient(135deg, rgba(${accentRgb}, 0.08), rgba(${accentRgb}, 0.02))`,
+            borderColor: `rgba(${accentRgb}, 0.18)`,
+          }}
+        >
+          <div className="inline-flex items-baseline gap-2 justify-center">
+            <span
+              className="text-5xl md:text-7xl font-extrabold tabular-nums leading-none tracking-tight"
+              style={{ color: accent }}
+            >
+              {yearsActive}
+            </span>
+            <span className="text-xs md:text-sm uppercase tracking-[0.2em] font-semibold text-gray-500">Years</span>
+          </div>
+          <div className="mt-4 text-sm md:text-base font-bold text-gray-900 leading-tight">
+            Building community in Westchester since {sinceYear}.
+          </div>
+          <div className="mt-1 text-xs md:text-sm text-gray-600 leading-relaxed">
+            Thousands of classes, events, and experiences — and counting.
+          </div>
+        </div>
+      )}
+
+      {/* ---------- 6. MATCHER TIERS ---------- */}
+      {tierBullets.length > 0 && (
+        <div className="mt-14">
+          <div className="text-center mb-6">
+            <div className="text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase mb-2" style={{ color: accent }}>
+              Campaign Matchers
+            </div>
+            <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">
+              Join a tier. Unlock the match.
+            </h3>
+          </div>
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+            {tierBullets.map((raw, i) => {
+              const m = raw.match(/\$?([\d,]+)(?:\s*·|\s+—|\s+-|:)?\s*(.+)?/);
+              const amt = m?.[1] ? `$${m[1].replace(/[^\d,]/g, "")}` : raw;
+              const label = m?.[2]?.replace(/\*\*/g, "").trim() || "";
+              const medal = MEDAL_FOR(label);
+              return (
+                <motion.div
+                  key={i}
+                  initial={{ opacity: 0, y: 10 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 0.45, delay: i * 0.06, ease: EASE_OUT_EXPO }}
+                  className="relative rounded-xl p-5 text-center border overflow-hidden shadow-sm hover:shadow-md transition-shadow cursor-default"
+                  style={{
+                    background: medal.bg,
+                    borderColor: medal.border,
+                  }}
+                >
+                  <div
+                    aria-hidden="true"
+                    className="absolute -top-6 -right-6 w-16 h-16 rounded-full opacity-30 blur-xl"
+                    style={{ background: medal.glow }}
+                  />
+                  <div className="relative">
+                    <div className="text-[10px] font-bold uppercase tracking-[0.2em] mb-2" style={{ color: medal.labelColor }}>
+                      {label}
+                    </div>
+                    <div className="text-2xl md:text-3xl font-extrabold tabular-nums" style={{ color: medal.amountColor }}>
+                      {amt}
+                    </div>
+                  </div>
+                </motion.div>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* ---------- 7. FAQ ---------- */}
       {campaign.faq && campaign.faq.length > 0 && (
-        <div className="mt-12">
-          <h3 className="text-2xl font-bold text-gray-900 mb-4 text-center">Questions?</h3>
+        <div className="mt-16 pt-10 border-t border-gray-100">
+          <div className="text-center mb-6">
+            <div className="text-[11px] md:text-xs font-semibold tracking-[0.3em] uppercase mb-2" style={{ color: accent }}>
+              FAQ
+            </div>
+            <h3 className="text-2xl md:text-3xl font-extrabold text-gray-900 tracking-tight">Questions?</h3>
+          </div>
           <div className="space-y-2">
             {campaign.faq.map((entry, i) => (
-              <details key={i} className="border border-gray-200 rounded-lg overflow-hidden bg-white group">
-                <summary className="cursor-pointer px-5 py-4 font-semibold text-gray-900 hover:bg-gray-50 flex items-center justify-between">
-                  <span>{entry.q}</span>
-                  <span className="text-xl transition-transform group-open:rotate-45" style={{ color: accent }}>+</span>
+              <details key={i} className="border border-gray-200 rounded-xl overflow-hidden bg-white group hover:border-gray-300 open:border-gray-300 open:shadow-sm transition-all cursor-pointer">
+                <summary className="cursor-pointer list-none px-5 py-4 font-semibold text-gray-900 hover:bg-gray-50 flex items-center justify-between gap-4 transition-colors">
+                  <span className="flex-1">{entry.q}</span>
+                  <span
+                    className="w-7 h-7 rounded-full flex items-center justify-center text-white text-lg leading-none transition-transform duration-200 group-open:rotate-45 flex-shrink-0"
+                    style={{ background: accent }}
+                    aria-hidden="true"
+                  >
+                    +
+                  </span>
                 </summary>
-                <div className="px-5 pb-4 text-sm text-gray-700 leading-relaxed whitespace-pre-line">{entry.a}</div>
+                <div className="px-5 pb-5 text-sm text-gray-600 leading-relaxed whitespace-pre-line border-t border-gray-100 pt-4">
+                  {entry.a}
+                </div>
               </details>
             ))}
           </div>
@@ -624,6 +1558,155 @@ function AboutPanel({ campaign, accent }: { campaign: Campaign; accent: string }
       )}
     </div>
   );
+}
+
+/** Split the tagline into three visual lines matching the hero treatment. */
+function TaglineEditorial({ tagline, accent }: { tagline: string; accent: string }) {
+  const m = tagline.match(/^(.+?\.)\s+(.+?\.)\s+(All\s+On\s+Fire\.?)$/i);
+  if (!m) return <span>{tagline}</span>;
+  return (
+    <>
+      <span className="block">{m[1]}</span>
+      <span className="block text-base md:text-lg text-gray-500 italic tracking-wide mt-2">{m[2]}</span>
+      <span className="block mt-3 font-serif text-3xl md:text-4xl font-bold tracking-tight" style={{ color: accent }}>
+        {m[3]}
+      </span>
+    </>
+  );
+}
+
+/**
+ * Visual styling for each matcher tier — subtle medal-inspired gradient
+ * backgrounds (not gaudy metallic). Works on top of the accent-agnostic palette.
+ */
+function MEDAL_FOR(label: string) {
+  const l = label.toLowerCase();
+  if (l.includes("platinum")) {
+    return {
+      bg: "linear-gradient(135deg, #f8fafc, #e2e8f0)",
+      border: "#cbd5e1",
+      glow: "#94a3b8",
+      labelColor: "#475569",
+      amountColor: "#0f172a",
+    };
+  }
+  if (l.includes("gold")) {
+    return {
+      bg: "linear-gradient(135deg, #fffbeb, #fde68a)",
+      border: "#f59e0b55",
+      glow: "#f59e0b",
+      labelColor: "#92400e",
+      amountColor: "#78350f",
+    };
+  }
+  if (l.includes("silver")) {
+    return {
+      bg: "linear-gradient(135deg, #f8fafc, #e5e7eb)",
+      border: "#9ca3af55",
+      glow: "#9ca3af",
+      labelColor: "#4b5563",
+      amountColor: "#111827",
+    };
+  }
+  if (l.includes("bronze")) {
+    return {
+      bg: "linear-gradient(135deg, #fef3c7, #fcd9a8)",
+      border: "#d9770655",
+      glow: "#d97706",
+      labelColor: "#9a3412",
+      amountColor: "#7c2d12",
+    };
+  }
+  return {
+    bg: "linear-gradient(135deg, #ffffff, #f9fafb)",
+    border: "#e5e7eb",
+    glow: "#9ca3af",
+    labelColor: "#4b5563",
+    amountColor: "#111827",
+  };
+}
+
+type StoryBlock =
+  | { kind: "h1" | "h2" | "h3"; text: string }
+  | { kind: "p"; text: string }
+  | { kind: "bullets"; items: string[] };
+
+/**
+ * Lightweight Markdown parser: enough to render our campaign story_md nicely
+ * without pulling in a full markdown library. Handles headings, paragraphs,
+ * bullet lists, and horizontal rules.
+ */
+function parseStoryMd(md: string): StoryBlock[] {
+  const lines = md.replace(/\r\n/g, "\n").split("\n");
+  const out: StoryBlock[] = [];
+  let paragraph: string[] = [];
+  let bullets: string[] = [];
+
+  const flushPara = () => {
+    if (paragraph.length) {
+      out.push({ kind: "p", text: paragraph.join(" ").trim() });
+      paragraph = [];
+    }
+  };
+  const flushBullets = () => {
+    if (bullets.length) {
+      out.push({ kind: "bullets", items: [...bullets] });
+      bullets = [];
+    }
+  };
+
+  for (const raw of lines) {
+    const line = raw.trim();
+    if (!line) {
+      flushPara();
+      flushBullets();
+      continue;
+    }
+    if (/^---+$/.test(line)) {
+      // Dashes/separators in the story are treated as paragraph breaks — don't
+      // render a visible line (design request: no dashes in the About tab).
+      flushPara(); flushBullets();
+      continue;
+    }
+    if (line.startsWith("### ")) {
+      flushPara(); flushBullets();
+      out.push({ kind: "h3", text: line.slice(4).trim() });
+      continue;
+    }
+    if (line.startsWith("## ")) {
+      flushPara(); flushBullets();
+      out.push({ kind: "h2", text: line.slice(3).trim() });
+      continue;
+    }
+    if (line.startsWith("# ")) {
+      flushPara(); flushBullets();
+      out.push({ kind: "h1", text: line.slice(2).trim() });
+      continue;
+    }
+    if (/^[-*]\s+/.test(line)) {
+      flushPara();
+      bullets.push(line.replace(/^[-*]\s+/, ""));
+      continue;
+    }
+    flushBullets();
+    paragraph.push(line);
+  }
+  flushPara();
+  flushBullets();
+  return out;
+}
+
+/**
+ * Render inline **bold** markers within a line. Keeps everything else plain.
+ */
+function renderInline(text: string): React.ReactNode {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((p, i) => {
+    if (/^\*\*[^*]+\*\*$/.test(p)) {
+      return <strong key={i} className="font-semibold text-gray-900">{p.slice(2, -2)}</strong>;
+    }
+    return <span key={i}>{p}</span>;
+  });
 }
 
 function TeamsPanel({
@@ -634,17 +1717,39 @@ function TeamsPanel({
   onDonate: (teamId: string) => void;
 }) {
   if (teams.length === 0) {
-    return <div className="text-center py-12 text-gray-500 text-sm">No teams yet.</div>;
+    return <div className="text-center py-12 text-gray-400 text-sm">No teams yet.</div>;
   }
   const sorted = [...teams].sort((a, b) => b.raised_cents - a.raised_cents);
   return (
-    <div className="space-y-3">
+    <motion.div
+      className="space-y-3"
+      variants={STAGGER_PARENT}
+      initial="hidden"
+      animate="show"
+    >
       {sorted.map((t, i) => {
         const pct = t.goal_cents && t.goal_cents > 0 ? Math.min(100, (t.raised_cents / t.goal_cents) * 100) : 0;
+        const isLeader = i === 0;
         return (
-          <div key={t.id} className="bg-white border border-gray-100 rounded-lg p-5">
+          <motion.div
+            key={t.id}
+            variants={STAGGER_CHILD}
+            whileHover={{ y: -2, boxShadow: "0 12px 24px -12px rgba(0,0,0,0.15)" }}
+            transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
+            className="bg-white border border-gray-100 rounded-lg p-5 relative overflow-hidden"
+          >
+            {isLeader && (
+              <div
+                className="absolute inset-y-0 left-0 w-1"
+                style={{ background: accent }}
+                aria-hidden="true"
+              />
+            )}
             <div className="flex items-center gap-4 mb-3">
-              <div className="text-lg font-bold text-gray-300 tabular-nums w-6 text-center">{i + 1}</div>
+              <div className={`text-lg font-bold tabular-nums w-6 text-center ${isLeader ? "" : "text-gray-300"}`}
+                style={isLeader ? { color: accent } : undefined}>
+                {i + 1}
+              </div>
               {t.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
                 <img src={t.avatar_url} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
@@ -655,22 +1760,29 @@ function TeamsPanel({
               )}
               <div className="flex-1 min-w-0">
                 <div className="font-semibold text-gray-900 text-sm">{t.name}</div>
-                {t.leader_name && <div className="text-xs text-gray-500">Led by {t.leader_name}</div>}
+                {t.leader_name && <div className="text-xs text-gray-400">Led by {t.leader_name}</div>}
               </div>
               <div className="text-right">
                 <div className="font-bold text-gray-900 tabular-nums text-sm">{formatUsd(t.raised_cents)}</div>
                 {t.goal_cents ? (
-                  <div className="text-xs text-gray-500 tabular-nums">of {formatUsd(t.goal_cents)}</div>
+                  <div className="text-xs text-gray-400 tabular-nums">of {formatUsd(t.goal_cents)}</div>
                 ) : null}
               </div>
             </div>
             {t.goal_cents ? (
               <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-                <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${pct}%`, background: accent }} />
+                <motion.div
+                  initial={{ width: 0 }}
+                  whileInView={{ width: `${pct}%` }}
+                  viewport={{ once: true, margin: "-40px" }}
+                  transition={{ duration: 1.2, ease: EASE_OUT_EXPO }}
+                  className="absolute inset-y-0 left-0 rounded-full"
+                  style={{ background: accent }}
+                />
               </div>
             ) : null}
             <div className="flex items-center justify-between text-xs">
-              <span className="text-gray-500">{t.donor_count} {t.donor_count === 1 ? "donor" : "donors"}</span>
+              <span className="text-gray-400">{t.donor_count} {t.donor_count === 1 ? "donor" : "donors"}</span>
               <button
                 type="button"
                 onClick={() => onDonate(t.id)}
@@ -680,10 +1792,10 @@ function TeamsPanel({
                 Give to this team →
               </button>
             </div>
-          </div>
+          </motion.div>
         );
       })}
-    </div>
+    </motion.div>
   );
 }
 
@@ -692,18 +1804,26 @@ function ShareBtn({
 }: {
   href: string; label: string; Icon: React.ElementType; accent: string;
 }) {
+  const accentRgb = useMemo(() => hexToRgb(accent), [accent]);
   return (
-    <a
+    <motion.a
       href={href}
       target="_blank"
       rel="noreferrer noopener"
-      className="inline-flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-md text-sm font-medium transition-colors"
-      onMouseEnter={(e) => { e.currentTarget.style.borderColor = accent; e.currentTarget.style.color = accent; }}
-      onMouseLeave={(e) => { e.currentTarget.style.borderColor = ""; e.currentTarget.style.color = ""; }}
+      whileHover={{
+        y: -2,
+        scale: 1.04,
+        borderColor: accent,
+        color: accent,
+        boxShadow: `0 10px 22px -10px rgba(${accentRgb}, 0.4)`,
+      }}
+      whileTap={{ scale: 0.97 }}
+      transition={{ duration: 0.18, ease: EASE_OUT_EXPO }}
+      className="inline-flex items-center gap-2 bg-white border border-gray-200 px-4 py-2 rounded-md text-sm font-medium"
     >
       <Icon className="w-4 h-4" />
       {label}
-    </a>
+    </motion.a>
   );
 }
 
@@ -712,25 +1832,38 @@ function StickyMobileBar({
 }: {
   accent: string; pct: number; total: number; goal: number; onDonate: () => void;
 }) {
+  const reduced = useReducedMotion();
   return (
-    <div className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden">
+    <motion.div
+      initial={reduced ? false : { y: 80, opacity: 0 }}
+      animate={{ y: 0, opacity: 1 }}
+      transition={{ duration: 0.5, ease: EASE_OUT_EXPO, delay: 0.4 }}
+      className="fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-gray-200 shadow-[0_-4px_20px_rgba(0,0,0,0.08)] md:hidden"
+    >
       <div className="px-4 py-3">
         <div className="flex items-center justify-between text-xs mb-1.5 tabular-nums">
           <span className="text-gray-500">{formatUsd(total)} of {formatUsd(goal)}</span>
           <span className="font-bold" style={{ color: accent }}>{pct.toFixed(0)}%</span>
         </div>
         <div className="relative h-1.5 bg-gray-100 rounded-full overflow-hidden mb-3">
-          <div className="absolute inset-y-0 left-0 rounded-full" style={{ width: `${Math.min(100, pct)}%`, background: accent }} />
+          <motion.div
+            initial={reduced ? { width: `${Math.min(100, pct)}%` } : { width: 0 }}
+            animate={{ width: `${Math.min(100, pct)}%` }}
+            transition={{ duration: 1.2, ease: EASE_OUT_EXPO, delay: 0.6 }}
+            className="absolute inset-y-0 left-0 rounded-full"
+            style={{ background: accent }}
+          />
         </div>
-        <button
+        <motion.button
           type="button"
           onClick={onDonate}
+          whileTap={{ scale: 0.97 }}
           className="w-full py-3 text-white font-bold rounded-md text-sm uppercase tracking-[0.1em] shadow-lg"
           style={{ background: accent }}
         >
           Donate Now
-        </button>
+        </motion.button>
       </div>
-    </div>
+    </motion.div>
   );
 }

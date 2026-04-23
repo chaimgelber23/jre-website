@@ -2,23 +2,15 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { AnimatePresence, motion } from "framer-motion";
-import { ChevronLeft, ChevronRight, Play } from "lucide-react";
+import { ChevronLeft, ChevronRight } from "lucide-react";
 
 interface Props {
   images: string[];
   alt: string;
-  videoUrl?: string | null;
-  onPlayVideo?: () => void;
   autoplayMs?: number;
 }
 
-export default function HeroCarousel({
-  images,
-  alt,
-  videoUrl,
-  onPlayVideo,
-  autoplayMs = 6000,
-}: Props) {
+export default function HeroCarousel({ images, alt, autoplayMs = 6000 }: Props) {
   const [i, setI] = useState(0);
   const [paused, setPaused] = useState(false);
   const total = images.length;
@@ -52,19 +44,6 @@ export default function HeroCarousel({
           transition={{ duration: 0.5 }}
         />
       </AnimatePresence>
-
-      {videoUrl && (
-        <button
-          type="button"
-          onClick={onPlayVideo}
-          aria-label="Play campaign video"
-          className="absolute inset-0 flex items-center justify-center bg-black/15 hover:bg-black/30 transition group"
-        >
-          <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-105 transition">
-            <Play className="w-9 h-9 text-gray-900 ml-1" fill="currentColor" />
-          </div>
-        </button>
-      )}
 
       {total > 1 && (
         <>

@@ -16,6 +16,15 @@ import type {
   DedicationType,
 } from "@/types/campaign";
 
+interface BillingAddress {
+  country?: string;
+  line1?: string;
+  apt?: string;
+  zip?: string;
+  city?: string;
+  state?: string;
+}
+
 interface DonateBody {
   amount_cents: number;
   tier_id: string | null;
@@ -23,6 +32,7 @@ interface DonateBody {
   team_id: string | null;
   payment_method: PaymentMethod;
   name: string;
+  display_name?: string | null;
   email: string;
   phone: string | null;
   is_anonymous: boolean;
@@ -30,10 +40,17 @@ interface DonateBody {
   dedication_type: DedicationType | null;
   dedication_name: string | null;
   dedication_email: string | null;
-  card: { name: string; number: string; expiry: string; cvv: string } | null;
+  card: {
+    name: string;
+    number: string;
+    expiry: string;
+    cvv: string;
+    billing?: BillingAddress;
+  } | null;
   daf_sponsor: string | null;
   ojc_account_id: string | null;
   donors_fund: { donor: string; authorization: string } | null;
+  installments?: number | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -120,7 +137,9 @@ export async function POST(
         amount_cents: body.amount_cents,
         matched_cents: 0,
         name: body.name.trim(),
-        display_name: maskDonorName(body.name.trim(), body.is_anonymous),
+        display_name: body.is_anonymous
+        ? "Anonymous"
+        : (body.display_name?.trim() || maskDonorName(body.name.trim(), false)),
         email: body.email.trim(),
         phone: body.phone,
         is_anonymous: body.is_anonymous,
@@ -176,7 +195,9 @@ export async function POST(
         amount_cents: body.amount_cents,
         matched_cents: 0,
         name: body.name.trim(),
-        display_name: maskDonorName(body.name.trim(), body.is_anonymous),
+        display_name: body.is_anonymous
+        ? "Anonymous"
+        : (body.display_name?.trim() || maskDonorName(body.name.trim(), false)),
         email: body.email.trim(),
         phone: body.phone,
         is_anonymous: body.is_anonymous,
@@ -236,7 +257,9 @@ export async function POST(
       amount_cents: body.amount_cents,
       matched_cents: matchedCents,
       name: body.name.trim(),
-      display_name: maskDonorName(body.name.trim(), body.is_anonymous),
+      display_name: body.is_anonymous
+        ? "Anonymous"
+        : (body.display_name?.trim() || maskDonorName(body.name.trim(), false)),
       email: body.email.trim(),
       phone: body.phone,
       is_anonymous: body.is_anonymous,
