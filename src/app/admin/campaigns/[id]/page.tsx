@@ -4,6 +4,7 @@ import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Save, Trash2, Plus } from "lucide-react";
 import { formatUsd } from "@/lib/campaign";
+import DonationsPanel from "./DonationsPanel";
 import type {
   Campaign, CampaignTier, CampaignCause, CampaignMatcher, CampaignTeam,
   CampaignDonation, FaqEntry,
@@ -168,7 +169,14 @@ export default function AdminCampaignEditor({ params }: { params: Promise<{ id: 
       </Section>
 
       <Section title={`Donations (${data.donations.length})`}>
-        <DonationsTable campaignId={id} donations={data.donations} reload={load} />
+        <DonationsPanel
+          campaignId={id}
+          donations={data.donations}
+          teams={data.teams}
+          tiers={data.tiers}
+          causes={data.causes}
+          reload={load}
+        />
       </Section>
     </div>
   );
@@ -457,86 +465,6 @@ function CollectionEditor({
   );
 }
 
-function DonationsTable({
-  campaignId, donations, reload,
-}: { campaignId: string; donations: CampaignDonation[]; reload: () => void }) {
-  const [busy, setBusy] = useState<string | null>(null);
-  const markCompleted = async (d: CampaignDonation) => {
-    setBusy(d.id);
-    try {
-      await fetch(`/api/admin/campaigns/${campaignId}/donations/${d.id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payment_status: "completed" }),
-      });
-      reload();
-    } finally {
-      setBusy(null);
-    }
-  };
-
-  if (donations.length === 0) {
-    return <div className="text-sm text-gray-500">No donations yet.</div>;
-  }
-
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <thead>
-          <tr className="text-left text-xs uppercase tracking-wide text-gray-500 border-b border-gray-200">
-            <th className="py-2 pr-3">Date</th>
-            <th className="py-2 pr-3">Donor</th>
-            <th className="py-2 pr-3">Amount</th>
-            <th className="py-2 pr-3">Method</th>
-            <th className="py-2 pr-3">Status</th>
-            <th className="py-2 pr-3"></th>
-          </tr>
-        </thead>
-        <tbody>
-          {donations.map((d) => (
-            <tr key={d.id} className="border-b border-gray-100">
-              <td className="py-2 pr-3 text-gray-500 whitespace-nowrap">{new Date(d.created_at).toLocaleDateString()}</td>
-              <td className="py-2 pr-3">
-                <div className="font-medium text-gray-900">{d.name}</div>
-                <div className="text-xs text-gray-500">{d.email}</div>
-              </td>
-              <td className="py-2 pr-3 tabular-nums">
-                <div className="font-semibold">{formatUsd(d.amount_cents)}</div>
-                {d.matched_cents > 0 && <div className="text-xs text-emerald-600">+{formatUsd(d.matched_cents)} match</div>}
-              </td>
-              <td className="py-2 pr-3 text-xs">{d.payment_method}</td>
-              <td className="py-2 pr-3">
-                <StatusBadge status={d.payment_status} />
-              </td>
-              <td className="py-2 pr-3">
-                {d.payment_status === "pledged" && (
-                  <button
-                    onClick={() => markCompleted(d)}
-                    disabled={busy === d.id}
-                    className="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-2.5 py-1 rounded-lg font-semibold disabled:opacity-50"
-                  >
-                    Mark received
-                  </button>
-                )}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function StatusBadge({ status }: { status: string }) {
-  const m: Record<string, string> = {
-    completed: "bg-emerald-100 text-emerald-700",
-    pledged: "bg-amber-100 text-amber-700",
-    pending: "bg-gray-100 text-gray-600",
-    failed: "bg-red-100 text-red-700",
-    refunded: "bg-gray-100 text-gray-500",
-  };
-  return <span className={`text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded ${m[status] ?? "bg-gray-100 text-gray-600"}`}>{status}</span>;
-}
 
 // ----------------- small helpers -----------------
 const inputCls = "w-full px-3 py-2 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all";

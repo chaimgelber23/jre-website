@@ -15,15 +15,25 @@ export async function PATCH(
 
   const allowed: Record<string, true> = {
     payment_status: true,
+    payment_method: true,
     payment_reference: true,
     daf_grant_id: true,
     check_number: true,
     admin_notes: true,
     matched_cents: true,
+    amount_cents: true,
     team_id: true,
     cause_id: true,
+    tier_id: true,
     is_anonymous: true,
     display_name: true,
+    name: true,
+    email: true,
+    phone: true,
+    message: true,
+    dedication_type: true,
+    dedication_name: true,
+    dedication_email: true,
   };
   const updates: Record<string, unknown> = {};
   for (const k of Object.keys(body)) {
