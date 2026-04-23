@@ -96,6 +96,10 @@ export default function TeamClient({
   const goalCents = team.goal_cents ?? 0;
   const pctRaw = goalCents > 0 ? (progress.raised_cents / goalCents) * 100 : 0;
 
+  // Display name for CTAs: strip leading "Team " prefix so "Team Oratz" -> "Oratz"
+  // (so buttons read "Donate to Oratz's Team" instead of "Donate to Team's Team").
+  const teamShortName = team.name.replace(/^Team\s+/i, "") || team.name;
+
   // Top 5 donors for this team — ranked by amount
   const topDonors = useMemo(() => {
     const sorted = [...donations].sort((a, b) => b.amount_cents - a.amount_cents);
@@ -233,7 +237,7 @@ export default function TeamClient({
               className="w-full max-w-xs px-6 py-4 bg-white font-bold rounded-md text-sm tracking-[0.1em] uppercase shadow-lg hover:bg-gray-50 transition"
               style={{ color: accent }}
             >
-              Donate to {team.name.split(" ")[0]}&apos;s Team
+              Donate to {teamShortName}&apos;s Team
             </button>
 
             {/* Quick-give chips */}
@@ -502,7 +506,7 @@ export default function TeamClient({
             className="w-full py-3 text-white font-bold rounded-md text-sm uppercase tracking-[0.1em] shadow-lg"
             style={{ background: accent }}
           >
-            Donate to {team.name.split(" ")[0]}&apos;s Team
+            Donate to {teamShortName}&apos;s Team
           </button>
         </div>
       </div>
