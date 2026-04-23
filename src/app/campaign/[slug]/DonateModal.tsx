@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft,
-  Building2, Gift,
+  Building2, Gift, Wallet,
 } from "lucide-react";
 import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
 import type {
@@ -42,6 +42,8 @@ interface DonateForm {
   cardCvv: string;
   dafSponsor: string;
   ojcAccountId: string;
+  dfDonor: string;      // Donor's Fund Giving Card # or email
+  dfAuth: string;       // Donor's Fund CVV or PIN
 }
 
 export default function DonateModal({
@@ -77,6 +79,8 @@ export default function DonateModal({
     cardCvv: "",
     dafSponsor: "",
     ojcAccountId: "",
+    dfDonor: "",
+    dfAuth: "",
   });
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
@@ -170,6 +174,10 @@ export default function DonateModal({
     if (paymentMethod === "daf" && !form.dafSponsor.trim()) {
       return setError("Please tell us which DAF sponsor (e.g. Fidelity Charitable).");
     }
+    if (paymentMethod === "donors_fund") {
+      if (!form.dfDonor.trim()) return setError("Please enter your Giving Card number or Donor's Fund email.");
+      if (!form.dfAuth.trim()) return setError("Please enter your CVV (for card) or PIN (for email login).");
+    }
 
     setSubmitting(true);
     try {
@@ -195,6 +203,10 @@ export default function DonateModal({
         } : null,
         daf_sponsor: paymentMethod === "daf" ? form.dafSponsor.trim() : null,
         ojc_account_id: paymentMethod === "ojc_fund" ? form.ojcAccountId.trim() : null,
+        donors_fund: paymentMethod === "donors_fund" ? {
+          donor: form.dfDonor.trim(),
+          authorization: form.dfAuth.trim(),
+        } : null,
       };
 
       const res = await fetch(`/api/campaign/${campaign.slug}/donate`, {
@@ -610,6 +622,7 @@ function PaymentStep({
 
       <div className="space-y-2 mb-4">
         {methodBtn("card", "Credit / Debit card", CreditCard, "Charged immediately — instant receipt")}
+        {methodBtn("donors_fund", "The Donors' Fund", Wallet, "Charge your Giving Card — instant, no fees")}
         {methodBtn("daf", "Donor-Advised Fund", Gift, "Fidelity, Schwab, JCF, etc. — we'll send instructions")}
         {methodBtn("ojc_fund", "OJC Fund", Building2, "Grant request from your OJC Fund account")}
       </div>
@@ -678,6 +691,30 @@ function PaymentStep({
         </div>
       )}
 
+      {paymentMethod === "donors_fund" && (
+        <div className="bg-[#FAFAFA] rounded-2xl p-4 space-y-3 border border-gray-100">
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Charge your <span className="font-semibold">Donors&apos; Fund</span> Giving Card directly. Enter your 16-digit card + CVV, or your account email + PIN.
+          </p>
+          <Input
+            label="Giving Card # or Account Email"
+            name="dfDonor"
+            value={form.dfDonor}
+            onChange={onChange}
+            placeholder="6599 9929 9945 6587 or you@example.com"
+            autoComplete="off"
+          />
+          <Input
+            label="CVV (card) or PIN (email)"
+            name="dfAuth"
+            value={form.dfAuth}
+            onChange={onChange}
+            placeholder="476 or 1234"
+            autoComplete="off"
+          />
+        </div>
+      )}
+
       {paymentMethod === "daf" && (
         <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
           <p className="text-xs text-gray-600 mb-3">
@@ -718,7 +755,9 @@ function PaymentStep({
           ) : (
             <>
               <Heart className="w-4 h-4" />
-              {paymentMethod === "card" ? `Donate ${formatUsd(amountCents)}` : `Pledge ${formatUsd(amountCents)}`}
+              {paymentMethod === "card" || paymentMethod === "donors_fund"
+                ? `Donate ${formatUsd(amountCents)}`
+                : `Pledge ${formatUsd(amountCents)}`}
             </>
           )}
         </button>
@@ -733,7 +772,7 @@ function PaymentStep({
 function SuccessStep({
   amountCents, paymentMethod, onClose,
 }: { amountCents: number; paymentMethod: PaymentMethod; onClose: () => void }) {
-  const isPledge = paymentMethod !== "card";
+  const isPledge = paymentMethod !== "card" && paymentMethod !== "donors_fund";
   return (
     <div className="text-center py-6">
       <motion.div

@@ -3,7 +3,7 @@
 // the auto-style Database interface.
 
 export type CampaignStatus = 'draft' | 'scheduled' | 'live' | 'ended' | 'archived';
-export type PaymentMethod = 'card' | 'daf' | 'ojc_fund' | 'check' | 'zelle' | 'other';
+export type PaymentMethod = 'card' | 'daf' | 'ojc_fund' | 'donors_fund' | 'check' | 'zelle' | 'other';
 export type PaymentStatus = 'pending' | 'pledged' | 'completed' | 'failed' | 'refunded';
 export type DedicationType = 'honor' | 'memory';
 

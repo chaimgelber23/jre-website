@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { processDirectPayment } from "@/lib/banquest";
+import { createGrant } from "@/lib/donors-fund";
 import {
   getCampaignBySlug,
   getActiveMatcher,
@@ -32,6 +33,7 @@ interface DonateBody {
   card: { name: string; number: string; expiry: string; cvv: string } | null;
   daf_sponsor: string | null;
   ojc_account_id: string | null;
+  donors_fund: { donor: string; authorization: string } | null;
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -58,7 +60,7 @@ export async function POST(
   if (!Number.isFinite(body.amount_cents) || body.amount_cents < 100) {
     return NextResponse.json({ success: false, error: "Minimum donation is $1" }, { status: 400 });
   }
-  const validMethods: PaymentMethod[] = ["card", "daf", "ojc_fund", "check", "zelle", "other"];
+  const validMethods: PaymentMethod[] = ["card", "daf", "ojc_fund", "donors_fund", "check", "zelle", "other"];
   if (!validMethods.includes(body.payment_method)) {
     return NextResponse.json({ success: false, error: "Invalid payment method" }, { status: 400 });
   }
@@ -130,6 +132,61 @@ export async function POST(
     paymentStatus = "completed";
     paymentReference = result.transactionId || `bq_${Date.now()}`;
     cardRef = result.cardRef || null;
+  } else if (body.payment_method === "donors_fund") {
+    // ---- Donor's Fund path: charge immediately via TDF /Create ---------------
+    if (!body.donors_fund?.donor?.trim() || !body.donors_fund?.authorization?.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your Giving Card + CVV (or email + PIN)." },
+        { status: 400 }
+      );
+    }
+    const taxId = process.env.TDF_TAX_ID;
+    const accountNumber = process.env.TDF_ACCOUNT_NUMBER;
+    if (!taxId || !accountNumber) {
+      return NextResponse.json(
+        { success: false, error: "Donor's Fund isn't fully configured. Please use a different payment method." },
+        { status: 500 }
+      );
+    }
+    const amountDollars = body.amount_cents / 100;
+    const grant = await createGrant({
+      taxId,
+      accountNumber,
+      amount: amountDollars.toFixed(2),
+      donor: body.donors_fund.donor.trim(),
+      donorAuthorization: body.donors_fund.authorization.trim(),
+      purposeNote: `JRE-${campaign.slug}`.slice(0, 50),
+    });
+
+    if (!grant.success) {
+      await db.from("campaign_donations").insert({
+        campaign_id: campaign.id,
+        cause_id: body.cause_id,
+        tier_id: body.tier_id,
+        team_id: body.team_id,
+        amount_cents: body.amount_cents,
+        matched_cents: 0,
+        name: body.name.trim(),
+        display_name: maskDonorName(body.name.trim(), body.is_anonymous),
+        email: body.email.trim(),
+        phone: body.phone,
+        is_anonymous: body.is_anonymous,
+        dedication_type: body.dedication_type,
+        dedication_name: body.dedication_name,
+        dedication_email: body.dedication_email,
+        message: body.message,
+        payment_method: "donors_fund",
+        payment_status: "failed",
+        failure_reason: grant.error || "Donor's Fund declined",
+      });
+      return NextResponse.json(
+        { success: false, error: grant.error || "Donor's Fund grant failed" },
+        { status: 400 }
+      );
+    }
+
+    paymentStatus = "completed";
+    paymentReference = grant.transactionId || `tdf_${grant.confirmationNumber}`;
   } else {
     // Pledge path — DAF / OJC / check / zelle / other
     paymentStatus = "pledged";
