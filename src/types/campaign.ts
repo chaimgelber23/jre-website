@@ -133,6 +133,7 @@ export interface CampaignDonation {
   recurring_frequency: string | null;
   next_charge_date: string | null;
   admin_notes: string | null;
+  is_hidden: boolean;
   created_at: string;
   updated_at: string;
 }

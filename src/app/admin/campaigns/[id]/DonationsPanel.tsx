@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useState } from "react";
-import { Plus, X, Check, AlertCircle, Clock, Search, StickyNote } from "lucide-react";
+import { Fragment, useMemo, useState } from "react";
+import { Plus, X, Check, AlertCircle, Clock, Search, StickyNote, Eye, EyeOff, Pencil } from "lucide-react";
 import { formatUsd } from "@/lib/campaign";
 import type {
   CampaignDonation,
@@ -46,8 +46,10 @@ type StatusFilter = "all" | PaymentStatus;
 export default function DonationsPanel({ campaignId, donations, teams, tiers, causes, reload }: Props) {
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
+  const [visibilityFilter, setVisibilityFilter] = useState<"all" | "visible" | "hidden">("visible");
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingNoteId, setEditingNoteId] = useState<string | null>(null);
+  const [editingRowId, setEditingRowId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const teamById = useMemo(() => Object.fromEntries(teams.map((t) => [t.id, t])), [teams]);
@@ -56,24 +58,31 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
     const q = search.trim().toLowerCase();
     return donations.filter((d) => {
       if (statusFilter !== "all" && d.payment_status !== statusFilter) return false;
+      if (visibilityFilter === "visible" && d.is_hidden) return false;
+      if (visibilityFilter === "hidden" && !d.is_hidden) return false;
       if (!q) return true;
       const hay = `${d.name} ${d.email} ${d.display_name ?? ""} ${d.message ?? ""} ${d.dedication_name ?? ""}`.toLowerCase();
       return hay.includes(q);
     });
-  }, [donations, search, statusFilter]);
+  }, [donations, search, statusFilter, visibilityFilter]);
 
   const stats = useMemo(() => {
     let raisedCents = 0;
     let pledgedCents = 0;
     let failedCount = 0;
+    let hiddenCount = 0;
     const byStatus: Record<string, number> = {};
     for (const d of donations) {
-      byStatus[d.payment_status] = (byStatus[d.payment_status] ?? 0) + 1;
-      if (d.payment_status === "completed") raisedCents += d.amount_cents;
-      if (d.payment_status === "pledged") pledgedCents += d.amount_cents;
+      if (d.is_hidden) hiddenCount += 1;
+      // Totals reflect what counts publicly: completed + pledged AND not hidden.
+      if (!d.is_hidden) {
+        byStatus[d.payment_status] = (byStatus[d.payment_status] ?? 0) + 1;
+        if (d.payment_status === "completed") raisedCents += d.amount_cents;
+        if (d.payment_status === "pledged") pledgedCents += d.amount_cents;
+      }
       if (d.payment_status === "failed") failedCount += 1;
     }
-    return { raisedCents, pledgedCents, failedCount, byStatus };
+    return { raisedCents, pledgedCents, failedCount, hiddenCount, byStatus };
   }, [donations]);
 
   const patchDonation = async (donationId: string, patch: Record<string, unknown>) => {
@@ -95,10 +104,11 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
   return (
     <div>
       {/* ====== Stats row ====== */}
-      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-4">
         <StatCard label="Paid" value={formatUsd(stats.raisedCents)} sub={`${stats.byStatus.completed ?? 0} donations`} tone="green" />
         <StatCard label="Pledged" value={formatUsd(stats.pledgedCents)} sub={`${stats.byStatus.pledged ?? 0} open`} tone="amber" />
         <StatCard label="Failed" value={String(stats.failedCount)} sub="attempts" tone="red" />
+        <StatCard label="Hidden" value={String(stats.hiddenCount)} sub="off public wall" tone="gray" />
         <StatCard label="Total records" value={String(donations.length)} sub="all statuses" tone="gray" />
       </div>
 
@@ -124,6 +134,15 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
           <option value="failed">Failed</option>
           <option value="refunded">Refunded</option>
           <option value="pending">Pending</option>
+        </select>
+        <select
+          value={visibilityFilter}
+          onChange={(e) => setVisibilityFilter(e.target.value as "all" | "visible" | "hidden")}
+          className="px-3 py-2 text-sm border border-gray-200 rounded-md bg-white"
+        >
+          <option value="visible">Visible only</option>
+          <option value="hidden">Hidden only</option>
+          <option value="all">All (visible + hidden)</option>
         </select>
         <button
           type="button"
@@ -182,7 +201,8 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
               const statusStyle = STATUS_STYLES[d.payment_status];
               const team = d.team_id ? teamById[d.team_id] : null;
               return (
-                <tr key={d.id} className="border-b border-gray-100 last:border-0 align-top">
+                <Fragment key={d.id}>
+                <tr className={`border-b border-gray-100 last:border-0 align-top ${d.is_hidden ? "bg-blue-50/40" : ""}`}>
                   <td className="px-3 py-2">
                     <div className="font-medium text-gray-900">{d.name}</div>
                     <div className="text-xs text-gray-500">{d.email}</div>
@@ -199,6 +219,11 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
                     <span className={`inline-flex items-center px-2 py-0.5 rounded border text-xs font-medium ${statusStyle.className}`}>
                       {statusStyle.label}
                     </span>
+                    {d.is_hidden && (
+                      <div className="mt-1 inline-flex items-center gap-1 px-2 py-0.5 rounded border border-blue-200 bg-blue-100 text-blue-800 text-[10px] font-bold uppercase tracking-wide">
+                        <EyeOff className="w-2.5 h-2.5" /> Hidden
+                      </div>
+                    )}
                   </td>
                   <td className="px-3 py-2 text-xs text-gray-700">
                     {METHOD_LABELS[d.payment_method]}
@@ -266,6 +291,23 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
                       )}
                       <button
                         type="button"
+                        onClick={() => setEditingRowId(editingRowId === d.id ? null : d.id)}
+                        className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
+                        title="Edit donor / amount / team"
+                      >
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => patchDonation(d.id, { is_hidden: !d.is_hidden })}
+                        className={`inline-flex items-center gap-1 text-xs px-2 py-1 rounded border ${d.is_hidden ? "border-blue-200 text-blue-700 bg-blue-50 hover:bg-blue-100" : "border-gray-200 text-gray-700 bg-white hover:bg-gray-50"}`}
+                        title={d.is_hidden ? "Unhide — restore to donor wall + totals" : "Hide — remove from donor wall + totals"}
+                      >
+                        {d.is_hidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                        {d.is_hidden ? "Unhide" : "Hide"}
+                      </button>
+                      <button
+                        type="button"
                         onClick={() => setEditingNoteId(editingNoteId === d.id ? null : d.id)}
                         className="inline-flex items-center gap-1 text-xs px-2 py-1 rounded border border-gray-200 text-gray-700 bg-white hover:bg-gray-50"
                       >
@@ -285,6 +327,24 @@ export default function DonationsPanel({ campaignId, donations, teams, tiers, ca
                     )}
                   </td>
                 </tr>
+                {editingRowId === d.id && (
+                  <tr className="border-b border-gray-100 bg-amber-50/40">
+                    <td colSpan={8} className="p-4">
+                      <EditDonationForm
+                        donation={d}
+                        teams={teams}
+                        tiers={tiers}
+                        causes={causes}
+                        onCancel={() => setEditingRowId(null)}
+                        onSave={async (patch) => {
+                          await patchDonation(d.id, patch);
+                          setEditingRowId(null);
+                        }}
+                      />
+                    </td>
+                  </tr>
+                )}
+                </Fragment>
               );
             })}
           </tbody>
@@ -548,6 +608,173 @@ function Field({ label, children, span }: { label: string; children: React.React
     <div className={span === 2 ? "md:col-span-2" : undefined}>
       <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">{label}</label>
       {children}
+    </div>
+  );
+}
+
+function EditDonationForm({
+  donation, teams, tiers, causes, onCancel, onSave,
+}: {
+  donation: CampaignDonation;
+  teams: CampaignTeam[];
+  tiers: CampaignTier[];
+  causes: CampaignCause[];
+  onCancel: () => void;
+  onSave: (patch: Record<string, unknown>) => Promise<void>;
+}) {
+  const [form, setForm] = useState({
+    name: donation.name,
+    email: donation.email,
+    phone: donation.phone ?? "",
+    amount: (donation.amount_cents / 100).toString(),
+    teamId: donation.team_id ?? "",
+    tierId: donation.tier_id ?? "",
+    causeId: donation.cause_id ?? "",
+    method: donation.payment_method,
+    status: donation.payment_status,
+    message: donation.message ?? "",
+    dedicationType: (donation.dedication_type ?? "") as "" | DedicationType,
+    dedicationName: donation.dedication_name ?? "",
+    dedicationEmail: donation.dedication_email ?? "",
+    isAnonymous: donation.is_anonymous,
+  });
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const submit = async () => {
+    setError(null);
+    const amountDollars = parseFloat(form.amount);
+    if (!Number.isFinite(amountDollars) || amountDollars < 1) {
+      setError("Amount must be at least $1");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await onSave({
+        name: form.name.trim(),
+        email: form.email.trim(),
+        phone: form.phone.trim() || null,
+        amount_cents: Math.round(amountDollars * 100),
+        team_id: form.teamId || null,
+        tier_id: form.tierId || null,
+        cause_id: form.causeId || null,
+        payment_method: form.method,
+        payment_status: form.status,
+        message: form.message.trim() || null,
+        dedication_type: form.dedicationType || null,
+        dedication_name: form.dedicationName.trim() || null,
+        dedication_email: form.dedicationEmail.trim() || null,
+        is_anonymous: form.isAnonymous,
+      });
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const inputCls = "w-full px-2 py-1.5 text-sm border border-gray-200 rounded bg-white focus:outline-none focus:border-gray-400";
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="text-sm font-semibold text-gray-900">Edit donation</div>
+        <div className="text-[11px] text-gray-500 font-mono">{donation.id}</div>
+      </div>
+      {error && <div className="mb-3 p-2 text-sm bg-red-50 border border-red-200 text-red-700 rounded">{error}</div>}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+        <Field label="Name *"><input className={inputCls} value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} /></Field>
+        <Field label="Email *"><input className={inputCls} type="email" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} /></Field>
+        <Field label="Phone"><input className={inputCls} value={form.phone} onChange={(e) => setForm({ ...form, phone: e.target.value })} /></Field>
+
+        <Field label="Amount (USD) *">
+          <input className={inputCls} type="number" min="1" step="0.01" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} />
+        </Field>
+        <Field label="Payment method">
+          <select className={inputCls} value={form.method} onChange={(e) => setForm({ ...form, method: e.target.value as PaymentMethod })}>
+            <option value="card">Card</option>
+            <option value="check">Check</option>
+            <option value="zelle">Zelle</option>
+            <option value="daf">DAF</option>
+            <option value="fidelity">Fidelity Charitable</option>
+            <option value="ojc_fund">OJC Fund</option>
+            <option value="donors_fund">Donor&apos;s Fund</option>
+            <option value="other">Other</option>
+          </select>
+        </Field>
+        <Field label="Status">
+          <select className={inputCls} value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as PaymentStatus })}>
+            <option value="completed">Paid</option>
+            <option value="pledged">Pledge</option>
+            <option value="pending">Pending</option>
+            <option value="failed">Failed</option>
+            <option value="refunded">Refunded</option>
+          </select>
+        </Field>
+
+        {teams.length > 0 && (
+          <Field label="Team">
+            <select className={inputCls} value={form.teamId} onChange={(e) => setForm({ ...form, teamId: e.target.value })}>
+              <option value="">— no team —</option>
+              {teams.map((t) => (<option key={t.id} value={t.id}>{t.name}</option>))}
+            </select>
+          </Field>
+        )}
+        {tiers.length > 0 && (
+          <Field label="Tier">
+            <select className={inputCls} value={form.tierId} onChange={(e) => setForm({ ...form, tierId: e.target.value })}>
+              <option value="">— custom —</option>
+              {tiers.map((t) => (<option key={t.id} value={t.id}>{t.label} ({formatUsd(t.amount_cents)})</option>))}
+            </select>
+          </Field>
+        )}
+        {causes.length > 0 && (
+          <Field label="Cause">
+            <select className={inputCls} value={form.causeId} onChange={(e) => setForm({ ...form, causeId: e.target.value })}>
+              <option value="">— default —</option>
+              {causes.map((c) => (<option key={c.id} value={c.id}>{c.name}</option>))}
+            </select>
+          </Field>
+        )}
+
+        <Field label="Dedication type">
+          <select className={inputCls} value={form.dedicationType} onChange={(e) => setForm({ ...form, dedicationType: e.target.value as "" | DedicationType })}>
+            <option value="">None</option>
+            <option value="honor">In honor of</option>
+            <option value="memory">In memory of</option>
+          </select>
+        </Field>
+        <Field label="Dedication name"><input className={inputCls} value={form.dedicationName} onChange={(e) => setForm({ ...form, dedicationName: e.target.value })} /></Field>
+        <Field label="Dedication email"><input className={inputCls} value={form.dedicationEmail} onChange={(e) => setForm({ ...form, dedicationEmail: e.target.value })} /></Field>
+
+        <Field label="Public wall message" span={2}>
+          <textarea className={inputCls + " resize-none"} rows={2} value={form.message} onChange={(e) => setForm({ ...form, message: e.target.value })} />
+        </Field>
+
+        <label className="col-span-full inline-flex items-center gap-2 text-sm text-gray-700">
+          <input type="checkbox" checked={form.isAnonymous} onChange={(e) => setForm({ ...form, isAnonymous: e.target.checked })} />
+          List on donor wall as Anonymous
+        </label>
+      </div>
+
+      <div className="flex gap-2 mt-4">
+        <button
+          type="button"
+          onClick={submit}
+          disabled={submitting}
+          className="px-4 py-2 text-sm bg-[#EF8046] text-white rounded-md font-semibold hover:bg-[#d96a2f] disabled:opacity-50"
+        >
+          {submitting ? "Saving..." : "Save changes"}
+        </button>
+        <button
+          type="button"
+          onClick={onCancel}
+          className="px-4 py-2 text-sm border border-gray-200 text-gray-700 rounded-md hover:bg-gray-100"
+        >
+          Cancel
+        </button>
+      </div>
     </div>
   );
 }

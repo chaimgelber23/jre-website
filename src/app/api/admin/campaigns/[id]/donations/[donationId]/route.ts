@@ -26,6 +26,7 @@ export async function PATCH(
     cause_id: true,
     tier_id: true,
     is_anonymous: true,
+    is_hidden: true,
     display_name: true,
     name: true,
     email: true,

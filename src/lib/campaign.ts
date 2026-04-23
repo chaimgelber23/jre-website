@@ -174,6 +174,7 @@ export async function getCampaignTeamSnapshot(
       .select("*")
       .eq("campaign_id", campaign.id)
       .eq("team_id", teamBase.id)
+      .eq("is_hidden", false)
       .in("payment_status", ["completed", "pledged"])
       .order("created_at", { ascending: false })
       .limit(RECENT_DONATIONS_LIMIT),
@@ -237,6 +238,7 @@ export async function getCampaignSnapshot(slug: string): Promise<CampaignSnapsho
       .from("campaign_donations")
       .select("*")
       .eq("campaign_id", campaign.id)
+      .eq("is_hidden", false)
       .in("payment_status", ["completed", "pledged"])
       .order("created_at", { ascending: false })
       .limit(RECENT_DONATIONS_LIMIT),
