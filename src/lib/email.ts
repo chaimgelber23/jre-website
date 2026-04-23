@@ -80,7 +80,7 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
                   <!-- Logo Header -->
                   <tr>
                     <td align="center" style="padding: 0 0 8px 0;">
-                      <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
+                      <img src="https://thejre.org/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
                     </td>
                   </tr>
 
@@ -240,7 +240,7 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                   <!-- Logo Header (on white) -->
                   <tr>
                     <td align="center" style="padding: 0 0 8px 0;">
-                      <img src="https://jre-website.vercel.app/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
+                      <img src="https://thejre.org/images/logo.png" alt="The JRE" width="140" style="display: block; margin: 0 auto; max-width: 140px; height: auto;" />
                     </td>
                   </tr>
 
@@ -274,7 +274,7 @@ export async function sendRegistrationConfirmation(data: RegistrationEmailData) 
                             <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 32px;">
                               <tr>
                                 <td style="border-radius: 12px; overflow: hidden;">
-                                  <img src="https://beta.thejre.org${data.eventImageUrl}" alt="${data.eventTitle}" width="504" style="display: block; width: 100%; height: auto; border-radius: 12px;" />
+                                  <img src="https://thejre.org${data.eventImageUrl}" alt="${data.eventTitle}" width="504" style="display: block; width: 100%; height: auto; border-radius: 12px;" />
                                 </td>
                               </tr>
                               <tr>
