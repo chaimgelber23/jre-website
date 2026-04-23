@@ -28,7 +28,17 @@ function getAuthHeader(): string {
 // TYPES
 // ============================================
 
-interface TokenizedPaymentData {
+// Optional extra fields that populate the Banquest gateway UI / reports.
+// invoiceNumber / orderNumber / poNumber show up on the transaction detail page.
+// customFields maps string keys like "custom1".."custom20" → values (max 20).
+interface BanquestMetadata {
+  invoiceNumber?: string;
+  orderNumber?: string;
+  poNumber?: string;
+  customFields?: Record<string, string | number | null | undefined>;
+}
+
+interface TokenizedPaymentData extends BanquestMetadata {
   paymentToken: string; // Nonce token from Hosted Tokenization
   amount: number;
   email: string;
@@ -38,7 +48,7 @@ interface TokenizedPaymentData {
   saveCard?: boolean; // Set to true for recurring payments
 }
 
-interface DirectPaymentData {
+interface DirectPaymentData extends BanquestMetadata {
   amount: number;
   cardNumber: string;
   cardExpiry: string; // MM/YY or MM/YYYY format
@@ -87,6 +97,52 @@ interface BanquestResponse {
 }
 
 // ============================================
+// PAYLOAD HELPERS
+// ============================================
+
+// Banquest's customer.identifier is a stable per-customer key the gateway uses to
+// group transactions. Using email is fine; trim & lowercase so repeated donors group correctly.
+function customerIdentifier(email: string): string {
+  return email.trim().toLowerCase().slice(0, 100);
+}
+
+// Normalize arbitrary key/value metadata into Banquest's custom1..custom20 slots.
+// Accepts either already-keyed ({custom1: "..."}) or ordered entries in insertion order.
+function buildCustomFields(
+  input?: Record<string, string | number | null | undefined>
+): Record<string, string> | undefined {
+  if (!input) return undefined;
+  const entries = Object.entries(input).filter(([, v]) => v !== null && v !== undefined && v !== "");
+  if (entries.length === 0) return undefined;
+  const out: Record<string, string> = {};
+  let slot = 1;
+  for (const [k, v] of entries) {
+    const value = String(v);
+    if (/^custom([1-9]|1\d|20)$/.test(k)) {
+      out[k] = value;
+    } else {
+      while (slot <= 20 && out[`custom${slot}`] !== undefined) slot++;
+      if (slot > 20) break;
+      out[`custom${slot}`] = value;
+      slot++;
+    }
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
+function buildTransactionDetails(
+  description: string | undefined,
+  meta?: BanquestMetadata
+): Record<string, string> {
+  const td: Record<string, string> = {};
+  if (description) td.description = description;
+  if (meta?.invoiceNumber) td.invoice_number = meta.invoiceNumber;
+  if (meta?.orderNumber) td.order_number = meta.orderNumber;
+  if (meta?.poNumber) td.po_number = meta.poNumber;
+  return td;
+}
+
+// ============================================
 // TOKENIZED PAYMENT (Hosted Tokenization) - PREFERRED
 // ============================================
 
@@ -110,22 +166,23 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
       console.log("Added nonce- prefix to token");
     }
 
-    const requestBody = {
+    const fullName = [data.firstName, data.lastName].filter(Boolean).join(" ").trim();
+    const customFields = buildCustomFields(data.customFields);
+    const requestBody: Record<string, unknown> = {
       amount: data.amount,
       source, // Nonce token with proper prefix
+      ...(fullName ? { name: fullName } : {}),
       customer: {
-        first_name: data.firstName || "",
-        last_name: data.lastName || "",
         email: data.email,
+        identifier: customerIdentifier(data.email),
         send_receipt: false,
       },
       billing_info: {
         first_name: data.firstName || "",
         last_name: data.lastName || "",
       },
-      transaction_details: {
-        description: data.description || "JRE Payment",
-      },
+      transaction_details: buildTransactionDetails(data.description || "JRE Payment", data),
+      ...(customFields ? { custom_fields: customFields } : {}),
       capture: true, // Charge immediately (not just auth)
       save_card: data.saveCard || false, // Save card for recurring payments
     };
@@ -233,30 +290,26 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
   try {
     const authHeader = getAuthHeader();
 
-    const requestBody = {
+    const fullName = `${firstName} ${lastName}`.trim();
+    const customFields = buildCustomFields(data.customFields);
+    const requestBody: Record<string, unknown> = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
       expiry_month: expMonth,
       expiry_year: expYear,
       cvv2: data.cardCvv,
-      // Top-level name fields (required by Banquest/NMI v2 API)
-      first_name: firstName,
-      last_name: lastName,
-      email: data.email,
-      cardholder: `${firstName} ${lastName}`.trim(),
+      name: fullName || data.cardName,
       customer: {
-        first_name: firstName,
-        last_name: lastName,
         email: data.email,
+        identifier: customerIdentifier(data.email),
         send_receipt: false,
       },
       billing_info: {
         first_name: firstName,
         last_name: lastName,
       },
-      transaction_details: {
-        description: data.description || "JRE Payment",
-      },
+      transaction_details: buildTransactionDetails(data.description || "JRE Payment", data),
+      ...(customFields ? { custom_fields: customFields } : {}),
       capture: true,
       save_card: false,
     };
@@ -561,7 +614,7 @@ export async function voidTransaction(referenceNumber: number): Promise<PaymentR
 // DIRECT CARD PAYMENT WITH SEPARATE FIELDS
 // ============================================
 
-interface DirectCardPaymentData {
+interface DirectCardPaymentData extends BanquestMetadata {
   cardNumber: string;
   expiryMonth: number;
   expiryYear: number;
@@ -593,30 +646,25 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
 
     const fullName = `${firstName} ${lastName}`.trim();
 
-    const requestBody = {
+    const customFields = buildCustomFields(data.customFields);
+    const requestBody: Record<string, unknown> = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
-      // Top-level name fields (required by Banquest/NMI v2 API)
-      first_name: firstName,
-      last_name: lastName,
-      email: data.email,
-      cardholder: fullName,
+      name: fullName || data.cardName || "",
       customer: {
-        first_name: firstName,
-        last_name: lastName,
         email: data.email,
+        identifier: customerIdentifier(data.email),
         send_receipt: false,
       },
       billing_info: {
         first_name: firstName,
         last_name: lastName,
       },
-      transaction_details: {
-        description: data.description || "JRE Payment",
-      },
+      transaction_details: buildTransactionDetails(data.description || "JRE Payment", data),
+      ...(customFields ? { custom_fields: customFields } : {}),
       capture: true,
       save_card: false,
     };
@@ -696,7 +744,7 @@ export async function tokenizeCard(_cardData: {
 // RECURRING PAYMENTS (Save card + charge later)
 // ============================================
 
-interface RecurringPaymentSetupData {
+interface RecurringPaymentSetupData extends BanquestMetadata {
   cardNumber: string;
   expiryMonth: number;
   expiryYear: number;
@@ -735,30 +783,25 @@ export async function setupRecurringPayment(data: RecurringPaymentSetupData): Pr
 
     const fullName = `${firstName} ${lastName}`.trim();
 
-    const requestBody = {
+    const customFields = buildCustomFields(data.customFields);
+    const requestBody: Record<string, unknown> = {
       amount: data.amount,
       card: data.cardNumber.replace(/\s/g, ""),
       expiry_month: data.expiryMonth,
       expiry_year: expYear,
       cvv2: data.cvv,
-      // Top-level name fields (required by Banquest/NMI v2 API)
-      first_name: firstName,
-      last_name: lastName,
-      email: data.email,
-      cardholder: fullName,
+      name: fullName || data.cardName || "",
       customer: {
-        first_name: firstName,
-        last_name: lastName,
         email: data.email,
+        identifier: customerIdentifier(data.email),
         send_receipt: false,
       },
       billing_info: {
         first_name: firstName,
         last_name: lastName,
       },
-      transaction_details: {
-        description: data.description || "JRE Recurring Donation",
-      },
+      transaction_details: buildTransactionDetails(data.description || "JRE Recurring Donation", data),
+      ...(customFields ? { custom_fields: customFields } : {}),
       capture: true,
       save_card: true, // Save card for recurring charges
     };
@@ -818,20 +861,23 @@ export async function chargeRecurringPayment(data: {
   amount: number;
   email: string;
   description?: string;
-}): Promise<PaymentResult> {
+  name?: string;
+} & BanquestMetadata): Promise<PaymentResult> {
   try {
     const authHeader = getAuthHeader();
 
-    const requestBody = {
+    const customFields = buildCustomFields(data.customFields);
+    const requestBody: Record<string, unknown> = {
       amount: data.amount,
       source: data.cardRef, // Use saved card reference
+      ...(data.name ? { name: data.name } : {}),
       customer: {
         email: data.email,
+        identifier: customerIdentifier(data.email),
         send_receipt: false,
       },
-      transaction_details: {
-        description: data.description || "JRE Monthly Donation",
-      },
+      transaction_details: buildTransactionDetails(data.description || "JRE Monthly Donation", data),
+      ...(customFields ? { custom_fields: customFields } : {}),
       capture: true,
     };
 

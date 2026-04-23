@@ -123,6 +123,15 @@ export async function POST(request: NextRequest) {
           cardName: cardName || name,
           email,
           description: `JRE Purim 2026 - ${name}${sponsorship ? ` (${sponsorship})` : ""}`,
+          orderNumber: "purim-2026",
+          invoiceNumber: `purim-2026-${Date.now().toString(36)}`,
+          customFields: {
+            custom1: "JRE Purim 2026",
+            custom2: `Adults: ${numAdults}`,
+            custom3: numKids > 0 ? `Kids: ${numKids}` : "",
+            custom4: sponsorship || "",
+            custom5: normalizedPhone || "",
+          },
         });
 
         if (!paymentResult.success) {

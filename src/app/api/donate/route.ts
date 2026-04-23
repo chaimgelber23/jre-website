@@ -77,6 +77,15 @@ export async function POST(request: NextRequest) {
       description: sponsorship
         ? `JRE Donation - ${sponsorship}`
         : `JRE Donation${isRecurring ? " (Monthly)" : ""}`,
+      orderNumber: isRecurring ? "donation-monthly" : "donation",
+      invoiceNumber: `donation-${Date.now().toString(36)}`,
+      customFields: {
+        custom1: isRecurring ? "JRE Monthly Donation" : "JRE Donation",
+        custom2: sponsorship || "",
+        custom3: honorName ? `In honor/memory of: ${honorName}` : "",
+        custom4: phone || "",
+        custom5: message ? message.slice(0, 255) : "",
+      },
     });
 
     if (!paymentResult.success) {

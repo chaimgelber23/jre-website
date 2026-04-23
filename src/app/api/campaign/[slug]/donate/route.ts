@@ -99,6 +99,15 @@ export async function POST(
       cardName: body.card.name || body.name,
       email: body.email,
       description: `JRE Campaign: ${campaign.title}`,
+      orderNumber: `campaign-${campaign.slug ?? campaign.id}`,
+      invoiceNumber: `campaign-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`,
+      customFields: {
+        custom1: `Campaign: ${campaign.title}`,
+        custom2: body.tier_id ? `Tier: ${body.tier_id}` : "",
+        custom3: body.team_id ? `Team: ${body.team_id}` : "",
+        custom4: body.dedication_name ? `${body.dedication_type || "Dedication"}: ${body.dedication_name}` : "",
+        custom5: body.phone || "",
+      },
     });
 
     if (!result.success) {

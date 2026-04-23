@@ -81,9 +81,17 @@ export async function GET(request: NextRequest) {
           cardRef: donation.card_ref,
           amount: donation.amount,
           email: donation.email,
+          name: donation.name || undefined,
           description: donation.sponsorship
             ? `JRE Monthly Donation - ${donation.sponsorship}`
             : "JRE Monthly Donation",
+          orderNumber: "donation-monthly",
+          invoiceNumber: `donation-monthly-${donation.id}-${Date.now().toString(36)}`,
+          customFields: {
+            custom1: "JRE Monthly Donation",
+            custom2: donation.sponsorship || "",
+            custom3: `Donation ID: ${donation.id}`,
+          },
         });
 
         if (paymentResult.success) {

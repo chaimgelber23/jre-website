@@ -156,6 +156,16 @@ export async function POST(
         cardName: cardName || name,
         email,
         description: `JRE Event Registration - ${event.title}${sponsorshipName ? ` (${sponsorshipName})` : ""}`,
+        orderNumber: slug,
+        invoiceNumber: `${slug}-${Date.now().toString(36)}`,
+        customFields: {
+          custom1: event.title,
+          custom2: `Adults: ${numAdults}`,
+          custom3: numKids > 0 ? `Kids: ${numKids}` : "",
+          custom4: sponsorshipName || "",
+          custom5: normalizedPhone || "",
+          custom6: event.date,
+        },
       });
 
       if (!paymentResult.success) {
