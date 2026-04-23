@@ -60,7 +60,7 @@ export async function POST(
   if (!Number.isFinite(body.amount_cents) || body.amount_cents < 100) {
     return NextResponse.json({ success: false, error: "Minimum donation is $1" }, { status: 400 });
   }
-  const validMethods: PaymentMethod[] = ["card", "daf", "ojc_fund", "donors_fund", "check", "zelle", "other"];
+  const validMethods: PaymentMethod[] = ["card", "daf", "fidelity", "ojc_fund", "donors_fund", "check", "zelle", "other"];
   if (!validMethods.includes(body.payment_method)) {
     return NextResponse.json({ success: false, error: "Invalid payment method" }, { status: 400 });
   }
@@ -188,13 +188,17 @@ export async function POST(
     paymentStatus = "completed";
     paymentReference = grant.transactionId || `tdf_${grant.confirmationNumber}`;
   } else {
-    // Pledge path — DAF / OJC / check / zelle / other
+    // Pledge path — DAF / Fidelity / OJC / check / zelle / other
     paymentStatus = "pledged";
     if (body.payment_method === "daf" && !body.daf_sponsor?.trim()) {
       return NextResponse.json(
         { success: false, error: "Please specify your DAF sponsor." },
         { status: 400 }
       );
+    }
+    // Fidelity pledges auto-populate the sponsor name
+    if (body.payment_method === "fidelity" && !body.daf_sponsor?.trim()) {
+      body.daf_sponsor = "Fidelity Charitable";
     }
   }
 

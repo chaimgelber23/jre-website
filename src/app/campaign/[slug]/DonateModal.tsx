@@ -3,8 +3,7 @@
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft,
-  Building2, Gift, Wallet,
+  X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft, Gift,
 } from "lucide-react";
 import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
 import type {
@@ -591,40 +590,100 @@ function PaymentStep({
   cardCvvRef: React.RefObject<HTMLInputElement | null>;
   setForm: React.Dispatch<React.SetStateAction<DonateForm>>;
 }) {
-  const methodBtn = (m: PaymentMethod, label: string, Icon: React.ElementType, subtitle: string) => (
-    <button
-      key={m}
-      type="button"
-      onClick={() => setPaymentMethod(m)}
-      className={`w-full text-left p-3 rounded-xl border flex items-center gap-3 transition-all ${
-        paymentMethod === m
-          ? "border-[#EF8046] bg-[#fff5f0]"
-          : "border-gray-200 bg-white hover:border-gray-300"
-      }`}
-    >
-      <Icon className={`w-5 h-5 ${paymentMethod === m ? "text-[#EF8046]" : "text-gray-500"}`} />
-      <div className="flex-1">
-        <div className="font-semibold text-sm text-gray-900">{label}</div>
-        <div className="text-xs text-gray-500">{subtitle}</div>
-      </div>
-      {paymentMethod === m && <Check className="w-4 h-4 text-[#EF8046]" />}
-    </button>
-  );
+  type TileKind =
+    | { kind: "icon"; icon: React.ElementType }
+    | { kind: "logo"; src: string; alt: string; heightClass?: string };
+
+  const MethodTile = ({
+    m, label, subtitle, visual,
+  }: {
+    m: PaymentMethod;
+    label: string;
+    subtitle: string;
+    visual: TileKind;
+  }) => {
+    const active = paymentMethod === m;
+    return (
+      <button
+        key={m}
+        type="button"
+        onClick={() => setPaymentMethod(m)}
+        className={`relative p-3 pt-7 rounded-xl border transition-all text-center flex flex-col items-center justify-start gap-1.5 min-h-[128px] ${
+          active
+            ? "border-[#EF8046] bg-[#fff5f0] shadow-sm"
+            : "border-gray-200 bg-white hover:border-gray-300"
+        }`}
+        aria-pressed={active}
+      >
+        {/* Radio indicator */}
+        <span
+          className={`absolute top-2.5 left-2.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+            active ? "border-[#EF8046] bg-[#EF8046]" : "border-gray-300 bg-white"
+          }`}
+        >
+          {active && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
+        </span>
+
+        {/* Visual: icon or logo */}
+        <div className="h-8 flex items-center justify-center">
+          {visual.kind === "icon" ? (
+            <visual.icon className="w-7 h-7 text-gray-700" strokeWidth={1.75} />
+          ) : (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img
+              src={visual.src}
+              alt={visual.alt}
+              className={`object-contain ${visual.heightClass ?? "h-7"} max-w-[110px]`}
+            />
+          )}
+        </div>
+
+        <div className="text-sm font-semibold text-gray-900 leading-tight">{label}</div>
+        <div className="text-[11px] text-gray-500 leading-tight px-1">{subtitle}</div>
+      </button>
+    );
+  };
 
   return (
     <div>
       <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900">Payment</h3>
+        <h3 className="text-sm font-semibold text-gray-900">Payment method</h3>
         <div className="flex items-center gap-1 text-xs text-gray-500">
           <Lock className="w-3 h-3 text-green-500" /> Secure
         </div>
       </div>
 
-      <div className="space-y-2 mb-4">
-        {methodBtn("card", "Credit / Debit card", CreditCard, "Charged immediately — instant receipt")}
-        {methodBtn("donors_fund", "The Donors' Fund", Wallet, "Charge your Giving Card — instant, no fees")}
-        {methodBtn("daf", "Donor-Advised Fund", Gift, "Fidelity, Schwab, JCF, etc. — we'll send instructions")}
-        {methodBtn("ojc_fund", "OJC Fund", Building2, "Grant request from your OJC Fund account")}
+      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
+        <MethodTile
+          m="card"
+          label="Credit Card"
+          subtitle="Instant tax-deductible receipt"
+          visual={{ kind: "icon", icon: CreditCard }}
+        />
+        <MethodTile
+          m="donors_fund"
+          label="The Donors' Fund"
+          subtitle="Charge your Giving Card instantly"
+          visual={{ kind: "logo", src: "/logos/donors-fund.svg", alt: "The Donors' Fund", heightClass: "h-8" }}
+        />
+        <MethodTile
+          m="fidelity"
+          label="Fidelity Charitable"
+          subtitle="Grant request — we'll email instructions"
+          visual={{ kind: "logo", src: "/logos/fidelity-charitable.png", alt: "Fidelity Charitable", heightClass: "h-5" }}
+        />
+        <MethodTile
+          m="ojc_fund"
+          label="OJC Fund"
+          subtitle="Grant request — we'll email instructions"
+          visual={{ kind: "logo", src: "/logos/ojc-fund.png", alt: "OJC Fund", heightClass: "h-8" }}
+        />
+        <MethodTile
+          m="daf"
+          label="Other DAF"
+          subtitle="Schwab, JCF, Vanguard, etc."
+          visual={{ kind: "icon", icon: Gift }}
+        />
       </div>
 
       {paymentMethod === "card" && (
@@ -722,6 +781,14 @@ function PaymentStep({
           </p>
           <Input label="DAF sponsor name *" name="dafSponsor" value={form.dafSponsor} onChange={onChange}
             placeholder="Fidelity Charitable, Schwab Charitable, Jewish Communal Fund..." />
+        </div>
+      )}
+
+      {paymentMethod === "fidelity" && (
+        <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Pledge now — we&apos;ll email you Fidelity Charitable&apos;s grant-request link prefilled for JRE. Your pledge counts toward the goal immediately.
+          </p>
         </div>
       )}
 
