@@ -19,6 +19,7 @@ export interface Campaign {
   tagline: string | null;
   story_md: string | null;
   hero_image_url: string | null;
+  hero_image_urls: string[] | null;
   video_url: string | null;
   og_image_url: string | null;
   goal_cents: number;

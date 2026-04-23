@@ -6,12 +6,13 @@ import {
   X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft,
   Building2, Gift,
 } from "lucide-react";
-import { formatUsd, centsFromDollars } from "@/lib/campaign";
+import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
 import type {
   CampaignSnapshot,
   CampaignTier,
   CampaignCause,
   CampaignTeamWithProgress,
+  CampaignMatcher,
   PaymentMethod,
 } from "@/types/campaign";
 
@@ -51,7 +52,8 @@ export default function DonateModal({
   preselectedTeamId,
   onDonated,
 }: Props) {
-  const { campaign, tiers, causes, teams } = snapshot;
+  const { campaign, tiers, causes, teams, matchers } = snapshot;
+  const activeMatcher = useMemo(() => getActiveMatcher(matchers), [matchers]);
 
   const [step, setStep] = useState<Step>("amount");
 
@@ -271,6 +273,8 @@ export default function DonateModal({
                   tiers={tiers}
                   causes={causes}
                   teams={teams}
+                  matcher={activeMatcher}
+                  amountCents={amountCents}
                   amountDollars={amountDollars}
                   tierId={tierId}
                   causeId={causeId}
@@ -333,12 +337,14 @@ export default function DonateModal({
 // ---------- step components ----------
 
 function AmountStep({
-  tiers, causes, teams, amountDollars, tierId, causeId, teamId,
+  tiers, causes, teams, matcher, amountCents, amountDollars, tierId, causeId, teamId,
   onPickTier, onPickCustom, onPickCause, onPickTeam, onNext,
 }: {
   tiers: CampaignTier[];
   causes: CampaignCause[];
   teams: CampaignTeamWithProgress[];
+  matcher: CampaignMatcher | null;
+  amountCents: number;
   amountDollars: number | "";
   tierId: string | null;
   causeId: string | null;
@@ -349,6 +355,12 @@ function AmountStep({
   onPickTeam: (id: string | null) => void;
   onNext: () => void;
 }) {
+  const multiplier = matcher ? Number(matcher.multiplier) : 1;
+  const matchedCents = matcher && amountCents > 0
+    ? Math.round(amountCents * Math.max(0, multiplier - 1))
+    : 0;
+  const totalCents = amountCents + matchedCents;
+
   return (
     <div>
       <h3 className="text-sm font-semibold text-gray-900 mb-3">Choose an amount</h3>
@@ -375,7 +387,7 @@ function AmountStep({
         ))}
       </div>
 
-      <div className="relative mb-4">
+      <div className="relative mb-3">
         <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
         <input
           type="number"
@@ -387,6 +399,24 @@ function AmountStep({
           className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
         />
       </div>
+
+      {matcher && multiplier > 1 && amountCents > 0 && (
+        <div className="mb-4 p-3 rounded-xl border border-[#EF8046]/25 bg-gradient-to-r from-[#fff5f0] to-[#fef7e6]">
+          <div className="flex items-center gap-3">
+            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#EF8046] text-white text-[11px] font-bold tracking-wide">
+              x{multiplier} MATCH
+            </span>
+            <div className="flex-1 text-sm leading-tight">
+              <div className="text-gray-900 font-semibold tabular-nums">
+                Your {formatUsd(amountCents)} becomes {formatUsd(totalCents)}
+              </div>
+              <div className="text-xs text-gray-600">
+                <span className="font-medium">{matcher.name}</span> adds {formatUsd(matchedCents)}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {causes.length > 1 && (
         <div className="mb-4">

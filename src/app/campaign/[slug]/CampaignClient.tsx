@@ -1,9 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  Search, Share2, Heart, Play, Facebook, Twitter, Mail,
+  Search, Share2, Heart, Facebook, Twitter, Mail,
   MessageCircle, Copy, Check,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
@@ -11,6 +11,8 @@ import Footer from "@/components/layout/Footer";
 import { formatUsd, getActiveMatcher, getTimeRemaining } from "@/lib/campaign";
 import type { CampaignSnapshot, PublicDonation, CampaignTeamWithProgress, CampaignMatcher, Campaign } from "@/types/campaign";
 import DonateModal from "./DonateModal";
+import HeroCarousel from "./HeroCarousel";
+import VideoModal from "./VideoModal";
 
 interface Props {
   snapshot: CampaignSnapshot;
@@ -20,7 +22,7 @@ interface Props {
 }
 
 type Tab = "donors" | "matchers" | "about" | "teams" | "communities";
-type Sort = "latest" | "oldest" | "highest";
+type Sort = "default" | "latest" | "oldest" | "highest";
 
 const DEFAULT_ACCENT = "#DA98B1";
 
@@ -32,17 +34,25 @@ export default function CampaignClient({
 }: Props) {
   const [snapshot, setSnapshot] = useState(initial);
   const [modalOpen, setModalOpen] = useState(false);
+  const [videoOpen, setVideoOpen] = useState(false);
   const [preselectedTier, setPreselectedTier] = useState<string | null>(null);
   const [preselectedTeam, setPreselectedTeam] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("donors");
-  const [sortBy, setSortBy] = useState<Sort>("latest");
+  const [sortBy, setSortBy] = useState<Sort>("default");
   const [search, setSearch] = useState("");
   const [showAllDonors, setShowAllDonors] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const { campaign, matchers, teams, progress, recent_donations } = snapshot;
+  const { campaign, tiers, matchers, teams, progress, recent_donations } = snapshot;
   const accent = campaign.theme_color || DEFAULT_ACCENT;
   const activeMatcher = getActiveMatcher(matchers);
+  const multiplier = activeMatcher ? Number(activeMatcher.multiplier) : 1;
+
+  const heroImages = useMemo(() => {
+    const list = (campaign.hero_image_urls ?? []).filter(Boolean);
+    if (list.length > 0) return list;
+    return campaign.hero_image_url ? [campaign.hero_image_url] : [];
+  }, [campaign.hero_image_urls, campaign.hero_image_url]);
 
   const refresh = useCallback(async () => {
     try {
@@ -63,6 +73,11 @@ export default function CampaignClient({
 
   const openDonate = () => {
     setPreselectedTier(null);
+    setPreselectedTeam(null);
+    setModalOpen(true);
+  };
+  const openWithTier = (tierId: string) => {
+    setPreselectedTier(tierId);
     setPreselectedTeam(null);
     setModalOpen(true);
   };
@@ -88,7 +103,11 @@ export default function CampaignClient({
       if (sortBy === "highest") return b.amount_cents - a.amount_cents;
       const at = new Date(a.created_at).getTime();
       const bt = new Date(b.created_at).getTime();
-      return sortBy === "oldest" ? at - bt : bt - at;
+      if (sortBy === "oldest") return at - bt;
+      if (sortBy === "latest") return bt - at;
+      // "default" — featured/highest gifts first, then recency
+      if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
+      return bt - at;
     });
   const visibleDonations = showAllDonors ? filteredDonations : filteredDonations.slice(0, 10);
 
@@ -104,31 +123,22 @@ export default function CampaignClient({
     <main className="min-h-screen bg-white">
       <Header />
 
-      {/* ============ FULL-WIDTH HERO IMAGE / VIDEO ============ */}
+      {/* ============ FULL-WIDTH HERO CAROUSEL / VIDEO ============ */}
       <section className="relative w-full bg-gray-100">
-        <div className="relative w-full aspect-[21/9] md:aspect-[21/8] overflow-hidden">
-          {campaign.hero_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img src={campaign.hero_image_url} alt={campaign.title} className="absolute inset-0 w-full h-full object-cover" />
-          ) : (
+        {heroImages.length > 0 ? (
+          <HeroCarousel
+            images={heroImages}
+            alt={campaign.title}
+            videoUrl={campaign.video_url}
+            onPlayVideo={() => setVideoOpen(true)}
+          />
+        ) : (
+          <div className="relative w-full aspect-[21/9] md:aspect-[21/8] overflow-hidden">
             <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 text-gray-300">
               <Heart className="w-24 h-24" />
             </div>
-          )}
-          {campaign.video_url && (
-            <a
-              href={campaign.video_url}
-              target="_blank"
-              rel="noreferrer noopener"
-              aria-label="Play campaign video"
-              className="absolute inset-0 flex items-center justify-center bg-black/15 hover:bg-black/30 transition group"
-            >
-              <div className="w-20 h-20 rounded-full bg-white/95 flex items-center justify-center shadow-2xl group-hover:scale-105 transition">
-                <Play className="w-9 h-9 text-gray-900 ml-1" fill="currentColor" />
-              </div>
-            </a>
-          )}
-        </div>
+          </div>
+        )}
       </section>
 
       {/* ============ NARROW TITLE BAND ============ */}
@@ -189,6 +199,60 @@ export default function CampaignClient({
           </div>
         </div>
       </section>
+
+      {/* ============ SPONSOR TIER CARDS ============ */}
+      {tiers.length > 0 && (
+        <section className="py-10 md:py-12 bg-gray-50 border-b border-gray-100">
+          <div className="container mx-auto px-6">
+            <div className="text-center mb-6">
+              <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-1">Sponsorship Levels</div>
+              <h2 className="text-xl md:text-2xl font-bold text-gray-900">Choose how you&apos;ll give</h2>
+              {multiplier > 1 && (
+                <p className="text-sm text-gray-600 mt-2">
+                  Every gift is <span className="font-semibold" style={{ color: accent }}>multiplied {multiplier}×</span> thanks to our matcher.
+                </p>
+              )}
+            </div>
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${tiers.length >= 3 ? "lg:grid-cols-3" : ""} ${tiers.length >= 4 ? "xl:grid-cols-4" : ""} gap-4 max-w-6xl mx-auto`}>
+              {tiers.map((t) => (
+                <button
+                  key={t.id}
+                  type="button"
+                  onClick={() => openWithTier(t.id)}
+                  className={`relative text-left bg-white border rounded-xl p-5 transition-all hover:shadow-lg ${
+                    t.is_featured ? "border-2" : "border border-gray-200"
+                  }`}
+                  style={t.is_featured ? { borderColor: accent } : undefined}
+                >
+                  {t.is_featured && (
+                    <span
+                      className="absolute -top-2 left-5 text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded text-white"
+                      style={{ background: accent }}
+                    >
+                      Popular
+                    </span>
+                  )}
+                  <div className="flex items-baseline justify-between mb-1">
+                    <div className="text-2xl md:text-3xl font-bold text-gray-900 tabular-nums">{formatUsd(t.amount_cents)}</div>
+                    {t.hebrew_value && (
+                      <div dir="rtl" className="text-sm font-semibold" style={{ color: accent }}>
+                        {t.hebrew_value}
+                      </div>
+                    )}
+                  </div>
+                  {t.label && <div className="text-sm font-semibold text-gray-800 mb-1">{t.label}</div>}
+                  {t.description && <div className="text-xs text-gray-600 leading-relaxed">{t.description}</div>}
+                  {multiplier > 1 && (
+                    <div className="mt-3 pt-3 border-t border-gray-100 text-[11px] text-gray-500">
+                      Becomes <span className="font-semibold tabular-nums" style={{ color: accent }}>{formatUsd(t.amount_cents * multiplier)}</span> with match
+                    </div>
+                  )}
+                </button>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* ============ 3-COL DONATION WIDGET: SHARE | $AMOUNT | DONATE ============ */}
       <section className="py-12 md:py-16">
@@ -308,6 +372,7 @@ export default function CampaignClient({
                   onChange={(e) => setSortBy(e.target.value as Sort)}
                   className="px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-gray-400 text-sm"
                 >
+                  <option value="default">Default</option>
                   <option value="latest">Latest</option>
                   <option value="oldest">Oldest</option>
                   <option value="highest">Highest</option>
@@ -391,6 +456,8 @@ export default function CampaignClient({
         preselectedTeamId={preselectedTeam}
         onDonated={refresh}
       />
+
+      <VideoModal open={videoOpen} url={campaign.video_url} onClose={() => setVideoOpen(false)} />
     </main>
   );
 }
@@ -517,7 +584,11 @@ function DonorCard({ d, accent }: { d: PublicDonation; accent: string }) {
           <div className="font-semibold text-gray-900 text-sm truncate">{d.display_name || "Anonymous"}</div>
           <div className="font-bold text-gray-900 tabular-nums text-sm flex-shrink-0">{formatUsd(d.amount_cents)}</div>
         </div>
-        {d.message && <div className="text-xs text-gray-600 italic mt-1 line-clamp-2">{d.message}</div>}
+        {d.message && (
+          <div dir="auto" className="text-xs text-gray-600 italic mt-1 line-clamp-2">
+            {d.message}
+          </div>
+        )}
         {d.dedication_name && (
           <div className="text-xs text-gray-600 mt-1">
             {d.dedication_type === "memory" ? "In memory of " : "In honor of "}
@@ -526,8 +597,27 @@ function DonorCard({ d, accent }: { d: PublicDonation; accent: string }) {
         )}
         <div className="text-xs text-gray-400 mt-1">{timeAgo(d.created_at)}</div>
         {d.team_name && (
-          <div className="text-xs text-gray-500 mt-1">
-            with <span className="underline" style={{ color: accent }}>{d.team_name}</span>
+          <div className="text-xs text-gray-500 mt-1 space-y-0.5">
+            <div>
+              with{" "}
+              {d.team_slug ? (
+                <a href={`#team-${d.team_slug}`} className="underline" style={{ color: accent }}>
+                  {d.team_name}
+                </a>
+              ) : (
+                <span className="underline" style={{ color: accent }}>{d.team_name}</span>
+              )}
+            </div>
+            <div className="text-gray-500">
+              <span className="font-medium text-gray-700">Donated to:</span>{" "}
+              {d.team_slug ? (
+                <a href={`#team-${d.team_slug}`} className="underline" style={{ color: accent }}>
+                  {d.team_name}
+                </a>
+              ) : (
+                <span className="underline" style={{ color: accent }}>{d.team_name}</span>
+              )}
+            </div>
           </div>
         )}
       </div>

@@ -7,8 +7,10 @@ import {
   computeMatchedAmount,
   maskDonorName,
 } from "@/lib/campaign";
+import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
 import type {
   CampaignMatcher,
+  CampaignTier,
   PaymentMethod,
   DedicationType,
 } from "@/types/campaign";
@@ -197,6 +199,38 @@ export async function POST(
       .from("campaign_matchers")
       .update({ matched_cents: (activeMatcher.matched_cents ?? 0) + matchedCents })
       .eq("id", activeMatcher.id);
+  }
+
+  // ---- Receipt + dedication emails (fire-and-forget) ------------------------
+  if (paymentStatus === "completed") {
+    let tierLabel: string | undefined;
+    if (body.tier_id) {
+      const { data: tierRow } = await db
+        .from("campaign_tiers")
+        .select("label,amount_cents")
+        .eq("id", body.tier_id)
+        .maybeSingle();
+      const tier = tierRow as Pick<CampaignTier, "label" | "amount_cents"> | null;
+      if (tier?.label) tierLabel = tier.label;
+    }
+
+    void sendDonationConfirmation({
+      to: body.email.trim(),
+      name: body.name.trim(),
+      amount: body.amount_cents / 100,
+      isRecurring: false,
+      sponsorship: tierLabel,
+      transactionId: paymentReference ?? insertData.id,
+    }).catch((e) => console.error("donation receipt email failed:", e));
+
+    if (body.dedication_email && EMAIL_RE.test(body.dedication_email) && body.dedication_name) {
+      void sendHonoreeNotification({
+        to: body.dedication_email.trim(),
+        honoreeName: body.dedication_name.trim(),
+        donorName: body.is_anonymous ? "A JRE friend" : body.name.trim(),
+        message: body.message ?? undefined,
+      }).catch((e) => console.error("honoree email failed:", e));
+    }
   }
 
   return NextResponse.json({
