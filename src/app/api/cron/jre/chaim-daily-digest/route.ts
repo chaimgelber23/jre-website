@@ -57,8 +57,8 @@ export async function GET(req: NextRequest) {
   const { weekday, dateStr } = todayInfo();
   const upcoming = await getNextUpcomingClass();
   const tasks = [];
-  const buttons = [];
   const draftsCreated = [];
+  let dashboardLinkNeeded = false;
 
   // Header — always include current upcoming class context
   let header = `📅 <b>JRE Daily Digest — ${weekday} ${dateStr}</b>\n`;
@@ -76,7 +76,7 @@ export async function GET(req: NextRequest) {
   switch (weekday) {
     case "Sunday": {
       tasks.push("👀 Preview the week. Check the Tuesday Speakers sheet for the upcoming class.");
-      buttons.push({ text: "📊 Workflow sheet", url: SHEET_URL });
+      tasks.push(`📊 Workflow sheet: <a href="${SHEET_URL}">open</a>`);
       break;
     }
 
@@ -113,7 +113,7 @@ export async function GET(req: NextRequest) {
           }
         }
 
-        buttons.push({ text: "📝 Open dashboard", url: DASHBOARD_URL });
+        dashboardLinkNeeded = true;
       }
       break;
     }
@@ -152,7 +152,7 @@ export async function GET(req: NextRequest) {
             }
           } catch {}
         }
-        buttons.push({ text: "📝 Open dashboard to approve", url: DASHBOARD_URL });
+        dashboardLinkNeeded = true;
       } else {
         tasks.push(`✅ All paid. Quiet Friday.`);
       }
@@ -170,11 +170,11 @@ export async function GET(req: NextRequest) {
   if (draftsCreated.length > 0) {
     body += "\n\n<b>Drafts auto-created:</b>\n" + draftsCreated.join("\n");
   }
+  if (dashboardLinkNeeded) {
+    body += `\n\n📝 <a href="${DASHBOARD_URL}">Open dashboard to approve</a>`;
+  }
 
-  await sendTelegram("jre", body, {
-    severity: "info",
-    inlineKeyboard: buttons.length > 0 ? [buttons] : undefined,
-  });
+  await sendTelegram("jre", body, { severity: "info" });
 
   return NextResponse.json({
     ok: true,
