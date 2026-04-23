@@ -24,6 +24,8 @@ const GMAIL_SCOPES = [
   "https://www.googleapis.com/auth/gmail.modify",
   // Drive — read all her files (Docs, Sheets, Slides, folders)
   "https://www.googleapis.com/auth/drive.readonly",
+  // Drive — manage files the app creates (needed to share new sheets/docs)
+  "https://www.googleapis.com/auth/drive.file",
   // Sheets — read + write any sheet she can access
   "https://www.googleapis.com/auth/spreadsheets",
   // Docs — read + write any doc
