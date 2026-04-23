@@ -113,7 +113,7 @@ export default function AdminCampaignEditor({ params }: { params: Promise<{ id: 
           rows={data.tiers}
           reload={load}
           fields={[
-            { name: "amount_cents", label: "Amount (cents)", type: "number" },
+            { name: "amount_cents", label: "Amount", type: "dollars" },
             { name: "label", label: "Label", type: "text" },
             { name: "description", label: "Description", type: "text" },
             { name: "hebrew_value", label: "Hebrew", type: "text" },
@@ -136,7 +136,7 @@ export default function AdminCampaignEditor({ params }: { params: Promise<{ id: 
           fields={[
             { name: "name", label: "Matcher name", type: "text" },
             { name: "multiplier", label: "Multiplier (e.g. 2, 3)", type: "number" },
-            { name: "cap_cents", label: "Cap (cents, blank=uncapped)", type: "number" },
+            { name: "cap_cents", label: "Cap (blank=uncapped)", type: "dollars" },
             { name: "logo_url", label: "Logo URL", type: "text" },
             { name: "story", label: "Story", type: "text" },
             { name: "is_active", label: "Active?", type: "boolean" },
@@ -147,6 +147,10 @@ export default function AdminCampaignEditor({ params }: { params: Promise<{ id: 
       </Section>
 
       <Section title="Teams">
+        <div className="text-xs text-gray-500 mb-3">
+          Each team has its own fundraising goal. Captains can message you their number
+          — you paste it here in dollars (no zeros padding).
+        </div>
         <CollectionEditor
           campaignId={id}
           collection="teams"
@@ -155,12 +159,15 @@ export default function AdminCampaignEditor({ params }: { params: Promise<{ id: 
           fields={[
             { name: "slug", label: "Slug", type: "text" },
             { name: "name", label: "Team name", type: "text" },
-            { name: "leader_name", label: "Leader", type: "text" },
-            { name: "goal_cents", label: "Goal (cents)", type: "number" },
+            { name: "leader_name", label: "Captain", type: "text" },
+            { name: "leader_email", label: "Captain email", type: "text" },
+            { name: "goal_cents", label: "Team goal", type: "dollars" },
+            { name: "avatar_url", label: "Avatar / photo URL", type: "text" },
+            { name: "story", label: "Team story", type: "textarea" },
             { name: "is_active", label: "Active?", type: "boolean" },
             { name: "sort_order", label: "Order", type: "number" },
           ]}
-          defaults={{ slug: "", name: "", leader_name: "", goal_cents: null, is_active: true, sort_order: 0 }}
+          defaults={{ slug: "", name: "", leader_name: "", leader_email: "", goal_cents: null, avatar_url: "", story: "", is_active: true, sort_order: 0 }}
         />
       </Section>
 
@@ -321,7 +328,12 @@ function FaqEditor({
 interface CollectionField {
   name: string;
   label: string;
-  type: "text" | "number" | "boolean";
+  /**
+   * "dollars" is stored as cents in the DB but displayed / edited in whole
+   * dollars. "textarea" renders a multi-line input. Everything else is a
+   * straight text/number/checkbox.
+   */
+  type: "text" | "number" | "boolean" | "dollars" | "textarea";
 }
 
 type Row = { id?: string } & Record<string, unknown>;
@@ -384,6 +396,40 @@ function CollectionEditor({
         </label>
       );
     }
+    if (f.type === "dollars") {
+      const dollars = v == null ? "" : String(Math.round((v as number) / 100));
+      return (
+        <div>
+          <label className="block text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-1">{f.label}</label>
+          <div className="relative">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-sm">$</span>
+            <input
+              type="number"
+              value={dollars}
+              onChange={(e) => {
+                const raw = e.target.value;
+                onChange(raw === "" ? null : Math.round(Number(raw) * 100));
+              }}
+              placeholder="0"
+              className={`${inputCls} pl-7`}
+            />
+          </div>
+        </div>
+      );
+    }
+    if (f.type === "textarea") {
+      return (
+        <div>
+          <label className="block text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-1">{f.label}</label>
+          <textarea
+            value={v == null ? "" : String(v)}
+            onChange={(e) => onChange(e.target.value)}
+            rows={3}
+            className={inputCls}
+          />
+        </div>
+      );
+    }
     return (
       <div>
         <label className="block text-[10px] uppercase tracking-wide text-gray-500 font-semibold mb-1">{f.label}</label>
@@ -425,10 +471,16 @@ function CollectionEditor({
                     {fields.map((f) => {
                       const v = r[f.name];
                       if (v == null || v === "") return null;
-                      if (f.name === "amount_cents" || f.name === "cap_cents" || f.name === "goal_cents") {
+                      if (f.type === "dollars") {
                         return <span key={f.name} className="mr-3"><b>{f.label}:</b> {formatUsd(v as number)}</span>;
                       }
-                      return <span key={f.name} className="mr-3"><b>{f.label}:</b> {String(v)}</span>;
+                      if (f.type === "boolean") {
+                        return <span key={f.name} className="mr-3"><b>{f.label}:</b> {v ? "Yes" : "No"}</span>;
+                      }
+                      const display = f.type === "textarea"
+                        ? String(v).slice(0, 40) + (String(v).length > 40 ? "…" : "")
+                        : String(v);
+                      return <span key={f.name} className="mr-3"><b>{f.label}:</b> {display}</span>;
                     })}
                   </div>
                   <div className="flex gap-2 items-center">
