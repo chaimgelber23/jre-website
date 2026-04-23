@@ -43,6 +43,12 @@ const JOBS = [
     // Thursday 9am ET (currently EDT = 13:00 UTC)
     schedule: { hours: [13], minutes: [7], wdays: [4], months: [-1], mdays: [-1] },
   },
+  {
+    title: "JRE — chaim-daily-digest (7am ET)",
+    url: `${BASE_URL}/api/cron/jre/chaim-daily-digest`,
+    // Daily 7am ET = 11:00 UTC (during EDT)
+    schedule: { hours: [11], minutes: [3], wdays: [-1], months: [-1], mdays: [-1] },
+  },
   // {
   //   title: "JRE — zelle-digest (M/W/F 9:07am ET)",
   //   url: `${BASE_URL}/api/cron/jre/zelle-digest`,
