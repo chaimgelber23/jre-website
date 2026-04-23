@@ -4,12 +4,22 @@ import type {
   CampaignCause,
   CampaignTier,
   CampaignMatcher,
+  CampaignTeam,
   CampaignTeamWithProgress,
   CampaignUpdate,
   CampaignSnapshot,
   CampaignDonation,
   PublicDonation,
 } from "@/types/campaign";
+
+export interface CampaignTeamSnapshot {
+  campaign: Campaign;
+  team: CampaignTeamWithProgress;
+  tiers: CampaignTier[];
+  causes: CampaignCause[];
+  matchers: CampaignMatcher[];
+  recent_donations: PublicDonation[];
+}
 
 const RECENT_DONATIONS_LIMIT = 50;
 
@@ -131,6 +141,71 @@ export async function getCampaignBySlug(slug: string): Promise<Campaign | null> 
     return null;
   }
   return (data as Campaign) ?? null;
+}
+
+export async function getCampaignTeamSnapshot(
+  campaignSlug: string,
+  teamSlug: string
+): Promise<CampaignTeamSnapshot | null> {
+  const supabase = createServerClient();
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  const campaign = await getCampaignBySlug(campaignSlug);
+  if (!campaign) return null;
+
+  const { data: teamRow } = await db
+    .from("campaign_teams")
+    .select("*")
+    .eq("campaign_id", campaign.id)
+    .eq("slug", teamSlug)
+    .eq("is_active", true)
+    .maybeSingle();
+  const teamBase = teamRow as CampaignTeam | null;
+  if (!teamBase) return null;
+
+  const [causesRes, tiersRes, matchersRes, teamProgressRes, donationsRes] = await Promise.all([
+    db.from("campaign_causes").select("*").eq("campaign_id", campaign.id).order("sort_order", { ascending: true }),
+    db.from("campaign_tiers").select("*").eq("campaign_id", campaign.id).order("sort_order", { ascending: true }),
+    db.from("campaign_matchers").select("*").eq("campaign_id", campaign.id).eq("is_active", true).order("sort_order", { ascending: true }),
+    db.from("campaign_team_progress").select("*").eq("team_id", teamBase.id).maybeSingle(),
+    db
+      .from("campaign_donations")
+      .select("*")
+      .eq("campaign_id", campaign.id)
+      .eq("team_id", teamBase.id)
+      .in("payment_status", ["completed", "pledged"])
+      .order("created_at", { ascending: false })
+      .limit(RECENT_DONATIONS_LIMIT),
+  ]);
+
+  const causes: CampaignCause[] = (causesRes.data ?? []) as CampaignCause[];
+  const tiers: CampaignTier[] = (tiersRes.data ?? []) as CampaignTier[];
+  const matchers: CampaignMatcher[] = (matchersRes.data ?? []) as CampaignMatcher[];
+  const teamProgress = (teamProgressRes.data ?? { raised_cents: 0, donor_count: 0 }) as {
+    raised_cents: number;
+    donor_count: number;
+  };
+
+  const team: CampaignTeamWithProgress = {
+    ...teamBase,
+    raised_cents: teamProgress.raised_cents ?? 0,
+    donor_count: teamProgress.donor_count ?? 0,
+  };
+
+  const donations = (donationsRes.data ?? []) as CampaignDonation[];
+  const recent = donations.map((d) =>
+    publicizeDonation(d, [{ id: team.id, slug: team.slug, name: team.name }], causes)
+  );
+
+  return {
+    campaign,
+    team,
+    tiers,
+    causes,
+    matchers,
+    recent_donations: recent,
+  };
 }
 
 export async function getCampaignSnapshot(slug: string): Promise<CampaignSnapshot | null> {
