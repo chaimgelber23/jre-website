@@ -153,9 +153,13 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // ---- Also process campaign_donations (new multi-campaign schema) --------
+    const campaignResults = await processCampaignRecurring(supabase, today);
+
     return NextResponse.json({
       message: "Recurring donations processed",
-      ...results,
+      donations: results,
+      campaign_donations: campaignResults,
     });
   } catch (error) {
     console.error("Error processing recurring donations:", error);
@@ -164,6 +168,101 @@ export async function GET(request: NextRequest) {
       { status: 500 }
     );
   }
+}
+
+interface CampaignRecurringRow {
+  id: string;
+  campaign_id: string;
+  amount_cents: number;
+  name: string;
+  email: string;
+  card_ref: string | null;
+}
+
+async function processCampaignRecurring(
+  supabase: ReturnType<typeof createServerClient>,
+  today: string,
+) {
+  const results = { processed: 0, successful: 0, failed: 0, errors: [] as string[] };
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const db = supabase as any;
+
+  const { data, error } = await db
+    .from("campaign_donations")
+    .select("id, campaign_id, amount_cents, name, email, card_ref")
+    .eq("is_recurring", true)
+    .eq("payment_status", "completed")
+    .not("card_ref", "is", null)
+    .lte("next_charge_date", today);
+
+  if (error) {
+    console.error("campaign_donations fetch error:", error);
+    return { ...results, errors: [error.message] };
+  }
+  const rows = (data ?? []) as CampaignRecurringRow[];
+  if (rows.length === 0) return results;
+
+  for (const row of rows) {
+    results.processed++;
+    if (!row.card_ref) {
+      results.failed++;
+      continue;
+    }
+    try {
+      const amount = row.amount_cents / 100;
+      const paymentResult = await chargeRecurringPayment({
+        cardRef: row.card_ref,
+        amount,
+        email: row.email,
+        name: row.name,
+        description: "JRE Monthly Donation",
+        orderNumber: `campaign-monthly-${row.campaign_id}`,
+        invoiceNumber: `campaign-monthly-${row.id}-${Date.now().toString(36)}`,
+        customFields: { custom1: `Campaign: ${row.campaign_id}`, custom2: `Parent: ${row.id}` },
+      });
+
+      if (paymentResult.success) {
+        await db.from("campaign_donations").insert({
+          campaign_id: row.campaign_id,
+          amount_cents: row.amount_cents,
+          matched_cents: 0,
+          name: row.name,
+          display_name: row.name,
+          email: row.email,
+          payment_method: "card",
+          payment_status: "completed",
+          payment_reference: paymentResult.transactionId,
+          card_ref: row.card_ref,
+          is_recurring: false,
+          recurring_frequency: null,
+          next_charge_date: null,
+        });
+        await db
+          .from("campaign_donations")
+          .update({ next_charge_date: getNextChargeDate() })
+          .eq("id", row.id);
+        await sendDonationConfirmation({
+          to: row.email,
+          name: row.name,
+          amount,
+          isRecurring: true,
+          transactionId: paymentResult.transactionId ?? "",
+        }).catch(console.error);
+        results.successful++;
+      } else {
+        await db
+          .from("campaign_donations")
+          .update({ failure_reason: paymentResult.error || "Recurring charge declined" })
+          .eq("id", row.id);
+        results.failed++;
+        results.errors.push(`${row.id}: ${paymentResult.error}`);
+      }
+    } catch (err) {
+      results.failed++;
+      results.errors.push(`${row.id}: ${err instanceof Error ? err.message : "unknown"}`);
+    }
+  }
+  return results;
 }
 
 // Vercel cron config - run daily at 9 AM EST

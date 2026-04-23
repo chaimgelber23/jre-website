@@ -4,7 +4,7 @@ import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import confetti from "canvas-confetti";
 import {
-  X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft,
+  X, CreditCard, Lock, Check, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
 import type {
@@ -84,7 +84,7 @@ export default function DonateModal({
   const [amountDollars, setAmountDollars] = useState<number | "">("");
   const [tierId, setTierId] = useState<string | null>(preselectedTierId ?? null);
   const [teamId, setTeamId] = useState<string | null>(preselectedTeamId ?? null);
-  const [installments, setInstallments] = useState<number>(1); // 1 = one-time
+  const [frequency, setFrequency] = useState<"one_time" | "monthly">("one_time");
 
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
 
@@ -152,6 +152,47 @@ export default function DonateModal({
     };
   }, [open, onClose]);
 
+  // Reset internal state whenever the modal closes, so the next open starts
+  // fresh (no stale "success" step, no stale card fields). Preselections are
+  // re-applied by the effects above once it reopens.
+  useEffect(() => {
+    if (open) return;
+    setStep("details");
+    setAmountDollars("");
+    setTierId(null);
+    setTeamId(null);
+    setFrequency("one_time");
+    setPaymentMethod("card");
+    setSubmitting(false);
+    setError(null);
+    setForm({
+      fullName: "",
+      displayName: "",
+      email: "",
+      phone: "",
+      phoneCountry: "+1",
+      isAnonymous: false,
+      message: "",
+      dedicationType: "",
+      dedicationName: "",
+      dedicationEmail: "",
+      cardName: "",
+      cardNumber: "",
+      cardExpiry: "",
+      cardCvv: "",
+      addrCountry: "United States",
+      addrLine1: "",
+      addrApt: "",
+      addrZip: "",
+      addrCity: "",
+      addrState: "",
+      dafSponsor: "",
+      ojcAccountId: "",
+      dfDonor: "",
+      dfAuth: "",
+    });
+  }, [open]);
+
   // When step changes, scroll the modal body back to top
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
@@ -165,7 +206,10 @@ export default function DonateModal({
     ? Math.round(amountCents * Math.max(0, multiplier - 1))
     : 0;
   const totalCents = amountCents + matchedCents;
-  const perInstallmentCents = installments > 1 ? Math.round(amountCents / installments) : amountCents;
+  // Gated behind campaign.allow_recurring: donors only see the Monthly pill
+  // once that DB flag is flipped. Until then `isRecurring` stays false and
+  // the flow behaves exactly like a one-time donation.
+  const isRecurring = campaign.allow_recurring && frequency === "monthly";
 
   const cardNumberRef = useRef<HTMLInputElement>(null);
   const cardExpiryRef = useRef<HTMLInputElement>(null);
@@ -270,7 +314,8 @@ export default function DonateModal({
           donor: form.dfDonor.trim(),
           authorization: form.dfAuth.trim(),
         } : null,
-        installments: installments > 1 ? installments : null,
+        is_recurring: isRecurring,
+        recurring_frequency: isRecurring ? "monthly" : null,
       };
 
       const res = await fetch(`/api/campaign/${campaign.slug}/donate`, {
@@ -368,8 +413,7 @@ export default function DonateModal({
                 matchedCents={matchedCents}
                 totalCents={totalCents}
                 multiplier={multiplier}
-                installments={installments}
-                perInstallmentCents={perInstallmentCents}
+                frequency={frequency}
                 tierId={tierId}
                 teamId={teamId}
                 form={form}
@@ -378,7 +422,7 @@ export default function DonateModal({
                 onPickTier={selectTier}
                 onPickCustom={selectCustom}
                 onPickTeam={setTeamId}
-                onSetInstallments={setInstallments}
+                onSetFrequency={setFrequency}
                 onChange={change}
                 orgName="Jewish Renaissance Experience"
               />
@@ -399,6 +443,7 @@ export default function DonateModal({
                 amountCents={amountCents}
                 matchedCents={matchedCents}
                 totalCents={totalCents}
+                isRecurring={isRecurring}
                 orgName="Jewish Renaissance Experience"
               />
             )}
@@ -407,6 +452,7 @@ export default function DonateModal({
               <SuccessStep
                 amountCents={amountCents}
                 isPledge={isPledge}
+                isRecurring={isRecurring}
                 email={form.email.trim()}
                 onClose={onClose}
               />
@@ -447,12 +493,9 @@ export default function DonateModal({
                         Processing…
                       </>
                     ) : (
-                      <>
-                        <Heart className="w-4 h-4" />
-                        {paymentMethod === "card" || paymentMethod === "donors_fund"
-                          ? `Donate ${formatUsd(amountCents)}`
-                          : `Pledge ${formatUsd(amountCents)}`}
-                      </>
+                      paymentMethod === "card" || paymentMethod === "donors_fund"
+                        ? `Donate ${formatUsd(amountCents)}${isRecurring ? "/month" : ""}`
+                        : `Pledge ${formatUsd(amountCents)}${isRecurring ? "/month" : ""}`
                     )}
                   </button>
                 </div>
@@ -475,10 +518,10 @@ function DetailsStep({
   tiers, teams, matcher,
   allowAnonymous, allowDedication, allowRecurring,
   amountDollars, amountCents, matchedCents, totalCents, multiplier,
-  installments, perInstallmentCents,
+  frequency,
   tierId, teamId,
   form, displayNameLeft, messageLeft,
-  onPickTier, onPickCustom, onPickTeam, onSetInstallments, onChange,
+  onPickTier, onPickCustom, onPickTeam, onSetFrequency, onChange,
   orgName,
 }: {
   tiers: CampaignTier[];
@@ -492,8 +535,7 @@ function DetailsStep({
   matchedCents: number;
   totalCents: number;
   multiplier: number;
-  installments: number;
-  perInstallmentCents: number;
+  frequency: "one_time" | "monthly";
   tierId: string | null;
   teamId: string | null;
   form: DonateForm;
@@ -502,7 +544,7 @@ function DetailsStep({
   onPickTier: (t: CampaignTier) => void;
   onPickCustom: (v: string) => void;
   onPickTeam: (id: string | null) => void;
-  onSetInstallments: (n: number) => void;
+  onSetFrequency: (f: "one_time" | "monthly") => void;
   onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   orgName: string;
 }) {
@@ -535,7 +577,7 @@ function DetailsStep({
           </div>
         )}
 
-        <div className="flex items-stretch rounded-xl border-2 border-gray-200 bg-[#FAFAFA] focus-within:border-[#EF8046] focus-within:bg-white transition-colors duration-200">
+        <div className="flex items-stretch rounded-xl border border-gray-200 bg-[#FAFAFA]">
           <span className="pl-4 pr-2 flex items-center text-gray-500 font-medium text-lg select-none">$</span>
           <input
             type="text"
@@ -551,27 +593,34 @@ function DetailsStep({
         {allowRecurring && (
           <div className="mt-3">
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-              Donate in installments
+              Frequency
             </label>
-            <div className="flex items-center gap-2 flex-wrap">
-              {[1, 3, 6, 12].map((n) => (
+            <div className="grid grid-cols-2 gap-2">
+              {([
+                { key: "one_time", label: "One-time", sub: "single donation" },
+                { key: "monthly", label: "Monthly", sub: "every month" },
+              ] as const).map((opt) => (
                 <button
-                  key={n}
+                  key={opt.key}
                   type="button"
-                  onClick={() => onSetInstallments(n)}
-                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
-                    installments === n
+                  onClick={() => onSetFrequency(opt.key)}
+                  className={`px-3 py-2.5 rounded-xl text-sm font-semibold transition-colors ${
+                    frequency === opt.key
                       ? "bg-[#EF8046] text-white"
                       : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-[#EF8046]"
                   }`}
                 >
-                  {n === 1 ? "One-time" : `${n}×`}
+                  <div>{opt.label}</div>
+                  <div className={`text-[11px] font-normal mt-0.5 ${frequency === opt.key ? "text-white/80" : "text-gray-500"}`}>
+                    {opt.sub}
+                  </div>
                 </button>
               ))}
             </div>
-            {installments > 1 && amountCents > 0 && (
-              <p className="text-[11px] text-gray-500 mt-2 tabular-nums">
-                {formatUsd(perInstallmentCents)} × {installments} monthly payments
+            {frequency === "monthly" && amountCents > 0 && (
+              <p className="text-[11px] text-gray-600 mt-2 tabular-nums">
+                {formatUsd(amountCents)} charged today, then the same amount on this day every month. Cancel anytime by emailing{" "}
+                <a href="mailto:office@thejre.org" className="underline">office@thejre.org</a>.
               </p>
             )}
           </div>
@@ -737,7 +786,7 @@ function DetailsStep({
 function PaymentStep({
   paymentMethod, setPaymentMethod, form, onChange, setForm,
   formatCardNumber, formatExpiry, cardNumberRef, cardExpiryRef, cardCvvRef,
-  amountCents, matchedCents, totalCents, orgName,
+  amountCents, matchedCents, totalCents, isRecurring, orgName,
 }: {
   paymentMethod: PaymentMethod;
   setPaymentMethod: (m: PaymentMethod) => void;
@@ -752,6 +801,7 @@ function PaymentStep({
   amountCents: number;
   matchedCents: number;
   totalCents: number;
+  isRecurring: boolean;
   orgName: string;
 }) {
   const isCharge = paymentMethod === "card" || paymentMethod === "donors_fund";
@@ -989,10 +1039,21 @@ function PaymentStep({
 
       {/* Confirmation panel */}
       <div className="rounded-2xl border-2 border-gray-200 bg-white px-4 py-4 space-y-2.5">
-        <div className="text-[11px] uppercase tracking-[0.18em] font-bold text-gray-500">Confirm your donation</div>
+        <div className="flex items-center justify-between">
+          <div className="text-[11px] uppercase tracking-[0.18em] font-bold text-gray-500">Confirm your donation</div>
+          {isRecurring && (
+            <span className="inline-flex items-center px-2 py-0.5 rounded-full bg-[#fff5f0] border border-[#EF8046]/30 text-[10px] font-bold tracking-wide text-[#EF8046] uppercase">
+              Monthly
+            </span>
+          )}
+        </div>
         <div className="flex items-baseline justify-between text-sm">
-          <span className="text-gray-600">You donate</span>
-          <span className="font-bold text-gray-900 tabular-nums">{formatUsd(amountCents)}</span>
+          <span className="text-gray-600">
+            {isRecurring ? "You donate each month" : "You donate"}
+          </span>
+          <span className="font-bold text-gray-900 tabular-nums">
+            {formatUsd(amountCents)}{isRecurring ? "/mo" : ""}
+          </span>
         </div>
         {matchedCents > 0 && (
           <div className="flex items-baseline justify-between text-sm">
@@ -1001,12 +1062,14 @@ function PaymentStep({
           </div>
         )}
         <div className="flex items-baseline justify-between text-sm pt-2 border-t border-gray-100">
-          <span className="font-semibold text-gray-700">{orgName} receives</span>
+          <span className="font-semibold text-gray-700">{orgName} receives{isRecurring ? " today" : ""}</span>
           <span className="font-extrabold text-gray-900 tabular-nums">{formatUsd(totalCents)}</span>
         </div>
         <p className="text-[11px] text-gray-500 leading-relaxed pt-1">
           {isCharge
-            ? <>You will be <span className="font-semibold text-gray-700">charged now</span>. A tax-deductible receipt will be emailed to you.</>
+            ? isRecurring
+              ? <>You will be <span className="font-semibold text-gray-700">charged {formatUsd(amountCents)} today</span>, then the same amount on this day every month until you cancel. A tax-deductible receipt will be emailed after each charge.</>
+              : <>You will be <span className="font-semibold text-gray-700">charged now</span>. A tax-deductible receipt will be emailed to you.</>
             : <>Your pledge is recorded immediately. We&apos;ll email you next steps to complete the grant.</>}
         </p>
         <p className="text-[11px] text-gray-500 leading-relaxed">
@@ -1023,8 +1086,8 @@ function PaymentStep({
 // ======================== SUCCESS ========================
 
 function SuccessStep({
-  amountCents, isPledge, email, onClose,
-}: { amountCents: number; isPledge: boolean; email: string; onClose: () => void }) {
+  amountCents, isPledge, isRecurring, email, onClose,
+}: { amountCents: number; isPledge: boolean; isRecurring: boolean; email: string; onClose: () => void }) {
   // Fire confetti once when the success step appears. Skip for pledges (no charge)
   // and for users who prefer reduced motion.
   useEffect(() => {
@@ -1059,7 +1122,9 @@ function SuccessStep({
           {isPledge ? "Pledge received!" : "Thank you!"}
         </h3>
         <p className="text-gray-600 text-sm">
-          Your {formatUsd(amountCents)} {isPledge ? "pledge" : "donation"} has been {isPledge ? "recorded" : "processed"}.
+          {isRecurring
+            ? <>Your <span className="font-semibold text-gray-900">{formatUsd(amountCents)}/month</span> donation has been set up. You&apos;ll be charged the same amount on this day every month until you cancel.</>
+            : <>Your {formatUsd(amountCents)} {isPledge ? "pledge" : "donation"} has been {isPledge ? "recorded" : "processed"}.</>}
         </p>
         {email && (
           <p className="text-sm text-gray-500 mt-1">
@@ -1086,11 +1151,13 @@ function SuccessStep({
             sub="One share can 3× your gift's reach"
             href={typeof window !== "undefined" ? `https://api.whatsapp.com/send?text=${encodeURIComponent(`I just gave to JRE. Join me: ${window.location.href}`)}` : "#"}
           />
-          <ImpactLink
-            label="Make it monthly"
-            sub="Contact us to set up a recurring gift"
-            href="mailto:office@thejre.org?subject=Set%20up%20recurring%20gift"
-          />
+          {!isRecurring && (
+            <ImpactLink
+              label="Make it monthly"
+              sub="Contact us to set up a recurring gift"
+              href="mailto:office@thejre.org?subject=Set%20up%20recurring%20gift"
+            />
+          )}
           <ImpactLink
             label="Ask your employer to match"
             sub="Many companies double charitable gifts"
@@ -1185,21 +1252,24 @@ function AddressAutocomplete({
   const [highlighted, setHighlighted] = useState(-1);
   const wrapRef = useRef<HTMLDivElement>(null);
 
-  // Debounce the query — 300ms after last keystroke
+  // Debounce the query — 150ms after last keystroke for a snappy feel.
+  // Abort any in-flight request when the user keeps typing so we never
+  // render stale suggestions over a newer query.
   useEffect(() => {
     const q = value.trim();
-    if (q.length < 3) { setSuggestions([]); return; }
+    if (q.length < 2) { setSuggestions([]); return; }
+    const ctrl = new AbortController();
     const id = setTimeout(async () => {
       setLoading(true);
       try {
-        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`, { signal: ctrl.signal });
         if (!res.ok) return;
         const data = await res.json();
         setSuggestions((data.suggestions as AddrSuggestion[]) ?? []);
       } catch { /* ignore */ }
       finally { setLoading(false); }
-    }, 300);
-    return () => clearTimeout(id);
+    }, 150);
+    return () => { clearTimeout(id); ctrl.abort(); };
   }, [value]);
 
   // Close on outside click
@@ -1233,8 +1303,8 @@ function AddressAutocomplete({
           else if (e.key === "Escape") { setOpen(false); }
         }}
         autoComplete="off"
-        placeholder="Start typing address — e.g. 1327 E 26…"
-        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm transition-all"
+        placeholder="Start typing your address…"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm"
       />
       {open && (suggestions.length > 0 || loading) && (
         <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10 max-h-64 overflow-y-auto">

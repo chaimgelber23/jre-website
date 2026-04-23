@@ -397,16 +397,7 @@ export default function CampaignClient({
                 }}
                 placeholder="0"
                 aria-label="Donation amount in dollars"
-                className="w-full h-full pl-12 pr-4 py-3 text-2xl md:text-3xl font-bold text-gray-900 tabular-nums border-2 border-gray-200 rounded-md focus:outline-none bg-white text-center transition-[border-color,box-shadow] duration-200"
-                style={{ ["--tw-ring-color" as string]: accent }}
-                onFocus={(e) => {
-                  e.currentTarget.style.borderColor = accent;
-                  e.currentTarget.style.boxShadow = `0 0 0 4px rgba(${hexToRgb(accent)}, 0.15)`;
-                }}
-                onBlur={(e) => {
-                  e.currentTarget.style.borderColor = "";
-                  e.currentTarget.style.boxShadow = "";
-                }}
+                className="w-full h-full pl-12 pr-4 py-3 text-2xl md:text-3xl font-bold text-gray-900 tabular-nums border border-gray-200 rounded-md focus:outline-none bg-white text-center"
               />
             </div>
 

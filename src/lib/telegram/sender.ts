@@ -43,10 +43,9 @@ function getChatId(channel: TelegramChannel): string | undefined {
   return process.env[config.chatIdEnv] ?? DEFAULT_CHAT_ID;
 }
 
-export type InlineButton = {
-  text: string;
-  callback_data: string;
-};
+export type InlineButton =
+  | { text: string; callback_data: string }
+  | { text: string; url: string };
 
 export type InlineKeyboard = InlineButton[][];
 

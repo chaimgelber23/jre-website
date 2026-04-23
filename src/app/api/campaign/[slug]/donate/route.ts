@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { processDirectPayment } from "@/lib/banquest";
+import { processDirectPayment, setupRecurringPayment } from "@/lib/banquest";
 import { createGrant } from "@/lib/donors-fund";
 import {
   getCampaignBySlug,
@@ -50,7 +50,16 @@ interface DonateBody {
   daf_sponsor: string | null;
   ojc_account_id: string | null;
   donors_fund: { donor: string; authorization: string } | null;
-  installments?: number | null;
+  is_recurring?: boolean;
+  recurring_frequency?: "monthly" | null;
+}
+
+function addMonthsISODate(iso: string, months: number): string {
+  const d = new Date(iso);
+  const day = d.getDate();
+  d.setMonth(d.getMonth() + months);
+  if (d.getDate() < day) d.setDate(0);
+  return d.toISOString().slice(0, 10);
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -103,29 +112,60 @@ export async function POST(
   let cardRef: string | null = null;
   const failureReason: string | null = null;
 
+  const wantsRecurring = body.is_recurring === true && body.recurring_frequency === "monthly";
+
   if (body.payment_method === "card") {
     if (!body.card || !body.card.number || !body.card.expiry || !body.card.cvv) {
       return NextResponse.json({ success: false, error: "Card details are required" }, { status: 400 });
     }
     const amountDollars = body.amount_cents / 100;
-    const result = await processDirectPayment({
-      amount: amountDollars,
-      cardNumber: body.card.number,
-      cardExpiry: body.card.expiry,
-      cardCvv: body.card.cvv,
-      cardName: body.card.name || body.name,
-      email: body.email,
-      description: `JRE Campaign: ${campaign.title}`,
-      orderNumber: `campaign-${campaign.slug ?? campaign.id}`,
-      invoiceNumber: `campaign-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`,
-      customFields: {
-        custom1: `Campaign: ${campaign.title}`,
-        custom2: body.tier_id ? `Tier: ${body.tier_id}` : "",
-        custom3: body.team_id ? `Team: ${body.team_id}` : "",
-        custom4: body.dedication_name ? `${body.dedication_type || "Dedication"}: ${body.dedication_name}` : "",
-        custom5: body.phone || "",
-      },
-    });
+    const description = wantsRecurring
+      ? `JRE Monthly: ${campaign.title}`
+      : `JRE Campaign: ${campaign.title}`;
+    const customFields = {
+      custom1: `Campaign: ${campaign.title}`,
+      custom2: body.tier_id ? `Tier: ${body.tier_id}` : "",
+      custom3: body.team_id ? `Team: ${body.team_id}` : "",
+      custom4: body.dedication_name ? `${body.dedication_type || "Dedication"}: ${body.dedication_name}` : "",
+      custom5: wantsRecurring ? "Recurring: monthly" : (body.phone || ""),
+    };
+
+    let result;
+    if (wantsRecurring) {
+      const [mmStr, yyStr] = body.card.expiry.split("/").map((s) => s.trim());
+      const expiryMonth = parseInt(mmStr, 10);
+      let expiryYear = parseInt(yyStr, 10);
+      if (!Number.isFinite(expiryMonth) || !Number.isFinite(expiryYear)) {
+        return NextResponse.json({ success: false, error: "Invalid expiry date. Use MM/YY." }, { status: 400 });
+      }
+      if (expiryYear < 100) expiryYear += 2000;
+      result = await setupRecurringPayment({
+        amount: amountDollars,
+        cardNumber: body.card.number,
+        expiryMonth,
+        expiryYear,
+        cvv: body.card.cvv,
+        cardName: body.card.name || body.name,
+        email: body.email,
+        description,
+        orderNumber: `campaign-${campaign.slug ?? campaign.id}`,
+        invoiceNumber: `campaign-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`,
+        customFields,
+      });
+    } else {
+      result = await processDirectPayment({
+        amount: amountDollars,
+        cardNumber: body.card.number,
+        cardExpiry: body.card.expiry,
+        cardCvv: body.card.cvv,
+        cardName: body.card.name || body.name,
+        email: body.email,
+        description,
+        orderNumber: `campaign-${campaign.slug ?? campaign.id}`,
+        invoiceNumber: `campaign-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`,
+        customFields,
+      });
+    }
 
     if (!result.success) {
       // Store failed attempt for reconciliation, then reject
@@ -246,6 +286,13 @@ export async function POST(
     matchedCents = computeMatchedAmount(body.amount_cents, activeMatcher);
   }
 
+  // Only card donations can actually recur (need a saved card_ref).
+  const persistRecurring =
+    wantsRecurring && body.payment_method === "card" && paymentStatus === "completed" && !!cardRef;
+  const nextChargeDate = persistRecurring
+    ? addMonthsISODate(new Date().toISOString(), 1)
+    : null;
+
   // ---- Insert donation ------------------------------------------------------
   const { data: insertData, error: insertError } = await db
     .from("campaign_donations")
@@ -274,6 +321,9 @@ export async function POST(
       daf_sponsor: body.daf_sponsor,
       daf_grant_id: body.ojc_account_id,
       failure_reason: failureReason,
+      is_recurring: persistRecurring,
+      recurring_frequency: persistRecurring ? "monthly" : null,
+      next_charge_date: nextChargeDate,
     })
     .select()
     .single();
@@ -311,7 +361,7 @@ export async function POST(
       to: body.email.trim(),
       name: body.name.trim(),
       amount: body.amount_cents / 100,
-      isRecurring: false,
+      isRecurring: persistRecurring,
       sponsorship: tierLabel,
       transactionId: paymentReference ?? insertData.id,
     }).catch((e) => console.error("donation receipt email failed:", e));
