@@ -1,9 +1,8 @@
 "use client";
 
-import { useEffect, useState, use } from "react";
+import { useEffect, useRef, useState, use } from "react";
 import Link from "next/link";
-import { ArrowLeft, ExternalLink, Save, Trash2, Plus } from "lucide-react";
-import { formatUsd } from "@/lib/campaign";
+import { ArrowLeft, ExternalLink, Save, Trash2, Plus, Check, Loader2, AlertCircle } from "lucide-react";
 import DonationsPanel from "./DonationsPanel";
 import type {
   Campaign, CampaignTier, CampaignCause, CampaignMatcher, CampaignTeam,
@@ -337,6 +336,7 @@ interface CollectionField {
 }
 
 type Row = { id?: string } & Record<string, unknown>;
+type SaveState = "idle" | "saving" | "saved" | "error";
 
 function CollectionEditor({
   campaignId, collection, rows, reload, fields, defaults,
@@ -349,28 +349,60 @@ function CollectionEditor({
   defaults: Record<string, unknown>;
 }) {
   const typed = rows as Row[];
-  const [editing, setEditing] = useState<Record<string, Row>>({});
+  // Local mirror of row data so typing feels instant; parent `reload()` syncs back after save.
+  const [localRows, setLocalRows] = useState<Record<string, Row>>({});
+  const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
+  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [creating, setCreating] = useState<Record<string, unknown> | null>(null);
 
-  const startEdit = (r: Row) => setEditing({ ...editing, [r.id as string]: { ...r } });
-  const cancel = (id: string) => {
-    const next = { ...editing };
-    delete next[id];
-    setEditing(next);
-  };
-  const onField = (id: string, name: string, value: unknown) => {
-    setEditing({ ...editing, [id]: { ...editing[id], [name]: value } });
-  };
-  const save = async (id: string) => {
-    const row = editing[id];
-    const res = await fetch(`/api/admin/campaigns/${campaignId}/${collection}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(row),
+  // Whenever the parent `rows` change (after reload), refresh the local mirror for any
+  // row we're not actively in the middle of editing/saving.
+  useEffect(() => {
+    setLocalRows((prev) => {
+      const next: Record<string, Row> = { ...prev };
+      for (const r of typed) {
+        if (!r.id) continue;
+        if (saveStates[r.id] === "saving") continue; // don't clobber mid-flight edits
+        next[r.id] = { ...r };
+      }
+      return next;
     });
-    const json = await res.json();
-    if (json.success) { cancel(id); reload(); }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [rows]);
+
+  const setSaveState = (id: string, s: SaveState, err?: string) => {
+    setSaveStates((prev) => ({ ...prev, [id]: s }));
+    if (err !== undefined) setErrors((prev) => ({ ...prev, [id]: err }));
   };
+
+  const persist = async (id: string) => {
+    const row = localRows[id];
+    if (!row) return;
+    setSaveState(id, "saving", "");
+    try {
+      const res = await fetch(`/api/admin/campaigns/${campaignId}/${collection}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(row),
+      });
+      const json = await res.json();
+      if (!json.success) throw new Error(json.error || "Save failed");
+      setSaveState(id, "saved");
+      // Fade the "Saved" tick after a moment
+      setTimeout(() => setSaveStates((p) => (p[id] === "saved" ? { ...p, [id]: "idle" } : p)), 1500);
+      reload();
+    } catch (e) {
+      setSaveState(id, "error", e instanceof Error ? e.message : "Save failed");
+    }
+  };
+
+  const onField = (id: string, name: string, value: unknown, debounceMs = 600) => {
+    setLocalRows((prev) => ({ ...prev, [id]: { ...(prev[id] ?? {}), [name]: value } }));
+    if (saveTimers.current[id]) clearTimeout(saveTimers.current[id]);
+    saveTimers.current[id] = setTimeout(() => persist(id), debounceMs);
+  };
+
   const remove = async (id: string) => {
     if (!confirm("Delete this row?")) return;
     const res = await fetch(`/api/admin/campaigns/${campaignId}/${collection}?row_id=${id}`, { method: "DELETE" });
@@ -450,47 +482,46 @@ function CollectionEditor({
     <div>
       <div className="space-y-2 mb-3">
         {typed.map((r) => {
-          const isEditing = r.id && editing[r.id];
+          const rowId = r.id as string;
+          const rowData = localRows[rowId] ?? r;
+          const state = saveStates[rowId] ?? "idle";
+          const err = errors[rowId];
           return (
-            <div key={r.id as string} className="border border-gray-200 rounded-xl p-3">
-              {isEditing ? (
-                <div className="grid sm:grid-cols-3 gap-3">
-                  {fields.map((f) => (
-                    <div key={f.name} className={f.type === "boolean" ? "self-end" : ""}>
-                      {renderField(editing[r.id as string] as Record<string, unknown>, f, (v) => onField(r.id as string, f.name, v))}
-                    </div>
-                  ))}
-                  <div className="sm:col-span-3 flex gap-2">
-                    <button onClick={() => save(r.id as string)} className="bg-[#EF8046] text-white px-3 py-1.5 rounded-lg text-sm font-semibold">Save</button>
-                    <button onClick={() => cancel(r.id as string)} className="text-sm text-gray-500">Cancel</button>
+            <div key={rowId} className="border border-gray-200 rounded-xl p-3">
+              <div className="grid sm:grid-cols-3 gap-3">
+                {fields.map((f) => (
+                  <div key={f.name} className={f.type === "boolean" ? "self-end" : ""}>
+                    {renderField(
+                      rowData as Record<string, unknown>,
+                      f,
+                      (v) => onField(rowId, f.name, v, f.type === "boolean" ? 0 : 600)
+                    )}
                   </div>
+                ))}
+                <div className="sm:col-span-3 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-1.5">
+                    {state === "saving" && (
+                      <><Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" /><span className="text-gray-500">Saving…</span></>
+                    )}
+                    {state === "saved" && (
+                      <><Check className="w-3.5 h-3.5 text-green-600" /><span className="text-green-700">Saved</span></>
+                    )}
+                    {state === "error" && (
+                      <><AlertCircle className="w-3.5 h-3.5 text-red-600" /><span className="text-red-700">{err || "Save failed"}</span></>
+                    )}
+                    {state === "idle" && (
+                      <span className="text-gray-400">Auto-save on</span>
+                    )}
+                  </div>
+                  <button
+                    onClick={() => remove(rowId)}
+                    className="text-red-600 hover:text-red-700 inline-flex items-center gap-1"
+                    type="button"
+                  >
+                    <Trash2 className="w-3.5 h-3.5" /> Delete
+                  </button>
                 </div>
-              ) : (
-                <div className="flex items-center justify-between gap-3 flex-wrap">
-                  <div className="text-sm text-gray-700 flex-1 min-w-0 truncate">
-                    {fields.map((f) => {
-                      const v = r[f.name];
-                      if (v == null || v === "") return null;
-                      if (f.type === "dollars") {
-                        return <span key={f.name} className="mr-3"><b>{f.label}:</b> {formatUsd(v as number)}</span>;
-                      }
-                      if (f.type === "boolean") {
-                        return <span key={f.name} className="mr-3"><b>{f.label}:</b> {v ? "Yes" : "No"}</span>;
-                      }
-                      const display = f.type === "textarea"
-                        ? String(v).slice(0, 40) + (String(v).length > 40 ? "…" : "")
-                        : String(v);
-                      return <span key={f.name} className="mr-3"><b>{f.label}:</b> {display}</span>;
-                    })}
-                  </div>
-                  <div className="flex gap-2 items-center">
-                    <button onClick={() => startEdit(r)} className="text-sm text-gray-600 hover:text-gray-900">Edit</button>
-                    <button onClick={() => remove(r.id as string)} className="text-sm text-red-600 hover:text-red-700">
-                      <Trash2 className="w-4 h-4" />
-                    </button>
-                  </div>
-                </div>
-              )}
+              </div>
             </div>
           );
         })}
