@@ -2,13 +2,15 @@ import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { processDirectPayment, setupRecurringPayment } from "@/lib/banquest";
 import { createGrant } from "@/lib/donors-fund";
+import { processCharityCardTransaction } from "@/lib/ojc-fund";
 import {
   getCampaignBySlug,
   getActiveMatcher,
   computeMatchedAmount,
   maskDonorName,
 } from "@/lib/campaign";
-import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
+import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert } from "@/lib/email";
+import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type {
   CampaignMatcher,
   CampaignTier,
@@ -49,9 +51,11 @@ interface DonateBody {
   } | null;
   daf_sponsor: string | null;
   ojc_account_id: string | null;
+  ojc: { cardNumber: string; expDate: string } | null;
   donors_fund: { donor: string; authorization: string } | null;
   is_recurring?: boolean;
   recurring_frequency?: "monthly" | null;
+  turnstile_token?: string | null;
 }
 
 function addMonthsISODate(iso: string, months: number): string {
@@ -75,6 +79,14 @@ export async function POST(
     body = (await req.json()) as DonateBody;
   } catch {
     return NextResponse.json({ success: false, error: "Invalid request body" }, { status: 400 });
+  }
+
+  const captcha = await verifyTurnstileToken(body.turnstile_token, getClientIp(req));
+  if (!captcha.ok) {
+    return NextResponse.json(
+      { success: false, error: "Verification failed. Please refresh the page and try again." },
+      { status: 400 }
+    );
   }
 
   if (!body.name?.trim() || !body.email?.trim()) {
@@ -191,6 +203,20 @@ export async function POST(
         payment_status: "failed",
         failure_reason: result.error || "Card declined",
       });
+      void sendPaymentFailureAlert({
+        campaignTitle: campaign.title,
+        campaignSlug: campaign.slug ?? String(campaign.id),
+        amount: body.amount_cents / 100,
+        paymentMethod: wantsRecurring ? "Card (monthly recurring)" : "Card",
+        errorMessage: result.error || "Card declined",
+        donorName: body.name.trim(),
+        donorEmail: body.email.trim(),
+        donorPhone: body.phone,
+        dedicationType: body.dedication_type,
+        dedicationName: body.dedication_name,
+        tierId: body.tier_id,
+        teamId: body.team_id,
+      }).catch((e) => console.error("payment failure alert failed:", e));
       return NextResponse.json(
         { success: false, error: result.error || "Payment failed" },
         { status: 400 }
@@ -249,6 +275,20 @@ export async function POST(
         payment_status: "failed",
         failure_reason: grant.error || "Donor's Fund declined",
       });
+      void sendPaymentFailureAlert({
+        campaignTitle: campaign.title,
+        campaignSlug: campaign.slug ?? String(campaign.id),
+        amount: body.amount_cents / 100,
+        paymentMethod: "Donor's Fund",
+        errorMessage: grant.error || "Donor's Fund declined",
+        donorName: body.name.trim(),
+        donorEmail: body.email.trim(),
+        donorPhone: body.phone,
+        dedicationType: body.dedication_type,
+        dedicationName: body.dedication_name,
+        tierId: body.tier_id,
+        teamId: body.team_id,
+      }).catch((e) => console.error("payment failure alert failed:", e));
       return NextResponse.json(
         { success: false, error: grant.error || "Donor's Fund grant failed" },
         { status: 400 }
@@ -257,8 +297,71 @@ export async function POST(
 
     paymentStatus = "completed";
     paymentReference = grant.transactionId || `tdf_${grant.confirmationNumber}`;
+  } else if (body.payment_method === "ojc_fund") {
+    // ---- OJC Charity Card path: charge immediately via OJC Fund --------------
+    if (!body.ojc?.cardNumber?.trim() || !body.ojc?.expDate?.trim()) {
+      return NextResponse.json(
+        { success: false, error: "Please enter your OJC Charity Card number and expiration." },
+        { status: 400 }
+      );
+    }
+    const amountDollars = body.amount_cents / 100;
+    // externalReferenceId max length appears undocumented; keep it short + unique.
+    const externalReferenceId = `jre-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`;
+    const charge = await processCharityCardTransaction({
+      cardNo: body.ojc.cardNumber.trim(),
+      expDate: body.ojc.expDate.trim(),
+      amount: amountDollars,
+      externalReferenceId,
+    });
+
+    if (!charge.success) {
+      await db.from("campaign_donations").insert({
+        campaign_id: campaign.id,
+        cause_id: body.cause_id,
+        tier_id: body.tier_id,
+        team_id: body.team_id,
+        amount_cents: body.amount_cents,
+        matched_cents: 0,
+        name: body.name.trim(),
+        display_name: body.is_anonymous
+          ? "Anonymous"
+          : (body.display_name?.trim() || maskDonorName(body.name.trim(), false)),
+        email: body.email.trim(),
+        phone: body.phone,
+        is_anonymous: body.is_anonymous,
+        dedication_type: body.dedication_type,
+        dedication_name: body.dedication_name,
+        dedication_email: body.dedication_email,
+        message: body.message,
+        payment_method: "ojc_fund",
+        payment_status: "failed",
+        failure_reason: charge.error || "OJC Charity Card declined",
+      });
+      void sendPaymentFailureAlert({
+        campaignTitle: campaign.title,
+        campaignSlug: campaign.slug ?? String(campaign.id),
+        amount: body.amount_cents / 100,
+        paymentMethod: "OJC Charity Card",
+        errorMessage: charge.error || "OJC Charity Card declined",
+        donorName: body.name.trim(),
+        donorEmail: body.email.trim(),
+        donorPhone: body.phone,
+        dedicationType: body.dedication_type,
+        dedicationName: body.dedication_name,
+        tierId: body.tier_id,
+        teamId: body.team_id,
+      }).catch((e) => console.error("payment failure alert failed:", e));
+      return NextResponse.json(
+        { success: false, error: charge.error || "OJC Charity Card declined" },
+        { status: 400 }
+      );
+    }
+
+    paymentStatus = "completed";
+    paymentReference = charge.referenceNumber ? `ojc_${charge.referenceNumber}` : `ojc_${Date.now()}`;
   } else {
-    // Pledge path — DAF / Fidelity / OJC / check / zelle / other
+    // Pledge path — DAF / Fidelity / check / zelle / other
     paymentStatus = "pledged";
     if (body.payment_method === "daf" && !body.daf_sponsor?.trim()) {
       return NextResponse.json(

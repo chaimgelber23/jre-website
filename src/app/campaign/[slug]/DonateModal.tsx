@@ -7,6 +7,7 @@ import {
   X, CreditCard, Lock, Check, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 import type {
   CampaignSnapshot,
   CampaignTier,
@@ -52,7 +53,8 @@ interface DonateForm {
   addrCity: string;
   addrState: string;
   dafSponsor: string;
-  ojcAccountId: string;
+  ojcCardNumber: string;
+  ojcExpDate: string;
   dfDonor: string;
   dfAuth: string;
 }
@@ -110,13 +112,17 @@ export default function DonateModal({
     addrCity: "",
     addrState: "",
     dafSponsor: "",
-    ojcAccountId: "",
+    ojcCardNumber: "",
+    ojcExpDate: "",
     dfDonor: "",
     dfAuth: "",
   });
 
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const captchaRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const scrollRef = useRef<HTMLDivElement>(null);
 
   // Preselect logic
@@ -187,7 +193,8 @@ export default function DonateModal({
       addrCity: "",
       addrState: "",
       dafSponsor: "",
-      ojcAccountId: "",
+      ojcCardNumber: "",
+      ojcExpDate: "",
       dfDonor: "",
       dfAuth: "",
     });
@@ -273,6 +280,14 @@ export default function DonateModal({
       if (!form.dfDonor.trim()) return setError("Please enter your Giving Card number or Donor's Fund email.");
       if (!form.dfAuth.trim()) return setError("Please enter your CVV (for card) or PIN (for email login).");
     }
+    if (paymentMethod === "ojc_fund") {
+      const cardDigits = form.ojcCardNumber.replace(/\s/g, "");
+      if (!/^\d{13,19}$/.test(cardDigits)) return setError("Please enter a valid OJC Charity Card number.");
+      if (!/^\d{4}$/.test(form.ojcExpDate.trim())) return setError("OJC expiration must be MMYY (e.g. 1226).");
+    }
+    if (captchaRequired && !captchaToken) {
+      return setError("Please wait for verification to finish, then try again.");
+    }
 
     setSubmitting(true);
     try {
@@ -309,13 +324,18 @@ export default function DonateModal({
           },
         } : null,
         daf_sponsor: paymentMethod === "daf" ? form.dafSponsor.trim() : null,
-        ojc_account_id: paymentMethod === "ojc_fund" ? form.ojcAccountId.trim() : null,
+        ojc_account_id: null,
+        ojc: paymentMethod === "ojc_fund" ? {
+          cardNumber: form.ojcCardNumber.replace(/\s/g, ""),
+          expDate: form.ojcExpDate.trim(),
+        } : null,
         donors_fund: paymentMethod === "donors_fund" ? {
           donor: form.dfDonor.trim(),
           authorization: form.dfAuth.trim(),
         } : null,
         is_recurring: isRecurring,
         recurring_frequency: isRecurring ? "monthly" : null,
+        turnstile_token: captchaToken,
       };
 
       const res = await fetch(`/api/campaign/${campaign.slug}/donate`, {
@@ -330,12 +350,14 @@ export default function DonateModal({
       onDonated?.();
     } catch (err) {
       setError(err instanceof Error ? err.message : "Donation failed");
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setSubmitting(false);
     }
   };
 
-  const isPledge = paymentMethod !== "card" && paymentMethod !== "donors_fund";
+  const isPledge = paymentMethod !== "card" && paymentMethod !== "donors_fund" && paymentMethod !== "ojc_fund";
   const displayNameLeft = MAX_DISPLAY_NAME - form.displayName.length;
   const messageLeft = MAX_MESSAGE - form.message.length;
 
@@ -472,7 +494,18 @@ export default function DonateModal({
                 </button>
               )}
               {step === "payment" && (
-                <div className="flex gap-2">
+                <>
+                  {captchaRequired && (
+                    <div className="mb-3 flex justify-center">
+                      <TurnstileWidget
+                        onVerify={setCaptchaToken}
+                        onExpire={() => setCaptchaToken(null)}
+                        onError={() => setCaptchaToken(null)}
+                        resetSignal={captchaReset}
+                      />
+                    </div>
+                  )}
+                  <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setStep("details")}
@@ -493,12 +526,13 @@ export default function DonateModal({
                         Processing…
                       </>
                     ) : (
-                      paymentMethod === "card" || paymentMethod === "donors_fund"
+                      paymentMethod === "card" || paymentMethod === "donors_fund" || paymentMethod === "ojc_fund"
                         ? `Donate ${formatUsd(amountCents)}${isRecurring ? "/month" : ""}`
                         : `Pledge ${formatUsd(amountCents)}${isRecurring ? "/month" : ""}`
                     )}
                   </button>
-                </div>
+                  </div>
+                </>
               )}
               <p className="text-center text-gray-400 text-[11px] mt-2.5">
                 <Lock className="inline w-3 h-3 mr-1 text-green-500" />
@@ -833,7 +867,7 @@ function PaymentStep({
   isRecurring: boolean;
   orgName: string;
 }) {
-  const isCharge = paymentMethod === "card" || paymentMethod === "donors_fund";
+  const isCharge = paymentMethod === "card" || paymentMethod === "donors_fund" || paymentMethod === "ojc_fund";
   type TileKind =
     | { kind: "icon"; icon: React.ElementType }
     | { kind: "logo"; src: string; alt: string; heightClass?: string }
@@ -909,8 +943,8 @@ function PaymentStep({
           <MethodTile
             m="ojc_fund"
             label="OJC Fund"
-            subtitle="Grant — we email instructions"
-            visual={{ kind: "badge", text: "OJC" }}
+            subtitle="Charge Charity Card instantly"
+            visual={{ kind: "logo", src: "/logos/ojc-fund.png", alt: "OJC Fund", heightClass: "h-8" }}
           />
           <MethodTile
             m="donors_fund"
@@ -1057,12 +1091,29 @@ function PaymentStep({
       )}
 
       {paymentMethod === "ojc_fund" && (
-        <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-600 mb-3">
-            OJC Fund account holders: pledge now and we&apos;ll email you a prefilled grant request link for JRE.
+        <div className="bg-[#FAFAFA] rounded-2xl p-4 space-y-3 border border-gray-100">
+          <p className="text-xs text-gray-600 leading-relaxed">
+            Enter your OJC Charity Card — we&apos;ll charge it instantly and email your tax-deductible receipt.
           </p>
-          <Input label="OJC account # (optional)" name="ojcAccountId" value={form.ojcAccountId} onChange={onChange}
-            placeholder="OJC-XXXXXX" />
+          <Input
+            label="OJC Charity Card Number"
+            name="ojcCardNumber"
+            value={form.ojcCardNumber}
+            onChange={onChange}
+            placeholder="6900 0000 0000 0000"
+            autoComplete="off"
+            inputMode="numeric"
+          />
+          <Input
+            label="Expiration (MMYY)"
+            name="ojcExpDate"
+            value={form.ojcExpDate}
+            onChange={onChange}
+            placeholder="1226"
+            autoComplete="off"
+            inputMode="numeric"
+            maxLength={4}
+          />
         </div>
       )}
 
@@ -1365,7 +1416,7 @@ function AddressAutocomplete({
 }
 
 function Input({
-  label, name, value, onChange, type = "text", placeholder, autoComplete, maxLength,
+  label, name, value, onChange, type = "text", placeholder, autoComplete, maxLength, inputMode,
 }: {
   label?: string;
   name: string;
@@ -1375,6 +1426,7 @@ function Input({
   placeholder?: string;
   autoComplete?: string;
   maxLength?: number;
+  inputMode?: React.HTMLAttributes<HTMLInputElement>["inputMode"];
 }) {
   const input = (
     <input
@@ -1385,6 +1437,7 @@ function Input({
       placeholder={placeholder}
       autoComplete={autoComplete}
       maxLength={maxLength}
+      inputMode={inputMode}
       className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm transition-all"
     />
   );
