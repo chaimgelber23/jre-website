@@ -802,6 +802,11 @@ export async function setupRecurringPayment(data: RecurringPaymentSetupData): Pr
       },
       transaction_details: buildTransactionDetails(data.description || "JRE Recurring Donation", data),
       ...(customFields ? { custom_fields: customFields } : {}),
+      transaction_flags: {
+        is_customer_initiated: true,
+        cardholder_present: true,
+        card_present: false,
+      },
       capture: true,
       save_card: true, // Save card for recurring charges
     };
@@ -878,6 +883,12 @@ export async function chargeRecurringPayment(data: {
       },
       transaction_details: buildTransactionDetails(data.description || "JRE Monthly Donation", data),
       ...(customFields ? { custom_fields: customFields } : {}),
+      transaction_flags: {
+        is_recurring: true,
+        is_customer_initiated: false,
+        cardholder_present: false,
+        card_present: false,
+      },
       capture: true,
     };
 
