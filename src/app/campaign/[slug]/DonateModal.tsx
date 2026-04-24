@@ -553,7 +553,7 @@ function DetailsStep({
       {/* Amount */}
       <Fieldset label="Your Amount">
         {tiers.length > 0 && (
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4">
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 mb-4 pt-3">
             {tiers.map((t) => {
               const selected = tierId === t.id;
               return (
@@ -571,8 +571,11 @@ function DetailsStep({
                   ].join(" ")}
                 >
                   {t.is_featured && (
-                    <span className="absolute -top-2 left-1/2 -translate-x-1/2 inline-flex items-center gap-1 bg-white text-gray-900 text-[9px] font-extrabold uppercase tracking-wide px-2 py-0.5 rounded-full shadow ring-1 ring-black/5 whitespace-nowrap">
-                      <span aria-hidden>🔥</span>Popular
+                    <span
+                      className="absolute -top-2 left-1/2 -translate-x-1/2 text-[9px] font-bold uppercase tracking-[0.12em] px-2 py-[3px] rounded-full text-white whitespace-nowrap shadow-sm"
+                      style={{ background: "#EF8046" }}
+                    >
+                      Popular
                     </span>
                   )}
                   <div className="text-base tabular-nums leading-none">{formatUsd(t.amount_cents)}</div>
