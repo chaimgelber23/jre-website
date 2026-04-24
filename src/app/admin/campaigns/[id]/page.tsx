@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, use } from "react";
+import { useEffect, useState, use } from "react";
 import Link from "next/link";
 import { ArrowLeft, ExternalLink, Save, Trash2, Plus, Check, Loader2, AlertCircle } from "lucide-react";
 import DonationsPanel from "./DonationsPanel";
@@ -336,7 +336,7 @@ interface CollectionField {
 }
 
 type Row = { id?: string } & Record<string, unknown>;
-type SaveState = "idle" | "saving" | "saved" | "error";
+type SaveState = "idle" | "dirty" | "saving" | "saved" | "error";
 
 function CollectionEditor({
   campaignId, collection, rows, reload, fields, defaults,
@@ -349,21 +349,20 @@ function CollectionEditor({
   defaults: Record<string, unknown>;
 }) {
   const typed = rows as Row[];
-  // Local mirror of row data so typing feels instant; parent `reload()` syncs back after save.
+  // Local mirror of row data. Users edit fields inline; nothing persists until Save.
   const [localRows, setLocalRows] = useState<Record<string, Row>>({});
   const [saveStates, setSaveStates] = useState<Record<string, SaveState>>({});
   const [errors, setErrors] = useState<Record<string, string>>({});
-  const saveTimers = useRef<Record<string, ReturnType<typeof setTimeout>>>({});
   const [creating, setCreating] = useState<Record<string, unknown> | null>(null);
 
-  // Whenever the parent `rows` change (after reload), refresh the local mirror for any
-  // row we're not actively in the middle of editing/saving.
+  // Refresh local mirror from server rows, but don't clobber rows the user is
+  // currently editing (state === "dirty" means unsaved local changes).
   useEffect(() => {
     setLocalRows((prev) => {
       const next: Record<string, Row> = { ...prev };
       for (const r of typed) {
         if (!r.id) continue;
-        if (saveStates[r.id] === "saving") continue; // don't clobber mid-flight edits
+        if (saveStates[r.id] === "dirty" || saveStates[r.id] === "saving") continue;
         next[r.id] = { ...r };
       }
       return next;
@@ -376,7 +375,12 @@ function CollectionEditor({
     if (err !== undefined) setErrors((prev) => ({ ...prev, [id]: err }));
   };
 
-  const persist = async (id: string) => {
+  const onField = (id: string, name: string, value: unknown) => {
+    setLocalRows((prev) => ({ ...prev, [id]: { ...(prev[id] ?? {}), [name]: value } }));
+    setSaveState(id, "dirty", "");
+  };
+
+  const saveRow = async (id: string) => {
     const row = localRows[id];
     if (!row) return;
     setSaveState(id, "saving", "");
@@ -389,18 +393,19 @@ function CollectionEditor({
       const json = await res.json();
       if (!json.success) throw new Error(json.error || "Save failed");
       setSaveState(id, "saved");
-      // Fade the "Saved" tick after a moment
-      setTimeout(() => setSaveStates((p) => (p[id] === "saved" ? { ...p, [id]: "idle" } : p)), 1500);
+      setTimeout(() => setSaveStates((p) => (p[id] === "saved" ? { ...p, [id]: "idle" } : p)), 1800);
       reload();
     } catch (e) {
       setSaveState(id, "error", e instanceof Error ? e.message : "Save failed");
     }
   };
 
-  const onField = (id: string, name: string, value: unknown, debounceMs = 600) => {
-    setLocalRows((prev) => ({ ...prev, [id]: { ...(prev[id] ?? {}), [name]: value } }));
-    if (saveTimers.current[id]) clearTimeout(saveTimers.current[id]);
-    saveTimers.current[id] = setTimeout(() => persist(id), debounceMs);
+  const resetRow = (id: string) => {
+    const serverRow = typed.find((r) => r.id === id);
+    if (serverRow) {
+      setLocalRows((prev) => ({ ...prev, [id]: { ...serverRow } }));
+      setSaveState(id, "idle", "");
+    }
   };
 
   const remove = async (id: string) => {
@@ -484,42 +489,68 @@ function CollectionEditor({
         {typed.map((r) => {
           const rowId = r.id as string;
           const rowData = localRows[rowId] ?? r;
-          const state = saveStates[rowId] ?? "idle";
+          const state: SaveState = saveStates[rowId] ?? "idle";
           const err = errors[rowId];
+          const isDirty = state === "dirty" || state === "error";
+          const isSaving = state === "saving";
           return (
-            <div key={rowId} className="border border-gray-200 rounded-xl p-3">
+            <div
+              key={rowId}
+              className={`border rounded-xl p-3 transition-colors ${
+                isDirty ? "border-[#EF8046]/40 bg-[#FFF8F3]" : "border-gray-200"
+              }`}
+            >
               <div className="grid sm:grid-cols-3 gap-3">
                 {fields.map((f) => (
                   <div key={f.name} className={f.type === "boolean" ? "self-end" : ""}>
                     {renderField(
                       rowData as Record<string, unknown>,
                       f,
-                      (v) => onField(rowId, f.name, v, f.type === "boolean" ? 0 : 600)
+                      (v) => onField(rowId, f.name, v)
                     )}
                   </div>
                 ))}
-                <div className="sm:col-span-3 flex items-center justify-between text-xs">
-                  <div className="flex items-center gap-1.5">
+                <div className="sm:col-span-3 flex items-center justify-between gap-3 flex-wrap">
+                  <div className="flex items-center gap-1.5 text-xs">
                     {state === "saving" && (
                       <><Loader2 className="w-3.5 h-3.5 animate-spin text-gray-500" /><span className="text-gray-500">Saving…</span></>
                     )}
                     {state === "saved" && (
-                      <><Check className="w-3.5 h-3.5 text-green-600" /><span className="text-green-700">Saved</span></>
+                      <><Check className="w-3.5 h-3.5 text-green-600" /><span className="text-green-700">Saved — live on the site</span></>
                     )}
                     {state === "error" && (
                       <><AlertCircle className="w-3.5 h-3.5 text-red-600" /><span className="text-red-700">{err || "Save failed"}</span></>
                     )}
-                    {state === "idle" && (
-                      <span className="text-gray-400">Auto-save on</span>
+                    {state === "dirty" && (
+                      <span className="text-[#EF8046] font-medium">Unsaved changes</span>
                     )}
                   </div>
-                  <button
-                    onClick={() => remove(rowId)}
-                    className="text-red-600 hover:text-red-700 inline-flex items-center gap-1"
-                    type="button"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" /> Delete
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {isDirty && (
+                      <button
+                        type="button"
+                        onClick={() => resetRow(rowId)}
+                        className="text-sm text-gray-500 hover:text-gray-800"
+                      >
+                        Reset
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => saveRow(rowId)}
+                      disabled={!isDirty || isSaving}
+                      className="inline-flex items-center gap-1.5 bg-[#EF8046] hover:bg-[#d96a2f] disabled:opacity-40 disabled:cursor-not-allowed text-white px-3 py-1.5 rounded-lg text-sm font-semibold"
+                    >
+                      <Save className="w-3.5 h-3.5" /> Save
+                    </button>
+                    <button
+                      onClick={() => remove(rowId)}
+                      className="text-red-600 hover:text-red-700 inline-flex items-center gap-1 text-sm"
+                      type="button"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" /> Delete
+                    </button>
+                  </div>
                 </div>
               </div>
             </div>
