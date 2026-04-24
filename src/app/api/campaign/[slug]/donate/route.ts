@@ -6,7 +6,6 @@ import { processCharityCardTransaction } from "@/lib/ojc-fund";
 import {
   getCampaignBySlug,
   getActiveMatcher,
-  computeMatchedAmount,
   maskDonorName,
 } from "@/lib/campaign";
 import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert } from "@/lib/email";
@@ -67,6 +66,10 @@ function addMonthsISODate(iso: string, months: number): string {
 }
 
 const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// Hard ceiling so a hung gateway can't pin a function instance during a campaign
+// rush. Banquest/OJC/TDF calls have their own 25s timeouts; this is the backstop.
+export const maxDuration = 30;
 
 export async function POST(
   req: NextRequest,
@@ -376,6 +379,14 @@ export async function POST(
   }
 
   // ---- Compute match --------------------------------------------------------
+  // Two-phase atomic match application:
+  //   1. Pick the active matcher and compute the *requested* match (no cap
+  //      clamping — that's the racy part).
+  //   2. Call the apply_matcher_increment RPC, which locks the matcher row,
+  //      clamps to remaining cap, increments, and returns the actual amount.
+  //   3. Use the RPC's returned value as the donation's matched_cents.
+  // This eliminates the lost-update race when many donors check out at once
+  // during a match push: SELECT FOR UPDATE serializes concurrent callers.
   let matchedCents = 0;
   let activeMatcher: CampaignMatcher | null = null;
   if (paymentStatus === "completed" || paymentStatus === "pledged") {
@@ -386,7 +397,27 @@ export async function POST(
       .eq("is_active", true);
     const matchers = (matchersData ?? []) as CampaignMatcher[];
     activeMatcher = getActiveMatcher(matchers);
-    matchedCents = computeMatchedAmount(body.amount_cents, activeMatcher);
+    if (activeMatcher) {
+      const multiplier = Number(activeMatcher.multiplier);
+      const requestedMatch = multiplier > 1
+        ? Math.round(body.amount_cents * (multiplier - 1))
+        : 0;
+      if (requestedMatch > 0) {
+        const { data: appliedRaw, error: rpcErr } = await db.rpc("apply_matcher_increment", {
+          p_matcher_id: activeMatcher.id,
+          p_requested: requestedMatch,
+        });
+        if (rpcErr) {
+          // RPC failure is non-fatal — fall back to the pre-RPC behavior
+          // (no match credit) so the donor still goes through. Logged so we
+          // can reconcile later.
+          console.error("apply_matcher_increment failed:", rpcErr);
+          matchedCents = 0;
+        } else {
+          matchedCents = Number(appliedRaw ?? 0);
+        }
+      }
+    }
   }
 
   // Only card donations can actually recur (need a saved card_ref).
@@ -433,18 +464,19 @@ export async function POST(
 
   if (insertError || !insertData) {
     console.error("campaign_donations insert error:", insertError);
+    // Compensate the matcher pool: we incremented it before the donation
+    // insert, and the donation never made it into the table, so the credit
+    // doesn't belong to anyone. Best-effort revert.
+    if (activeMatcher && matchedCents > 0) {
+      await db.rpc("revert_matcher_increment", {
+        p_matcher_id: activeMatcher.id,
+        p_amount: matchedCents,
+      }).catch((e: unknown) => console.error("revert_matcher_increment failed:", e));
+    }
     return NextResponse.json(
       { success: false, error: "Donation was processed but failed to save. Please contact us." },
       { status: 500 }
     );
-  }
-
-  // ---- Increment matcher pool (best-effort) ---------------------------------
-  if (activeMatcher && matchedCents > 0) {
-    await db
-      .from("campaign_matchers")
-      .update({ matched_cents: (activeMatcher.matched_cents ?? 0) + matchedCents })
-      .eq("id", activeMatcher.id);
   }
 
   // ---- Receipt + dedication emails (fire-and-forget) ------------------------

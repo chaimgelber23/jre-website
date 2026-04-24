@@ -10,6 +10,21 @@ const BANQUEST_API_URL = USE_SANDBOX
   ? "https://api.sandbox.banquestgateway.com/api/v2/transactions/charge"
   : "https://api.banquestgateway.com/api/v2/transactions/charge";
 
+// Hard ceiling on every Banquest call so a slow gateway can't hold a Vercel
+// function instance hostage during a campaign rush. Real responses are <2s in
+// practice; 25s is the kill switch.
+const BANQUEST_FETCH_TIMEOUT_MS = 25_000;
+
+async function bqFetch(url: string, init: RequestInit): Promise<Response> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), BANQUEST_FETCH_TIMEOUT_MS);
+  try {
+    return await fetch(url, { ...init, signal: controller.signal });
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
 // Helper to create Basic Auth header
 function getAuthHeader(): string {
   const sourceKey = process.env.BANQUEST_SOURCE_KEY;
@@ -192,7 +207,7 @@ export async function processTokenizedPayment(data: TokenizedPaymentData): Promi
     console.log("Token (first 50 chars):", data.paymentToken.substring(0, 50));
     console.log("Request body:", JSON.stringify(requestBody, null, 2));
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -316,7 +331,7 @@ export async function processDirectPayment(data: DirectPaymentData): Promise<Pay
 
     console.log("Processing direct payment for amount:", data.amount.toFixed(2));
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -415,7 +430,7 @@ export async function addToCustomerVault(paymentToken: string): Promise<{ succes
       save_card: true,
     };
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -479,7 +494,7 @@ export async function captureTransaction(options: CaptureOptions | number): Prom
       requestBody.transaction_details = { description: opts.description };
     }
 
-    const response = await fetch(BANQUEST_CAPTURE_URL, {
+    const response = await bqFetch(BANQUEST_CAPTURE_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -532,7 +547,7 @@ export async function refundTransaction(referenceNumber: number, amount?: number
       requestBody.amount = amount;
     }
 
-    const response = await fetch(BANQUEST_REFUND_URL, {
+    const response = await bqFetch(BANQUEST_REFUND_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -579,7 +594,7 @@ export async function voidTransaction(referenceNumber: number): Promise<PaymentR
       reference_number: referenceNumber,
     };
 
-    const response = await fetch(BANQUEST_VOID_URL, {
+    const response = await bqFetch(BANQUEST_VOID_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -677,7 +692,7 @@ export async function processDirectCardPayment(data: DirectCardPaymentData): Pro
     console.log("Using API URL:", BANQUEST_API_URL);
     console.log("Full request body (redacted):", JSON.stringify({ ...requestBody, card: "***", cvv2: "***" }, null, 2));
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -813,7 +828,7 @@ export async function setupRecurringPayment(data: RecurringPaymentSetupData): Pr
 
     console.log("Setting up recurring payment for amount:", data.amount.toFixed(2));
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -895,7 +910,7 @@ export async function chargeRecurringPayment(data: {
     console.log("Charging recurring payment for amount:", data.amount.toFixed(2));
     console.log("Using card_ref:", data.cardRef);
 
-    const response = await fetch(BANQUEST_API_URL, {
+    const response = await bqFetch(BANQUEST_API_URL, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",

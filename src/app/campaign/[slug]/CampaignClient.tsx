@@ -190,9 +190,37 @@ export default function CampaignClient({
     } catch { /* best-effort */ }
   }, [campaign.slug]);
 
+  // Poll the progress snapshot, but pause while the tab is hidden so a sea of
+  // backgrounded tabs during the campaign rush doesn't stack DB load. The
+  // server-side cache already collapses repeated polls to one Supabase fan-out
+  // per ~10s, so the foreground 30s cadence still feels live.
   useEffect(() => {
-    const id = setInterval(refresh, 20_000);
-    return () => clearInterval(id);
+    if (typeof document === "undefined") return;
+    let id: ReturnType<typeof setInterval> | null = null;
+    const start = () => {
+      if (id !== null) return;
+      id = setInterval(refresh, 30_000);
+    };
+    const stop = () => {
+      if (id !== null) {
+        clearInterval(id);
+        id = null;
+      }
+    };
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop();
+      } else {
+        refresh();
+        start();
+      }
+    };
+    if (!document.hidden) start();
+    document.addEventListener("visibilitychange", onVisibility);
+    return () => {
+      stop();
+      document.removeEventListener("visibilitychange", onVisibility);
+    };
   }, [refresh]);
 
   const totalRaisedCents = progress.raised_cents + progress.matched_cents;
