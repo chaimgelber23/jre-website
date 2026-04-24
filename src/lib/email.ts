@@ -557,6 +557,172 @@ export async function sendHonoreeNotification(data: HonoreeEmailData) {
   }
 }
 
+interface PaymentFailureAlertData {
+  campaignTitle: string;
+  campaignSlug: string;
+  amount: number;
+  paymentMethod: string;
+  errorMessage: string;
+  donorName: string;
+  donorEmail: string;
+  donorPhone?: string | null;
+  dedicationType?: string | null;
+  dedicationName?: string | null;
+  tierId?: string | null;
+  teamId?: string | null;
+}
+
+export async function sendPaymentFailureAlert(data: PaymentFailureAlertData) {
+  const resend = getResendClient();
+  if (!resend) {
+    console.log("Resend API key not configured, skipping failure alert");
+    return { success: false, error: "Email not configured" };
+  }
+
+  const primary =
+    process.env.PAYMENT_FAILURE_ALERT_EMAIL ||
+    process.env.ADMIN_ALERT_EMAIL ||
+    "office@thejre.org";
+  const to = Array.from(new Set([primary, "cgelber@thejre.org"]));
+
+  const timestamp = new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  const dedicationLine =
+    data.dedicationType && data.dedicationName
+      ? `${data.dedicationType}: ${data.dedicationName}`
+      : null;
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      replyTo: data.donorEmail,
+      subject: `[JRE ALERT] Payment failed — $${data.amount.toFixed(2)} from ${data.donorName} (${data.campaignTitle})`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <meta name="viewport" content="width=device-width, initial-scale=1.0">
+          <title>Payment Failure Alert</title>
+        </head>
+        <body style="margin: 0; padding: 0; background: #f7fafc; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr>
+              <td align="center" style="padding: 32px 20px;">
+                <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width: 600px; width: 100%;">
+
+                  <tr>
+                    <td style="background: #991b1b; padding: 24px 28px; border-radius: 12px 12px 0 0;">
+                      <div style="color: #fecaca; font-size: 11px; text-transform: uppercase; letter-spacing: 2px; font-weight: 700;">JRE Payment Alert</div>
+                      <h1 style="color: #ffffff; margin: 8px 0 0; font-size: 22px; font-weight: 700;">Payment failed — $${data.amount.toFixed(2)}</h1>
+                      <p style="color: #fecaca; font-size: 14px; margin: 6px 0 0;">${data.campaignTitle}</p>
+                    </td>
+                  </tr>
+
+                  <tr>
+                    <td style="background: #ffffff; padding: 28px; border: 1px solid #e5e7eb; border-top: none;">
+
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #fef2f2; border-radius: 8px; border-left: 4px solid #dc2626; margin: 0 0 24px;">
+                        <tr>
+                          <td style="padding: 16px 20px;">
+                            <div style="color: #991b1b; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; font-weight: 700; margin-bottom: 6px;">Gateway error</div>
+                            <div style="color: #7f1d1d; font-size: 14px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; word-break: break-word;">${data.errorMessage}</div>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Donor</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${data.donorName}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Email</td>
+                          <td align="right" style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><a href="mailto:${data.donorEmail}" style="color: #EF8046; font-size: 14px; font-weight: 500; text-decoration: none;">${data.donorEmail}</a></td>
+                        </tr>
+                        ${data.donorPhone ? `
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Phone</td>
+                          <td align="right" style="padding: 8px 0; border-bottom: 1px solid #f0f0f0;"><a href="tel:${data.donorPhone}" style="color: #1a1a1a; font-size: 14px; font-weight: 500; text-decoration: none;">${data.donorPhone}</a></td>
+                        </tr>
+                        ` : ""}
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Amount</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">$${data.amount.toFixed(2)}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Method</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${data.paymentMethod}</td>
+                        </tr>
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Campaign</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${data.campaignSlug}</td>
+                        </tr>
+                        ${dedicationLine ? `
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Dedication</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${dedicationLine}</td>
+                        </tr>
+                        ` : ""}
+                        ${data.tierId ? `
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Tier</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${data.tierId}</td>
+                        </tr>
+                        ` : ""}
+                        ${data.teamId ? `
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">Team</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 12px; font-family: ui-monospace, 'SF Mono', Menlo, monospace; padding: 8px 0; border-bottom: 1px solid #f0f0f0;">${data.teamId}</td>
+                        </tr>
+                        ` : ""}
+                        <tr>
+                          <td style="color: #6b7280; font-size: 13px; padding: 8px 0;">Time</td>
+                          <td align="right" style="color: #1a1a1a; font-size: 14px; font-weight: 500; padding: 8px 0;">${timestamp} ET</td>
+                        </tr>
+                      </table>
+
+                      <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top: 28px;">
+                        <tr>
+                          <td align="center">
+                            <a href="mailto:${data.donorEmail}?subject=${encodeURIComponent("About your donation to The JRE")}" style="display: inline-block; background: #EF8046; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 8px; font-weight: 600; font-size: 14px;">Reach out to ${data.donorName.split(" ")[0]}</a>
+                          </td>
+                        </tr>
+                      </table>
+
+                      <p style="color: #9ca3af; font-size: 12px; margin: 24px 0 0; line-height: 1.6; text-align: center;">A record with <code style="background: #f3f4f6; padding: 1px 6px; border-radius: 3px; font-size: 11px;">payment_status: "failed"</code> was saved to <code style="background: #f3f4f6; padding: 1px 6px; border-radius: 3px; font-size: 11px;">campaign_donations</code> for reconciliation.</p>
+                    </td>
+                  </tr>
+
+                </table>
+              </td>
+            </tr>
+          </table>
+        </body>
+        </html>
+      `,
+    });
+
+    if (error) {
+      console.error("Error sending payment failure alert:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("Failed to send payment failure alert:", err);
+    return { success: false, error: "Failed to send alert" };
+  }
+}
+
 export async function sendContactFormNotification(data: {
   name: string;
   email: string;
