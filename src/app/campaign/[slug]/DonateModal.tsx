@@ -31,6 +31,9 @@ type Step = "details" | "payment" | "success";
 const MAX_DISPLAY_NAME = 55;
 const MAX_MESSAGE = 75;
 
+const EMOJI_RE = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE00}-\u{FE0F}\u{200D}]/gu;
+const stripEmojis = (s: string) => s.replace(EMOJI_RE, "");
+
 interface DonateForm {
   fullName: string;
   displayName: string;
@@ -240,7 +243,7 @@ export default function DonateModal({
     if (type === "checkbox") {
       setForm({ ...form, [name]: (e.target as HTMLInputElement).checked });
     } else {
-      setForm({ ...form, [name]: value });
+      setForm({ ...form, [name]: stripEmojis(value) });
     }
   };
 
@@ -291,7 +294,7 @@ export default function DonateModal({
 
     setSubmitting(true);
     try {
-      const displayName = form.displayName.trim() || form.fullName.trim();
+      const displayName = stripEmojis(form.displayName.trim() || form.fullName.trim());
       const phoneFull = form.phone.trim() ? `${form.phoneCountry} ${form.phone.trim()}` : "";
 
       const payload = {
@@ -300,14 +303,14 @@ export default function DonateModal({
         cause_id: null,
         team_id: teamId,
         payment_method: paymentMethod,
-        name: form.fullName.trim(),
+        name: stripEmojis(form.fullName.trim()),
         display_name: displayName,
         email: form.email.trim(),
         phone: phoneFull || null,
         is_anonymous: form.isAnonymous,
-        message: form.message.trim() || null,
+        message: stripEmojis(form.message.trim()) || null,
         dedication_type: form.dedicationType || null,
-        dedication_name: form.dedicationName.trim() || null,
+        dedication_name: stripEmojis(form.dedicationName.trim()) || null,
         dedication_email: form.dedicationEmail.trim() || null,
         card: paymentMethod === "card" ? {
           name: form.cardName || form.fullName,
