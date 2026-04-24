@@ -168,6 +168,16 @@ export default function CampaignClient({
 
   const { campaign, tiers, matchers, teams, progress, recent_donations } = snapshot;
   const accent = campaign.theme_color || DEFAULT_ACCENT;
+
+  // Preview override: `?banner=/path/to.jpg` lets us see what a new banner will look
+  // like without touching the DB. Strips on navigation; never applied server-side.
+  const [previewBanner, setPreviewBanner] = useState<string | null>(null);
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+    const p = new URLSearchParams(window.location.search).get("banner");
+    if (p) setPreviewBanner(p);
+  }, []);
+  const heroImageUrl = previewBanner || campaign.hero_image_url;
   const activeMatcher = getActiveMatcher(matchers);
   const multiplier = activeMatcher ? Number(activeMatcher.multiplier) : 1;
 
@@ -250,7 +260,16 @@ export default function CampaignClient({
 
   return (
     <main className="min-h-screen bg-white">
-      {/* ============ TEXT-ONLY TITLE BAND (hero image removed per design-pending note) ============ */}
+      {heroImageUrl && (
+        <section className="w-full bg-black">
+          <img
+            src={heroImageUrl}
+            alt={campaign.title}
+            className="block w-full max-h-[70vh] object-contain mx-auto"
+          />
+        </section>
+      )}
+      {/* ============ TITLE BAND ============ */}
       <section className="text-white relative overflow-hidden" style={{ background: accent }}>
         <motion.div
           className="absolute inset-0 pointer-events-none"
