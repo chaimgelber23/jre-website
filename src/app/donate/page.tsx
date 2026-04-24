@@ -2,10 +2,11 @@
 
 import { useState, useRef, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, Check, CreditCard, ChevronDown, Gift, MessageSquare, Lock } from "lucide-react";
+import { Check, CreditCard, ChevronDown, Gift, MessageSquare, Lock } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import { FadeUp } from "@/components/ui/motion";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 
 const presetAmounts = [18, 36, 72, 180, 360, 720];
 
@@ -20,10 +21,13 @@ const sponsorships = [
   { value: "food-thought", label: "Sponsor a Food For Thought Event" },
 ];
 
+type DonatePaymentMethod = "card" | "donors_fund" | "ojc_fund";
+
 export default function DonatePage() {
   const [amount, setAmount] = useState<number | "">("");
   const [customAmount, setCustomAmount] = useState("");
   const [isRecurring, setIsRecurring] = useState(false);
+  const [paymentMethod, setPaymentMethod] = useState<DonatePaymentMethod>("card");
   const [formState, setFormState] = useState({
     name: "",
     email: "",
@@ -36,12 +40,19 @@ export default function DonatePage() {
     cardNumber: "",
     cardExpiry: "",
     cardCvv: "",
+    dfDonor: "",
+    dfAuth: "",
+    ojcCardNumber: "",
+    ojcExpDate: "",
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showHonorSection, setShowHonorSection] = useState(false);
   const [showSponsorSection, setShowSponsorSection] = useState(false);
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const captchaRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   // Card field refs for auto-jump
   const cardNameRef = useRef<HTMLInputElement>(null);
@@ -53,6 +64,11 @@ export default function DonatePage() {
   const handleAmountClick = (value: number) => {
     setAmount(value);
     setCustomAmount("");
+  };
+
+  const pickPaymentMethod = (m: DonatePaymentMethod) => {
+    setPaymentMethod(m);
+    if (m !== "card") setIsRecurring(false);
   };
 
   const handleCustomAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -97,36 +113,67 @@ export default function DonatePage() {
     }
   };
 
-  // Submit form with direct card data
+  // Submit form — routes card / Donor's Fund / OJC Fund through /api/donate
   const doSubmit = useCallback(async () => {
     try {
-      // Validate card fields
-      const cardNum = formState.cardNumber.replace(/\s/g, "");
-      if (!cardNum || cardNum.length < 13) {
-        setError("Please enter a valid card number.");
-        setIsSubmitting(false);
-        return;
+      if (paymentMethod === "card") {
+        const cardNum = formState.cardNumber.replace(/\s/g, "");
+        if (!cardNum || cardNum.length < 13) {
+          setError("Please enter a valid card number.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!formState.cardExpiry || !formState.cardExpiry.includes("/")) {
+          setError("Please enter the card expiry date (MM/YY).");
+          setIsSubmitting(false);
+          return;
+        }
+        const [mm, yy] = formState.cardExpiry.split("/");
+        if (!mm || !yy || parseInt(mm) < 1 || parseInt(mm) > 12) {
+          setError("Invalid expiry month. Please use MM/YY format.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!formState.cardCvv || formState.cardCvv.length < 3) {
+          setError("Please enter the CVV.");
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (paymentMethod === "donors_fund") {
+        if (!formState.dfDonor.trim()) {
+          setError("Please enter your Giving Card number or Donor's Fund email.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!formState.dfAuth.trim()) {
+          setError("Please enter your CVV (for card) or PIN (for email login).");
+          setIsSubmitting(false);
+          return;
+        }
+      } else if (paymentMethod === "ojc_fund") {
+        const cardDigits = formState.ojcCardNumber.replace(/\s/g, "");
+        if (!/^\d{13,19}$/.test(cardDigits)) {
+          setError("Please enter a valid OJC Charity Card number.");
+          setIsSubmitting(false);
+          return;
+        }
+        if (!/^\d{4}$/.test(formState.ojcExpDate.trim())) {
+          setError("OJC expiration must be MMYY (e.g. 1226).");
+          setIsSubmitting(false);
+          return;
+        }
       }
-      if (!formState.cardExpiry || !formState.cardExpiry.includes("/")) {
-        setError("Please enter the card expiry date (MM/YY).");
-        setIsSubmitting(false);
-        return;
-      }
-      const [mm, yy] = formState.cardExpiry.split("/");
-      if (!mm || !yy || parseInt(mm) < 1 || parseInt(mm) > 12) {
-        setError("Invalid expiry month. Please use MM/YY format.");
-        setIsSubmitting(false);
-        return;
-      }
-      if (!formState.cardCvv || formState.cardCvv.length < 3) {
-        setError("Please enter the CVV.");
+
+      if (captchaRequired && !captchaToken) {
+        setError("Please wait for verification to finish, then try again.");
         setIsSubmitting(false);
         return;
       }
 
       const payload = {
         amount,
-        isRecurring,
+        isRecurring: paymentMethod === "card" ? isRecurring : false,
+        paymentMethod,
         name: formState.name,
         email: formState.email,
         phone: formState.phone,
@@ -135,9 +182,18 @@ export default function DonatePage() {
         sponsorship: formState.sponsorship,
         message: formState.message,
         cardName: formState.cardName,
-        cardNumber: cardNum,
+        cardNumber: paymentMethod === "card" ? formState.cardNumber.replace(/\s/g, "") : "",
         cardExpiry: formState.cardExpiry,
         cardCvv: formState.cardCvv,
+        donorsFund: paymentMethod === "donors_fund" ? {
+          donor: formState.dfDonor.trim(),
+          authorization: formState.dfAuth.trim(),
+        } : null,
+        ojc: paymentMethod === "ojc_fund" ? {
+          cardNumber: formState.ojcCardNumber.replace(/\s/g, ""),
+          expDate: formState.ojcExpDate.trim(),
+        } : null,
+        turnstileToken: captchaToken,
       };
 
       const response = await fetch("/api/donate", {
@@ -156,10 +212,12 @@ export default function DonatePage() {
     } catch (err) {
       console.error("Donation error:", err);
       setError(err instanceof Error ? err.message : "Failed to process donation. Please try again.");
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setIsSubmitting(false);
     }
-  }, [amount, isRecurring, formState]);
+  }, [amount, isRecurring, paymentMethod, formState, captchaRequired, captchaToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -283,15 +341,17 @@ export default function DonatePage() {
                       />
                     </div>
 
-                    <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm">
-                      <input
-                        type="checkbox"
-                        checked={isRecurring}
-                        onChange={(e) => setIsRecurring(e.target.checked)}
-                        className="w-4 h-4 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]"
-                      />
-                      <span className="text-gray-600">Make this monthly</span>
-                    </label>
+                    {paymentMethod === "card" && (
+                      <label className="flex items-center gap-2 mt-4 cursor-pointer text-sm">
+                        <input
+                          type="checkbox"
+                          checked={isRecurring}
+                          onChange={(e) => setIsRecurring(e.target.checked)}
+                          className="w-4 h-4 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]"
+                        />
+                        <span className="text-gray-600">Make this monthly</span>
+                      </label>
+                    )}
                   </div>
 
                   {/* Divider */}
@@ -433,7 +493,7 @@ export default function DonatePage() {
                   {/* Divider */}
                   <div className="border-t border-gray-200 my-6" />
 
-                  {/* Payment Details - Direct Card Input (matches event pages) */}
+                  {/* Payment Details */}
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-5">
                       <h3 className="text-xs font-semibold text-gray-400 tracking-[0.15em] uppercase">Payment Details</h3>
@@ -443,12 +503,57 @@ export default function DonatePage() {
                       </div>
                     </div>
 
+                    {/* Method selector */}
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 mb-4">
+                      {(
+                        [
+                          { m: "card" as const, label: "Credit Card", subtitle: "US tax-deductible receipt" },
+                          { m: "ojc_fund" as const, label: "OJC Fund", subtitle: "Charge Charity Card instantly", logo: "/logos/ojc-fund.png" },
+                          { m: "donors_fund" as const, label: "The Donors Fund", subtitle: "Charge Giving Card instantly", logo: "/logos/donors-fund.svg" },
+                        ]
+                      ).map((opt) => {
+                        const active = paymentMethod === opt.m;
+                        return (
+                          <button
+                            key={opt.m}
+                            type="button"
+                            onClick={() => pickPaymentMethod(opt.m)}
+                            aria-pressed={active}
+                            className={`relative p-3 pt-7 rounded-xl border transition-all text-center flex flex-col items-center justify-start gap-1.5 min-h-[128px] ${
+                              active
+                                ? "border-[#EF8046] bg-[#fff5f0] shadow-sm"
+                                : "border-gray-200 bg-white hover:border-gray-300"
+                            }`}
+                          >
+                            <span
+                              className={`absolute top-2.5 left-2.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
+                                active ? "border-[#EF8046] bg-[#EF8046]" : "border-gray-300 bg-white"
+                              }`}
+                            >
+                              {active && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
+                            </span>
+                            <div className="h-8 flex items-center justify-center">
+                              {opt.logo ? (
+                                // eslint-disable-next-line @next/next/no-img-element
+                                <img src={opt.logo} alt={opt.label} className="object-contain h-8 max-w-[110px]" />
+                              ) : (
+                                <CreditCard className="w-7 h-7 text-gray-700" strokeWidth={1.75} />
+                              )}
+                            </div>
+                            <div className="text-sm font-semibold text-gray-900 leading-tight">{opt.label}</div>
+                            <div className="text-[11px] text-gray-500 leading-tight px-1">{opt.subtitle}</div>
+                          </button>
+                        );
+                      })}
+                    </div>
+
                     {error && (
                       <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm mb-4">
                         {error}
                       </div>
                     )}
 
+                    {paymentMethod === "card" && (
                     <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80 relative overflow-hidden">
                       {/* Subtle shimmer on the card form border */}
                       <motion.div
@@ -541,7 +646,86 @@ export default function DonatePage() {
                         </div>
                       </div>
                     </div>
+                    )}
+
+                    {paymentMethod === "donors_fund" && (
+                      <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Charge your <span className="font-semibold">Donors&apos; Fund</span> Giving Card directly. Enter your 16-digit card + CVV, or your account email + PIN.
+                        </p>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Giving Card # or Account Email</label>
+                          <input
+                            type="text"
+                            name="dfDonor"
+                            value={formState.dfDonor}
+                            onChange={handleChange}
+                            autoComplete="off"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors"
+                            placeholder="6599 9929 9945 6587 or you@example.com"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">CVV (card) or PIN (email)</label>
+                          <input
+                            type="text"
+                            name="dfAuth"
+                            value={formState.dfAuth}
+                            onChange={handleChange}
+                            autoComplete="off"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums"
+                            placeholder="476 or 1234"
+                          />
+                        </div>
+                      </div>
+                    )}
+
+                    {paymentMethod === "ojc_fund" && (
+                      <div className="bg-[#FAFAFA] rounded-2xl p-5 space-y-4 border border-gray-100/80">
+                        <p className="text-xs text-gray-600 leading-relaxed">
+                          Enter your OJC Charity Card — we&apos;ll charge it instantly and email your tax-deductible receipt.
+                        </p>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">OJC Charity Card Number</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name="ojcCardNumber"
+                            value={formState.ojcCardNumber}
+                            onChange={handleChange}
+                            autoComplete="off"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums tracking-wide"
+                            placeholder="6900 0000 0000 0000"
+                          />
+                        </div>
+                        <div>
+                          <label className="text-xs text-gray-500 mb-1 block font-medium">Expiration (MMYY)</label>
+                          <input
+                            type="text"
+                            inputMode="numeric"
+                            name="ojcExpDate"
+                            value={formState.ojcExpDate}
+                            onChange={handleChange}
+                            maxLength={4}
+                            autoComplete="off"
+                            className="w-full px-4 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-[15px] bg-white transition-colors tabular-nums"
+                            placeholder="1226"
+                          />
+                        </div>
+                      </div>
+                    )}
                   </div>
+
+                  {captchaRequired && (
+                    <div className="mb-4 flex justify-center">
+                      <TurnstileWidget
+                        onVerify={setCaptchaToken}
+                        onExpire={() => setCaptchaToken(null)}
+                        onError={() => setCaptchaToken(null)}
+                        resetSignal={captchaReset}
+                      />
+                    </div>
+                  )}
 
                   {/* Submit Button */}
                   <motion.button
@@ -575,7 +759,6 @@ export default function DonatePage() {
                       </>
                     ) : (
                       <>
-                        <Heart className="w-5 h-5" />
                         Donate {amount ? `$${amount}` : "Now"}
                         {isRecurring && " Monthly"}
                       </>
