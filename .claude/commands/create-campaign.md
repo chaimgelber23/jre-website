@@ -2,6 +2,8 @@
 
 Full Charidy-style fundraising campaign creation for the JRE website. Orchestrates the campaign record, sponsor tiers, matchers, teams, causes, and FAQ so everything is ready to accept donations the moment you flip status to `live`. All data lives in Supabase — no code deploy is needed to spin up a new campaign.
 
+> **Before flipping any new campaign to `live`, run the "Before flipping any campaign to `live`" checklist near the bottom of this file** (matcher RPC migration applied, progress endpoint cached, optional load test on a preview). The infra is hardened to absorb a 500-viewer + concurrent-checkout rush, but only if those gates are in place. Verified end-to-end on prod 2026-04-25.
+
 ## What you need to gather from the user
 
 Ask for the essentials first; the rest can come in follow-up or be edited in `/admin/campaigns/<id>`:
@@ -128,6 +130,131 @@ If the user asks "what did you build" or wants to understand the stack, walk thr
 - **Banquest is the card processor** (direct card input, no redirect). Donor's Fund is a separate TDF /Create grant path. Both charge immediately and set `payment_status = completed`. DAF/OJC/check/zelle/other paths go straight to `pledged`.
 - **Per portfolio-wide cost discipline**: do NOT add Vercel crons for campaign-side jobs. If a scheduled job is needed (e.g. "email all donors on day 3"), use cron-job.org → POST to a campaign endpoint with `maxDuration = 60`.
 
+## Donation-page UX gotchas (learned the hard way)
+
+The DB orchestration (this command) is stable. The donation *page* keeps catching us. Rules:
+
+- **Modal must reset on close, not just hide.** `DonateModal` is mounted once and toggled by `open`; without a reset effect, a donor who completes a gift and clicks Donate again lands back on the thank-you screen. Fix: a `useEffect` on `open` that clears `step`, form state, amount, tier, team, frequency, payment method when the modal closes. See [DonateModal.tsx:158-194](../../src/app/campaign/[slug]/DonateModal.tsx).
+- **No icons on the Donate submit button.** Donors read "♥ Donate $36" as emoji-y / unprofessional. Keep the submit label pure text. Same rule for pill labels — "One-time / Monthly" beats any iconography.
+- **No focus ring on money inputs.** A 4px `box-shadow` ring around the inline amount input clips past the adjacent Donate button on mobile and looks cheap. Use plain `border border-gray-200`, drop the `focus:` shadow. Same in the modal — no `focus-within:border-[#EF8046]` on the amount container.
+- **Address autocomplete needs a real backend.** Bare Nominatim returns a lot of street-only rows ("Avenue J, Brooklyn") that aren't actual addresses a donor can pick. Filter to hits with `house_number` + `road`. Run a US-biased query in parallel with a global one. Short-circuit to Google Places or Mapbox if `GOOGLE_PLACES_API_KEY` / `MAPBOX_ACCESS_TOKEN` is set. Client: 150ms debounce, min 2 chars, AbortController to kill stale requests. See `src/app/api/geocode/route.ts`.
+- **Monthly is gated, not absent.** The infra exists end-to-end (`setupRecurringPayment` → `card_ref` → `process-recurring-donations` cron appends new donation rows to the wall every 30 days). UI is behind `campaign.allow_recurring`. Flip that column `true` per campaign when ready. Before flipping, confirm: (a) cron-job.org has a daily job hitting `/api/cron/process-recurring-donations`, (b) your first real monthly donor was test-charged successfully and the card_ref saved in Banquest, (c) you have a cancel-recurring path ready.
+
+## Before testing donations end-to-end
+
+`USE_SANDBOX = false` in `src/lib/banquest.ts` and **stays that way**. Owner preference: never flip to sandbox for testing — the code paths/envs diverge subtly, and "it worked in sandbox" bites on switchover. Test with real charges on your own card, voided afterward.
+
+**Canonical test plan:**
+1. 2–3 real small charges ($1 each) on a card you own, covering the three charge paths that matter: credit card, DAF pledge, Donor's Fund Giving Card.
+2. Verify each: row in `campaign_donations`, tile on the donor wall, receipt email arrived, honoree notification (if dedication set), Banquest Control Panel shows the txn.
+3. Void every test txn in Banquest before it settles (same-day window) — voids are free; refunds after settlement cost a fee.
+4. Mark the `campaign_donations` rows `is_hidden = true` or delete them so they don't pollute the public wall/totals.
+
+**Never** put through 20+ test donations at once — Banquest has duplicate-detection on same card + same amount in a short window, and the public donor wall updates in real time on prod. A good test suite is 3 well-varied charges, not 20 copies.
+
+## Recent additions (2026-04-24)
+
+Things learned shipping the heart-icon removal + Donor's Fund / OJC additions to `/donate` and the campaign donate modal. Read these before scaffolding the next campaign.
+
+### Strip emojis from every free-text donor field
+Donors will paste ❤ into "in memory of" and similar dedication fields. On a memorial line that reads as flippant. **Apply the strip in two layers** — onChange (so the character never lands in state) AND at submit (defense-in-depth for any stale value that snuck through):
+
+```ts
+const EMOJI_RE = /[\p{Extended_Pictographic}\p{Emoji_Presentation}\u{FE00}-\u{FE0F}\u{200D}]/gu;
+const stripEmojis = (s: string) => s.replace(EMOJI_RE, "");
+```
+
+Apply to: `fullName`, `displayName`, `message`, `dedicationName`. NOT to email (`@` would survive anyway) or numeric/card fields (already digit-only). The regex catches compound ZWJ emoji and skin-tone modifiers without touching Hebrew/accented Latin. Reference: [DonateModal.tsx:34-35](../../src/app/campaign/%5Bslug%5D/DonateModal.tsx) and [donate/page.tsx](../../src/app/donate/page.tsx).
+
+### `MethodTile` is the canonical payment-method tile
+Both `/campaign/[slug]` (modal) and `/donate` (single-page) use the same 3-up grid: square card, logo or icon at top, bold label, faded subtitle, and a radio-dot in the top-left that fills with the brand orange when active. To add a new payment method (Apple Pay, Givebutter, Stripe Link, whatever), clone the tile shape — don't reinvent.
+
+```tsx
+// Tile shape — see DonateModal.tsx PaymentStep
+<button onClick={() => setPaymentMethod(m)} aria-pressed={active}
+  className={`relative p-3 pt-7 rounded-xl border min-h-[128px] flex flex-col items-center gap-1.5 ${
+    active ? "border-[#EF8046] bg-[#fff5f0] shadow-sm" : "border-gray-200 bg-white hover:border-gray-300"
+  }`}>
+  <span className="absolute top-2.5 left-2.5 w-4 h-4 rounded-full border-2 ..." />
+  <img src={logo} className="h-8 max-w-[110px] object-contain" />
+  <div className="text-sm font-semibold">{label}</div>
+  <div className="text-[11px] text-gray-500">{subtitle}</div>
+</button>
+```
+
+Logo assets already in repo (don't re-source): `/public/logos/donors-fund.svg`, `/public/logos/ojc-fund.png`, `/public/logos/fidelity-charitable.png`.
+
+### `payment_reference` prefix encodes the gateway
+The simple `donations` table (used by `/donate`) doesn't have a `payment_method` column — the gateway is encoded in the `payment_reference` value: `bq_<txnid>` for Banquest, `tdf_<confirmationNumber>` for Donor's Fund, `ojc_<referenceNumber>` for OJC. The campaign-side `campaign_donations` table DOES have `payment_method`, so this prefix-only convention is just for the legacy donate flow. Any future reporting that mixes the two tables needs to handle both.
+
+### Recurring is card-only — enforce server-side too
+The "Make this monthly" toggle is hidden on the UI when the donor switches to TDF/OJC, but the server must also defensively force `is_recurring=false` on non-card payloads. Saved-card-and-our-cron is the only recurring path; never use Banquest's recurring schedules (that's a memory-locked rule). Reference: [api/donate/route.ts](../../src/app/api/donate/route.ts).
+
+### TDF + OJC env vars are required for those branches
+- `TDF_TAX_ID`, `TDF_ACCOUNT_NUMBER` — without these the donors_fund branch returns 500 "isn't fully configured." Both must be in Vercel prod env.
+- OJC creds (see `lib/ojc-fund.ts`) — same deal.
+
+When spinning up a new campaign that wants TDF/OJC, verify these env vars exist BEFORE flipping status to `live`, or the donate route will surface a confusing 500 instead of a polite "use a different method."
+
+## Load hardening — non-negotiables (2026-04-25 audit)
+
+A campaign goes from "a few donors trickling in" to "500 viewers + dozens of concurrent checkouts" the moment it goes live. The page-and-checkout infra has been hardened to absorb that. **These rules are now baseline — every new campaign and every code change to campaign code must follow them.** Verified end-to-end on prod 2026-04-25 (200-way RPC concurrency proof passed; 50-way viewer fan-out cached at edge).
+
+### What's already in place — verify before launch
+
+- ✅ **Atomic matcher pool** via Postgres RPC `apply_matcher_increment(uuid, bigint)` + `revert_matcher_increment`. The donate route never reads-then-writes `matched_cents` directly. Migration: `supabase/migrations/campaign_matcher_atomic_rpc.sql`. Verify both functions exist:
+  ```sql
+  SELECT proname FROM pg_proc WHERE proname IN ('apply_matcher_increment','revert_matcher_increment');
+  -- Expect 2 rows
+  ```
+  If either is missing, the donate route logs `apply_matcher_increment failed:` and quietly drops match credit (donor pays, no match applied). Apply the migration in Supabase SQL editor before flipping status to `live`.
+- ✅ **Progress endpoint cached** via `unstable_cache` (10s window) + `Cache-Control: public, s-maxage=10, stale-while-revalidate=30`. Drops Supabase load by ~99% under viewer fan-out. Verify with `curl -I https://thejre.org/api/campaign/<slug>/progress` — `X-Vercel-Cache: HIT` and `Age:` incrementing means it's working.
+- ✅ **Donate route ceiling** — `export const maxDuration = 30` so a hung gateway can't pin a function instance.
+- ✅ **Banquest 25s AbortController** on every gateway call (`bqFetch` wrapper in `src/lib/banquest.ts`). A slow gateway returns a clean "try again" error instead of consuming 30s of compute.
+- ✅ **Visibility-aware client polling** — `CampaignClient` pauses polling while the tab is hidden, refreshes on return. Cadence 30s (down from 20s).
+
+### Rules for any code change to the campaign surface
+
+1. **Any new aggregate / read endpoint that gets polled by the campaign page MUST use `unstable_cache`** with a 10–30s revalidate window and an explicit `Cache-Control: s-maxage=N, stale-while-revalidate=…` header. No exceptions. Without this, every viewer hammers Supabase on every poll.
+2. **Any new payment-gateway integration MUST wrap its `fetch` calls in an `AbortController` with a ≤25s timeout.** Mirror the `bqFetch` helper in `src/lib/banquest.ts`. OJC and TDF currently lack this — if the campaign starts using them at scale, retrofit them to a shared `gatewayFetch` helper.
+3. **Any new counter / pool / quota mutation MUST be done via a Postgres RPC with `SELECT … FOR UPDATE`.** Never `read-then-write` from Node — that's the lost-update race the matcher RPC fixes. If you need a new pool counter (e.g. per-cause cap, per-team match), add a sibling RPC to `campaign_matcher_atomic_rpc.sql` and follow the same compensate-on-failure pattern.
+4. **Any new client-side polling loop MUST pause while `document.hidden`** and refresh on `visibilitychange`. Pattern is in `CampaignClient.tsx` — copy it, don't reinvent.
+5. **Any new route under `/api/campaign/[slug]/*` that does external I/O MUST set `export const maxDuration = N` (≤30).** Keep the kill switch in place.
+6. **Never put a `crons: [...]` block in `vercel.json`** — campaign-side scheduled jobs (recurring donations, daily digests, reminder emails) go on cron-job.org, hitting a route that has `maxDuration = 60` or less. (Portfolio-wide rule, not just campaign.)
+
+### Before flipping any campaign to `live`
+
+Run this checklist. Don't trust "it worked last time" — every campaign pulls in different volumes and matcher configurations.
+
+1. **Verify migration is applied** (above SQL).
+2. **Smoke the cached progress endpoint:**
+   ```bash
+   curl -I https://thejre.org/api/campaign/<slug>/progress
+   # Expect 200, Cache-Control: public, X-Vercel-Cache: HIT after first call
+   ```
+3. **Smoke the live page render:**
+   ```bash
+   curl -s -o /dev/null -w "%{http_code} %{time_total}s\n" https://thejre.org/campaign/<slug>
+   ```
+4. **(Optional but recommended) Run the load test against a Vercel preview** of the same branch. Refuses to run against `thejre.org` by design:
+   ```bash
+   SITE=https://<preview>.vercel.app \
+   SUPABASE_SERVICE_ROLE_KEY=... \
+   NEXT_PUBLIC_SUPABASE_URL=https://yhckumlsxrvfvtwrluge.supabase.co \
+   CONCURRENCY=100 \
+   node scripts/load-test-campaign.mjs
+   ```
+   PASS criteria: success rate ≥99%, p95 latency <3s, "matcher counter == sum of donation rows" line prints `✓`. Test rows are auto-tagged `email LIKE 'load-%@jre-test.local'` and cleaned up.
+5. **Confirm match cap is what you want.** A `null` cap means uncapped — fine for a "the more donors, the bigger the match" structure, but bad if your matcher actually has a budget. Set `cap_cents` accordingly.
+
+### The proof, for posterity / for the boss
+
+- 200 parallel `apply_matcher_increment` calls against a $1000-cap matcher → sum of returned actuals = exactly $1000, no over-grant. (Test in this file's history; run again any time with `node --input-type=module` against Supabase.)
+- 50 parallel viewer fan-outs at the live progress endpoint → all 200, edge cache absorbs them at 70–150ms (vs 0.4–2.6s on a cold cache).
+- Live deploy `9c989c3` — 2026-04-25.
+
+If the audit ever needs to be re-run, the canonical script is at `scripts/load-test-campaign.mjs`. The matcher-RPC unit test is a one-off node block; happy to be re-codified into a script if it gets re-run more than twice.
+
 ## Skill Chain
 
-After creating a campaign: remind the user they can call `/manage-sponsorships` to edit tiers in bulk, or visit `/admin/campaigns/<id>` for full control. If they want to add teams, ask if the pages should be linked publicly (no — default is unlisted) or shared individually.
+After creating a campaign: remind the user they can call `/manage-sponsorships` to edit tiers in bulk, or visit `/admin/campaigns/<id>` for full control. If they want to add teams, ask if the pages should be linked publicly (no — default is unlisted) or shared individually. **Before flipping the new campaign to `live`, run the "Before flipping any campaign to `live`" checklist above — it takes 60 seconds and catches infra drift.**
