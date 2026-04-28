@@ -1,4 +1,4 @@
-import { Heart, Users } from "lucide-react";
+import { Users } from "lucide-react";
 import { formatUsd } from "@/lib/campaign";
 import type { PublicDonation } from "@/types/campaign";
 
@@ -49,9 +49,29 @@ export default function DonorCard({ d, accent, hideTeam = false, campaignSlug }:
 
   return (
     <div
-      className="group relative bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-transparent"
+      className="group relative h-full min-h-[170px] bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-transparent"
       style={{ ["--accent" as string]: accent }}
     >
+      {/* Tier badge — top-right corner (e.g. "DOUBLE CHAI · לו") shows when donor picks a preset amount tablet */}
+      {d.tier_label && (
+        <div className="absolute -top-2 right-4 z-10">
+          <span
+            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-white text-[10px] font-bold uppercase tracking-[0.1em] shadow-sm"
+            style={{
+              background: `linear-gradient(135deg, ${accent} 0%, rgba(${accentRgb}, 0.85) 100%)`,
+              boxShadow: `0 4px 12px -2px rgba(${accentRgb}, 0.45)`,
+            }}
+          >
+            <span>{d.tier_label}</span>
+            {d.tier_hebrew && (
+              <span dir="rtl" className="text-white/85 font-semibold normal-case">
+                {d.tier_hebrew}
+              </span>
+            )}
+          </span>
+        </div>
+      )}
+
       {/* Left accent rail on hover — subtle premium cue */}
       <div
         aria-hidden
@@ -108,18 +128,15 @@ export default function DonorCard({ d, accent, hideTeam = false, campaignSlug }:
           </div>
         )}
 
-        {/* Dedication — heart icon + soft accent text */}
+        {/* Dedication — understated italic line */}
         {d.dedication_name && (
-          <div className="mt-3 flex items-center gap-1.5 text-xs text-gray-700">
-            <Heart className="w-3.5 h-3.5 flex-shrink-0" style={{ color: accent }} />
-            <span className="text-gray-500">
-              {d.dedication_type === "memory" ? "In memory of" : "In honor of"}
-            </span>
-            <span className="font-semibold text-gray-800 truncate">{d.dedication_name}</span>
+          <div className="mt-3 text-xs text-gray-600 italic">
+            <span>{d.dedication_type === "memory" ? "In memory of" : "In honor of"} </span>
+            <span className="font-semibold text-gray-800 not-italic">{d.dedication_name}</span>
           </div>
         )}
 
-        {/* Team — pill badge */}
+        {/* Team — pill badge at bottom (separate from tier badge above) */}
         {!hideTeam && d.team_name && (
           <div className="mt-3">
             {teamHref ? (

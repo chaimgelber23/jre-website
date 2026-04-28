@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { Heart, MessageCircle } from "lucide-react";
+import { MessageCircle } from "lucide-react";
 import { formatUsd } from "@/lib/campaign";
 import type { PublicDonation } from "@/types/campaign";
 
@@ -27,7 +27,6 @@ export default function DonorWall({ donations, totalCount }: Props) {
   if (donations.length === 0) {
     return (
       <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
-        <Heart className="w-8 h-8 text-[#EF8046] mx-auto mb-3" />
         <p className="text-gray-700 font-medium">Be the first to donate</p>
         <p className="text-gray-500 text-sm mt-1">Your donation will kick off this campaign.</p>
       </div>

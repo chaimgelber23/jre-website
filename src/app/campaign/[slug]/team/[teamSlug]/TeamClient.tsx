@@ -3,10 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
-  Search, Share2, Heart, Mail, MessageCircle, Copy, Check, ArrowLeft,
-  Flame, Trophy, Users, Sparkles,
+  Search, Share2, Mail, MessageCircle, Copy, Check, ArrowLeft, Users,
 } from "lucide-react";
-import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
 import {
   formatUsd,
@@ -18,7 +16,7 @@ import DonateModal from "../../DonateModal";
 import DonorCard from "../../DonorCard";
 import type { CampaignSnapshot, PublicDonation } from "@/types/campaign";
 
-type Sort = "default" | "latest" | "oldest" | "highest";
+type Sort = "newest" | "oldest" | "highest";
 
 const DEFAULT_ACCENT = "#DA98B1";
 const QUICK_GIVE_CENTS = [3600, 18000, 36000, 100000]; // $36, $180, $360, $1000
@@ -39,7 +37,7 @@ export default function TeamClient({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [preselectAmount, setPreselectAmount] = useState<number | null>(null);
-  const [sortBy, setSortBy] = useState<Sort>("default");
+  const [sortBy, setSortBy] = useState<Sort>("newest");
   const [search, setSearch] = useState("");
   const [showAll, setShowAll] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -134,20 +132,19 @@ export default function TeamClient({
   const filtered = donations
     .filter((d) => !search || d.display_name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === "highest") return b.amount_cents - a.amount_cents;
       const at = new Date(a.created_at).getTime();
       const bt = new Date(b.created_at).getTime();
+      if (sortBy === "highest") {
+        if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
+        return bt - at;
+      }
       if (sortBy === "oldest") return at - bt;
-      if (sortBy === "latest") return bt - at;
-      if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
-      return bt - at;
+      return bt - at; // newest (default)
     });
   const visible = showAll ? filtered : filtered.slice(0, 10);
 
   return (
     <main className="min-h-screen bg-white">
-      <Header />
-
       {/* ============ BREADCRUMB ============ */}
       <div className="border-b border-gray-100 bg-gray-50">
         <div className="container mx-auto px-6 py-3">
@@ -162,34 +159,35 @@ export default function TeamClient({
       </div>
 
       {/* ============ TEAM HERO ============ */}
-      <section className="relative w-full bg-gray-100">
-        <div className="relative w-full aspect-[21/9] md:aspect-[21/8] overflow-hidden">
-          {team.avatar_url || campaign.hero_image_url ? (
-            // eslint-disable-next-line @next/next/no-img-element
-            <img
-              src={team.avatar_url || campaign.hero_image_url || ""}
-              alt={team.name}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          ) : (
-            <div className="absolute inset-0 flex items-center justify-center bg-gradient-to-br from-gray-100 via-gray-200 to-gray-100 text-gray-300">
-              <Heart className="w-24 h-24" />
+      {(team.avatar_url || campaign.hero_image_url) ? (
+        <section className="w-full bg-black">
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src={team.avatar_url || campaign.hero_image_url || ""}
+            alt={team.name}
+            className="block w-full max-h-[70vh] object-contain mx-auto"
+          />
+        </section>
+      ) : (
+        <section className="w-full bg-gray-100">
+          <div className="w-full aspect-[21/9] md:aspect-[21/8]" />
+        </section>
+      )}
+
+      {/* ============ TITLE BAND ============ */}
+      <section className="text-white relative overflow-hidden" style={{ background: accent }}>
+        <div className="container mx-auto px-6 py-10 md:py-14 text-center">
+          <div className="text-[11px] md:text-xs uppercase tracking-[0.3em] text-white/80 mb-3">
+            {orgName}
+          </div>
+          <h1 className="text-3xl md:text-5xl font-bold leading-tight max-w-3xl mx-auto text-white">
+            {team.name}
+          </h1>
+          {team.leader_name && (
+            <div className="mt-3 text-sm md:text-base text-white/85">
+              Led by <span className="font-semibold">{team.leader_name}</span>
             </div>
           )}
-          <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent" />
-          <div className="absolute bottom-0 left-0 right-0 p-6 md:p-10 text-white">
-            <div className="container mx-auto">
-              <div className="text-[11px] uppercase tracking-[0.22em] opacity-80 mb-2 inline-flex items-center gap-2">
-                <Flame className="w-3.5 h-3.5" /> {orgName}
-              </div>
-              <h1 className="text-3xl md:text-5xl font-bold leading-tight">{team.name}</h1>
-              {team.leader_name && (
-                <div className="text-sm md:text-base opacity-90 mt-1">
-                  Led by <span className="font-semibold">{team.leader_name}</span>
-                </div>
-              )}
-            </div>
-          </div>
         </div>
       </section>
 
@@ -267,8 +265,7 @@ export default function TeamClient({
 
           {/* RIGHT — countdown */}
           <div className="px-6 py-8 md:py-10 flex flex-col items-center justify-center">
-            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-3 inline-flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5" style={{ color: accent }} />
+            <div className="text-[11px] uppercase tracking-[0.22em] text-gray-500 mb-3">
               Campaign Ends In
             </div>
             <CountdownStrip startAt={campaign.start_at} endAt={campaign.end_at} accent={accent} />
@@ -281,7 +278,6 @@ export default function TeamClient({
         <section className="border-b border-gray-100 bg-amber-50">
           <div className="container mx-auto px-6 py-4">
             <div className="flex items-center gap-3">
-              <Flame className="w-4 h-4 text-amber-600 flex-shrink-0" />
               <div className="flex-1 min-w-0">
                 <div className="text-xs font-semibold text-amber-900 mb-1.5 truncate">
                   {multiplier}× match pool:{" "}
@@ -308,8 +304,7 @@ export default function TeamClient({
         <div className="container mx-auto px-6 grid grid-cols-1 lg:grid-cols-5 gap-8 max-w-5xl">
           {/* Top donors (left col on desktop) */}
           <div className="lg:col-span-2">
-            <h2 className="text-xs uppercase tracking-[0.22em] text-gray-500 inline-flex items-center gap-2 mb-4">
-              <Trophy className="w-3.5 h-3.5" style={{ color: accent }} />
+            <h2 className="text-xs uppercase tracking-[0.22em] text-gray-500 mb-4">
               Top Donors
             </h2>
             {topDonors.length === 0 ? (
@@ -413,8 +408,7 @@ export default function TeamClient({
               onChange={(e) => setSortBy(e.target.value as Sort)}
               className="px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-gray-400 text-sm"
             >
-              <option value="default">Default</option>
-              <option value="latest">Latest</option>
+              <option value="newest">Newest</option>
               <option value="oldest">Oldest</option>
               <option value="highest">Highest</option>
             </select>
@@ -423,12 +417,11 @@ export default function TeamClient({
 
         {visible.length === 0 ? (
           <div className="text-center py-16 bg-white border border-gray-100 rounded-xl">
-            <Heart className="w-8 h-8 mx-auto mb-3" style={{ color: accent }} />
             <p className="text-gray-700 font-medium">Be the first to give to {team.name}</p>
             <p className="text-gray-500 text-sm mt-1">Kick off this team&apos;s fundraising.</p>
           </div>
         ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 auto-rows-fr">
             {visible.map((d) => (
               <DonorCard key={d.id} d={d} accent={accent} hideTeam />
             ))}
@@ -532,8 +525,8 @@ export default function TeamClient({
 function MatchImpactCard({ multiplier, matcherName }: { multiplier: number; matcherName?: string }) {
   return (
     <div className="text-center mb-4">
-      <div className="text-[10px] uppercase tracking-[0.22em] opacity-90 inline-flex items-center gap-1.5">
-        <Flame className="w-3 h-3" /> {multiplier}× Match Active
+      <div className="text-[10px] uppercase tracking-[0.22em] opacity-90">
+        {multiplier}× Match Active
       </div>
       <div className="text-2xl md:text-3xl font-bold leading-none mt-2 tabular-nums">
         $100 → <span className="underline decoration-2 underline-offset-4">${multiplier * 100}</span>

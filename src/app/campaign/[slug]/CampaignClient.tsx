@@ -11,7 +11,7 @@ import {
 } from "framer-motion";
 import confetti from "canvas-confetti";
 import {
-  Search, Share2, Heart, Mail,
+  Search, Share2, Mail,
   MessageCircle, Copy, Check,
 } from "lucide-react";
 import Footer from "@/components/layout/Footer";
@@ -30,7 +30,7 @@ interface Props {
 }
 
 type Tab = "donors" | "matchers" | "about" | "teams" | "communities";
-type Sort = "default" | "latest" | "oldest" | "highest";
+type Sort = "newest" | "oldest" | "highest";
 
 const DEFAULT_ACCENT = "#DA98B1";
 
@@ -158,7 +158,7 @@ export default function CampaignClient({
   const [preselectedTeam, setPreselectedTeam] = useState<string | null>(null);
   const [preselectedAmount, setPreselectedAmount] = useState<number | null>(null);
   const [tab, setTab] = useState<Tab>("donors");
-  const [sortBy, setSortBy] = useState<Sort>("default");
+  const [sortBy, setSortBy] = useState<Sort>("newest");
   const [search, setSearch] = useState("");
   const [showAllDonors, setShowAllDonors] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -268,13 +268,14 @@ export default function CampaignClient({
   const filteredDonations = recent_donations
     .filter((d) => !search || d.display_name.toLowerCase().includes(search.toLowerCase()))
     .sort((a, b) => {
-      if (sortBy === "highest") return b.amount_cents - a.amount_cents;
       const at = new Date(a.created_at).getTime();
       const bt = new Date(b.created_at).getTime();
+      if (sortBy === "highest") {
+        if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
+        return bt - at;
+      }
       if (sortBy === "oldest") return at - bt;
-      if (sortBy === "latest") return bt - at;
-      if (b.amount_cents !== a.amount_cents) return b.amount_cents - a.amount_cents;
-      return bt - at;
+      return bt - at; // newest (default)
     });
   const visibleDonations = showAllDonors ? filteredDonations : filteredDonations.slice(0, 24);
 
@@ -564,8 +565,7 @@ export default function CampaignClient({
                       onChange={(e) => setSortBy(e.target.value as Sort)}
                       className="px-3 py-2 border border-gray-200 rounded-md bg-white focus:outline-none focus:border-gray-400 text-sm"
                     >
-                      <option value="default">Default</option>
-                      <option value="latest">Latest</option>
+                      <option value="newest">Newest</option>
                       <option value="oldest">Oldest</option>
                       <option value="highest">Highest</option>
                     </select>
@@ -574,19 +574,18 @@ export default function CampaignClient({
 
                 {visibleDonations.length === 0 ? (
                   <div className="text-center py-16 bg-white border border-gray-100 rounded-xl">
-                    <Heart className="w-8 h-8 mx-auto mb-3" style={{ color: accent }} />
                     <p className="text-gray-700 font-medium">Be the first to donate</p>
                     <p className="text-gray-500 text-sm mt-1">Your gift kicks off this campaign.</p>
                   </div>
                 ) : (
                   <motion.div
-                    className="grid sm:grid-cols-2 gap-3"
+                    className="grid grid-cols-1 sm:grid-cols-2 gap-3 auto-rows-fr"
                     variants={STAGGER_PARENT}
                     initial="hidden"
                     animate="show"
                   >
                     {visibleDonations.map((d) => (
-                      <motion.div key={d.id} variants={STAGGER_CHILD} whileHover={{ y: -2 }} transition={{ duration: 0.2 }}>
+                      <motion.div key={d.id} variants={STAGGER_CHILD} whileHover={{ y: -2 }} transition={{ duration: 0.2 }} className="h-full">
                         <DonorCard d={d} accent={accent} />
                       </motion.div>
                     ))}
@@ -983,7 +982,6 @@ function TierStrip({
                       animate={reduced ? undefined : { scale: [1, 1.05, 1] }}
                       transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
                     >
-                      <span aria-hidden>🔥</span>
                       <span>Popular</span>
                     </motion.span>
                   )}
