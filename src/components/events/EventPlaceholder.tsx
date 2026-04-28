@@ -128,7 +128,7 @@ export default function EventPlaceholder({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`flex items-center gap-3 ${s.eyebrowGap}`}
+            className={`flex items-center gap-3 ${variant === "card" ? "" : s.eyebrowGap}`}
           >
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
             <span
@@ -140,44 +140,53 @@ export default function EventPlaceholder({
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
           </motion.div>
 
-          {/* Title: light-weight system serif, single voice (no color-split halves) */}
-          <motion.h1
-            initial={{ opacity: 0, y: 12 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.7, delay: 0.1 }}
-            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.05] tracking-tight break-words [text-wrap:balance]`}
-          >
-            {title}
-          </motion.h1>
+          {/* Title + date are intentionally hidden in card variant — the parent
+              listing card already shows title/date/time/location below the image
+              area, and duplicating them here causes overflow clipping in the
+              fixed h-52 container. Card variant shows ONLY the eyebrow as a
+              subtle brand mark on the themed glow background. */}
+          {variant !== "card" && (
+            <>
+              {/* Title: light-weight system serif, single voice (no color-split halves) */}
+              <motion.h1
+                initial={{ opacity: 0, y: 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.7, delay: 0.1 }}
+                className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.05] tracking-tight break-words [text-wrap:balance]`}
+              >
+                {title}
+              </motion.h1>
 
-          {/* Date: editorial stacked caps with hairline rules */}
-          {dateParts && (
-            <motion.div
-              initial={{ opacity: 0, y: 8 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.6, delay: 0.25 }}
-              className={`flex items-center gap-3 md:gap-4 ${s.metaGap}`}
-            >
-              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
-              <span className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase whitespace-nowrap`}>
-                {dateParts.month} {dateParts.day}
-                <span className="mx-1.5 md:mx-2 opacity-50">·</span>
-                {dateParts.year}
-              </span>
-              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
-            </motion.div>
-          )}
+              {/* Date: editorial stacked caps with hairline rules */}
+              {dateParts && (
+                <motion.div
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ duration: 0.6, delay: 0.25 }}
+                  className={`flex items-center gap-3 md:gap-4 ${s.metaGap}`}
+                >
+                  <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
+                  <span className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase whitespace-nowrap`}>
+                    {dateParts.month} {dateParts.day}
+                    <span className="mx-1.5 md:mx-2 opacity-50">·</span>
+                    {dateParts.year}
+                  </span>
+                  <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
+                </motion.div>
+              )}
 
-          {/* Fallback for non-parseable date strings */}
-          {!dateParts && date && (
-            <motion.p
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              transition={{ delay: 0.25 }}
-              className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase ${s.metaGap}`}
-            >
-              {date}
-            </motion.p>
+              {/* Fallback for non-parseable date strings */}
+              {!dateParts && date && (
+                <motion.p
+                  initial={{ opacity: 0 }}
+                  animate={{ opacity: 1 }}
+                  transition={{ delay: 0.25 }}
+                  className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase ${s.metaGap}`}
+                >
+                  {date}
+                </motion.p>
+              )}
+            </>
           )}
         </div>
       )}
