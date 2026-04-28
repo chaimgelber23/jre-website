@@ -1157,50 +1157,58 @@ export default function EventDetailClient({
                       )}
                     </div>
 
-                    {/* Sponsorship Toggle */}
-                    {eligibleSponsorships.length > 0 && (
-                      <div className="pt-5 border-t border-gray-100/80">
-                        <motion.button
-                          type="button"
-                          onClick={() => {
-                            setShowSponsorship(!showSponsorship);
-                            if (showSponsorship) {
-                              setSelectedSponsorship(null);
-                            }
-                          }}
-                          className={`w-full relative overflow-hidden rounded-xl font-medium text-sm flex items-center justify-between gap-2 transition-all duration-300 px-5 py-4 ${showSponsorship
-                            ? "bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100"
-                            : "bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white shadow-md hover:shadow-lg"
-                            }`}
-                          whileHover={{ scale: showSponsorship ? 1 : 1.015 }}
-                          whileTap={{ scale: 0.98 }}
-                        >
-                          {/* Shimmer sweep */}
-                          {!showSponsorship && (
-                            <motion.span
-                              className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
-                              animate={{ x: ["-150%", "250%"] }}
-                              transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
-                            />
-                          )}
-                          <span className="relative flex flex-col items-start text-left">
-                            <span className={`font-semibold ${showSponsorship ? "text-gray-600" : "text-white"}`}>
-                              {showSponsorship ? "Close Sponsorship Options" : "Become a Sponsor"}
-                            </span>
-                            {!showSponsorship && lowestEligible && (
-                              <span className="text-white/80 text-xs font-normal">
-                                {eligibleSponsorships.length} tier{eligibleSponsorships.length > 1 ? "s" : ""} — starting at ${lowestEligible.price}
-                              </span>
-                            )}
-                          </span>
-                          <motion.span
-                            className="relative flex-shrink-0"
-                            animate={{ rotate: showSponsorship ? 180 : 0 }}
-                            transition={{ duration: 0.25 }}
+                    {/* Sponsorship Toggle.
+                        For FREE events with sponsorships, we skip this dark "Become a Sponsor" toggle
+                        because there's a softer dashed CTA card further down (where the $0 total would be)
+                        that does the same job — and showing both feels in-your-face. Paid events still
+                        get this toggle so the upsell is visible alongside their non-zero total.
+                        On free events, the whole wrapper is hidden until the user opens the tier list,
+                        so we don't leave an empty `pt-5 border-t` line above the dashed CTA. */}
+                    {eligibleSponsorships.length > 0 && (!isFreeEvent || showSponsorship) && (
+                      <div className={`${isFreeEvent ? "" : "pt-5 border-t border-gray-100/80"}`}>
+                        {!isFreeEvent && (
+                          <motion.button
+                            type="button"
+                            onClick={() => {
+                              setShowSponsorship(!showSponsorship);
+                              if (showSponsorship) {
+                                setSelectedSponsorship(null);
+                              }
+                            }}
+                            className={`w-full relative overflow-hidden rounded-xl font-medium text-sm flex items-center justify-between gap-2 transition-all duration-300 px-5 py-4 ${showSponsorship
+                              ? "bg-gray-50 text-gray-500 border border-gray-200 hover:bg-gray-100"
+                              : "bg-gradient-to-r from-[var(--theme-primary)] to-[var(--theme-hover)] text-white shadow-md hover:shadow-lg"
+                              }`}
+                            whileHover={{ scale: showSponsorship ? 1 : 1.015 }}
+                            whileTap={{ scale: 0.98 }}
                           >
-                            <ChevronDown className={`w-5 h-5 ${showSponsorship ? "text-gray-400" : "text-white"}`} />
-                          </motion.span>
-                        </motion.button>
+                            {/* Shimmer sweep */}
+                            {!showSponsorship && (
+                              <motion.span
+                                className="absolute inset-0 bg-gradient-to-r from-transparent via-white/20 to-transparent -skew-x-12"
+                                animate={{ x: ["-150%", "250%"] }}
+                                transition={{ duration: 2.5, repeat: Infinity, repeatDelay: 3, ease: "easeInOut" }}
+                              />
+                            )}
+                            <span className="relative flex flex-col items-start text-left">
+                              <span className={`font-semibold ${showSponsorship ? "text-gray-600" : "text-white"}`}>
+                                {showSponsorship ? "Close Sponsorship Options" : "Become a Sponsor"}
+                              </span>
+                              {!showSponsorship && lowestEligible && (
+                                <span className="text-white/80 text-xs font-normal">
+                                  {eligibleSponsorships.length} tier{eligibleSponsorships.length > 1 ? "s" : ""} — starting at ${lowestEligible.price}
+                                </span>
+                              )}
+                            </span>
+                            <motion.span
+                              className="relative flex-shrink-0"
+                              animate={{ rotate: showSponsorship ? 180 : 0 }}
+                              transition={{ duration: 0.25 }}
+                            >
+                              <ChevronDown className={`w-5 h-5 ${showSponsorship ? "text-gray-400" : "text-white"}`} />
+                            </motion.span>
+                          </motion.button>
+                        )}
 
                         <AnimatePresence>
                           {showSponsorship && (
