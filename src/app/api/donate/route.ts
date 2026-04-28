@@ -4,7 +4,7 @@ import { syncDonationToSheets } from "@/lib/google-sheets/sync";
 import { processDirectPayment } from "@/lib/banquest";
 import { createGrant } from "@/lib/donors-fund";
 import { processCharityCardTransaction } from "@/lib/ojc-fund";
-import { sendDonationConfirmation, sendHonoreeNotification } from "@/lib/email";
+import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert, sendDonationSaveFailedAlert } from "@/lib/email";
 import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type { Donation, DonationInsert } from "@/types/database";
 
@@ -113,6 +113,20 @@ export async function POST(request: NextRequest) {
       });
 
       if (!paymentResult.success) {
+        void sendPaymentFailureAlert({
+          campaignTitle: sponsorship ? `General Donation — ${sponsorship}` : "General Donation",
+          campaignSlug: "general-donation",
+          amount: numericAmount,
+          paymentMethod: effectiveRecurring ? "Card (monthly recurring)" : "Card",
+          errorMessage: paymentResult.error || "Card declined",
+          donorName: name,
+          donorEmail: email,
+          donorPhone: phone || null,
+          dedicationType: honorName ? "In honor of" : null,
+          dedicationName: honorName || null,
+          tierId: null,
+          teamId: null,
+        }).catch((e) => console.error("payment failure alert failed:", e));
         return NextResponse.json(
           { success: false, error: paymentResult.error || "Payment failed" },
           { status: 400 }
@@ -143,6 +157,20 @@ export async function POST(request: NextRequest) {
         purposeNote: sponsorship ? `JRE-${sponsorship}`.slice(0, 50) : "JRE Donation",
       });
       if (!grant.success) {
+        void sendPaymentFailureAlert({
+          campaignTitle: sponsorship ? `General Donation — ${sponsorship}` : "General Donation",
+          campaignSlug: "general-donation",
+          amount: numericAmount,
+          paymentMethod: "Donor's Fund",
+          errorMessage: grant.error || "Donor's Fund declined",
+          donorName: name,
+          donorEmail: email,
+          donorPhone: phone || null,
+          dedicationType: honorName ? "In honor of" : null,
+          dedicationName: honorName || null,
+          tierId: null,
+          teamId: null,
+        }).catch((e) => console.error("payment failure alert failed:", e));
         return NextResponse.json(
           { success: false, error: grant.error || "Donor's Fund grant failed" },
           { status: 400 }
@@ -164,6 +192,20 @@ export async function POST(request: NextRequest) {
         externalReferenceId,
       });
       if (!charge.success) {
+        void sendPaymentFailureAlert({
+          campaignTitle: sponsorship ? `General Donation — ${sponsorship}` : "General Donation",
+          campaignSlug: "general-donation",
+          amount: numericAmount,
+          paymentMethod: "OJC Charity Card",
+          errorMessage: charge.error || "OJC Charity Card declined",
+          donorName: name,
+          donorEmail: email,
+          donorPhone: phone || null,
+          dedicationType: honorName ? "In honor of" : null,
+          dedicationName: honorName || null,
+          tierId: null,
+          teamId: null,
+        }).catch((e) => console.error("payment failure alert failed:", e));
         return NextResponse.json(
           { success: false, error: charge.error || "OJC Charity Card declined" },
           { status: 400 }
@@ -201,6 +243,23 @@ export async function POST(request: NextRequest) {
 
     if (error || !insertedData) {
       console.error("Supabase insert error:", error);
+      void sendDonationSaveFailedAlert({
+        campaignTitle: sponsorship ? `General Donation — ${sponsorship}` : "General Donation",
+        campaignSlug: "general-donation",
+        amount: numericAmount,
+        paymentMethod,
+        paymentReference: paymentReference || null,
+        cardRef: null,
+        dbError: error?.message ?? "unknown postgres error (no insertedData returned)",
+        chargedSuccessfully: true,
+        donorName: name,
+        donorEmail: email,
+        donorPhone: phone || null,
+        dedicationType: honorName ? "In honor of" : null,
+        dedicationName: honorName || null,
+        tierId: null,
+        teamId: null,
+      }).catch((e) => console.error("save-failed alert failed:", e));
       return NextResponse.json(
         { success: false, error: "Failed to save donation" },
         { status: 500 }

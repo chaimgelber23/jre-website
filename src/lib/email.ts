@@ -583,7 +583,9 @@ export async function sendPaymentFailureAlert(data: PaymentFailureAlertData) {
     process.env.PAYMENT_FAILURE_ALERT_EMAIL ||
     process.env.ADMIN_ALERT_EMAIL ||
     "office@thejre.org";
-  const to = Array.from(new Set([primary, "cgelber@thejre.org"]));
+  const to = Array.from(
+    new Set([primary, "cgelber@thejre.org", "glevi@thejre.org"])
+  );
 
   const timestamp = new Date().toLocaleString("en-US", {
     timeZone: "America/New_York",
@@ -756,7 +758,9 @@ export async function sendDonationSaveFailedAlert(data: DonationSaveFailedAlertD
     process.env.PAYMENT_FAILURE_ALERT_EMAIL ||
     process.env.ADMIN_ALERT_EMAIL ||
     "office@thejre.org";
-  const to = Array.from(new Set([primary, "cgelber@thejre.org"]));
+  const to = Array.from(
+    new Set([primary, "cgelber@thejre.org", "glevi@thejre.org"])
+  );
 
   const timestamp = new Date().toLocaleString("en-US", {
     timeZone: "America/New_York",

@@ -4,7 +4,7 @@ import { appendEventRegistration, slugToSheetName, type EventSheetConfig, type E
 // Square kept for backup - uncomment to switch processors
 // import { processSquarePayment } from "@/lib/square";
 import { processDirectCardPayment } from "@/lib/banquest";
-import { sendRegistrationConfirmation } from "@/lib/email";
+import { sendRegistrationConfirmation, sendPaymentFailureAlert } from "@/lib/email";
 import { syncContactToConstantContact } from "@/lib/constant-contact";
 import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
@@ -178,6 +178,20 @@ export async function POST(
       });
 
       if (!paymentResult.success) {
+        void sendPaymentFailureAlert({
+          campaignTitle: `Event: ${event.title}`,
+          campaignSlug: slug,
+          amount: subtotal,
+          paymentMethod: "Card",
+          errorMessage: paymentResult.error || "Card declined",
+          donorName: name,
+          donorEmail: email,
+          donorPhone: normalizedPhone || null,
+          dedicationType: null,
+          dedicationName: sponsorshipName,
+          tierId: sponsorshipId || null,
+          teamId: null,
+        }).catch((e) => console.error("payment failure alert failed:", e));
         return NextResponse.json(
           { success: false, error: paymentResult.error || "Payment failed" },
           { status: 400 }

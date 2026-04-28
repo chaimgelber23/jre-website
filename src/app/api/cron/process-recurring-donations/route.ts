@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
 import { chargeRecurringPayment } from "@/lib/banquest";
-import { sendDonationConfirmation } from "@/lib/email";
+import { sendDonationConfirmation, sendPaymentFailureAlert } from "@/lib/email";
 import type { Donation } from "@/types/database";
 
 // Vercel Cron secret for authentication
@@ -142,6 +142,23 @@ export async function GET(request: NextRequest) {
           results.errors.push(`Donation ${donation.id}: ${paymentResult.error}`);
           console.error(`Failed to charge donation ${donation.id}:`, paymentResult.error);
 
+          void sendPaymentFailureAlert({
+            campaignTitle: donation.sponsorship
+              ? `Recurring Donation — ${donation.sponsorship}`
+              : "Recurring Donation",
+            campaignSlug: `recurring-${donation.id}`,
+            amount: donation.amount,
+            paymentMethod: "Card (recurring — saved card_ref)",
+            errorMessage: paymentResult.error || "Payment declined",
+            donorName: donation.name,
+            donorEmail: donation.email,
+            donorPhone: donation.phone || null,
+            dedicationType: donation.honor_name ? "In honor of" : null,
+            dedicationName: donation.honor_name || null,
+            tierId: null,
+            teamId: null,
+          }).catch((e) => console.error("recurring failure alert failed:", e));
+
           // TODO: After X consecutive failures, set recurring_status to "failed" or "paused"
           // and send notification email to donor
         }
@@ -256,6 +273,21 @@ async function processCampaignRecurring(
           .eq("id", row.id);
         results.failed++;
         results.errors.push(`${row.id}: ${paymentResult.error}`);
+
+        void sendPaymentFailureAlert({
+          campaignTitle: `Campaign Recurring (${row.campaign_id})`,
+          campaignSlug: `campaign-${row.campaign_id}`,
+          amount,
+          paymentMethod: "Card (recurring — saved card_ref)",
+          errorMessage: paymentResult.error || "Recurring charge declined",
+          donorName: row.name,
+          donorEmail: row.email,
+          donorPhone: null,
+          dedicationType: null,
+          dedicationName: null,
+          tierId: null,
+          teamId: null,
+        }).catch((e) => console.error("campaign recurring failure alert failed:", e));
       }
     } catch (err) {
       results.failed++;
