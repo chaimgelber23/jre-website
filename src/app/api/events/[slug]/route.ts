@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { createServerClient } from "@/lib/supabase/server";
-import { getEventImageAspect } from "@/lib/image-meta";
 import type { Event, EventSponsorship } from "@/types/database";
 
 export async function GET(
@@ -54,13 +53,10 @@ export async function GET(
 
     const sponsorships = (sponsorshipsData || []) as EventSponsorship[];
 
-    const imageAspectRatio = await getEventImageAspect(event.image_url);
-
     return NextResponse.json({
       success: true,
       event,
       sponsorships,
-      imageAspectRatio,
     });
   } catch (error) {
     console.error("Event fetch API error:", error);

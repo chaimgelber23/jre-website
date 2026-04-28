@@ -139,9 +139,23 @@ export default function EventDetailClient({
         const data = await response.json();
 
         if (data.success) {
+          // Pre-measure image aspect ratio so the hero picks the right layout
+          // without a flash. Falls back to null (floating-card mode) on error.
+          if (data.event?.image_url) {
+            const probe = new window.Image();
+            const ratio = await new Promise<number | null>((resolve) => {
+              probe.onload = () => {
+                const w = probe.naturalWidth;
+                const h = probe.naturalHeight;
+                resolve(w && h ? w / h : null);
+              };
+              probe.onerror = () => resolve(null);
+              probe.src = data.event.image_url;
+            });
+            setImageAspectRatio(ratio);
+          }
           setEvent(data.event);
           setSponsorships(data.sponsorships || []);
-          setImageAspectRatio(typeof data.imageAspectRatio === "number" ? data.imageAspectRatio : null);
         } else {
           setNotFound(true);
         }
