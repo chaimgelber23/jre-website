@@ -187,6 +187,8 @@ export interface PublicDonation {
   dedication_name: string | null;
   team_slug: string | null;
   team_name: string | null;
+  tier_label: string | null;
+  tier_hebrew: string | null;
   cause_slug: string | null;
   created_at: string;
 }

@@ -109,10 +109,12 @@ export function maskDonorName(fullName: string, anonymous: boolean): string {
 export function publicizeDonation(
   d: CampaignDonation,
   teams: { id: string; slug: string; name: string }[],
-  causes: { id: string; slug: string }[]
+  causes: { id: string; slug: string }[],
+  tiers: { id: string; label: string; hebrew_value: string | null }[] = []
 ): PublicDonation {
   const team = d.team_id ? teams.find((t) => t.id === d.team_id) : null;
   const cause = d.cause_id ? causes.find((c) => c.id === d.cause_id) : null;
+  const tier = d.tier_id ? tiers.find((t) => t.id === d.tier_id) : null;
   return {
     id: d.id,
     display_name: d.is_anonymous ? "Anonymous" : (d.display_name || maskDonorName(d.name, false)),
@@ -122,6 +124,8 @@ export function publicizeDonation(
     dedication_name: d.dedication_name,
     team_slug: team?.slug ?? null,
     team_name: team?.name ?? null,
+    tier_label: tier?.label ?? null,
+    tier_hebrew: tier?.hebrew_value ?? null,
     cause_slug: cause?.slug ?? null,
     created_at: d.created_at,
   };
@@ -196,7 +200,7 @@ export async function getCampaignTeamSnapshot(
 
   const donations = (donationsRes.data ?? []) as CampaignDonation[];
   const recent = donations.map((d) =>
-    publicizeDonation(d, [{ id: team.id, slug: team.slug, name: team.name }], causes)
+    publicizeDonation(d, [{ id: team.id, slug: team.slug, name: team.name }], causes, tiers)
   );
 
   return {
@@ -276,7 +280,7 @@ export async function getCampaignSnapshot(slug: string): Promise<CampaignSnapsho
   const percent = campaign.goal_cents > 0 ? Math.min(100, (total / campaign.goal_cents) * 100) : 0;
 
   const donations = (donationsRes.data ?? []) as CampaignDonation[];
-  const recent = donations.map((d) => publicizeDonation(d, teams, causes));
+  const recent = donations.map((d) => publicizeDonation(d, teams, causes, tiers));
 
   return {
     campaign,

@@ -7,6 +7,7 @@ import { processDirectCardPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { syncContactToConstantContact } from "@/lib/constant-contact";
 import { appendEventRegistration, type EventSheetConfig, type EventRegistrationRow } from "@/lib/google-sheets/event-sheets";
+import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 
 // Purim event details (fallback if not in Supabase)
 const PURIM_EVENT = {
@@ -22,6 +23,14 @@ const PURIM_EVENT = {
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
+
+    const captcha = await verifyTurnstileToken(body?.turnstileToken, getClientIp(request));
+    if (!captcha.ok) {
+      return NextResponse.json(
+        { success: false, error: "Verification failed. Please refresh the page and try again." },
+        { status: 400 }
+      );
+    }
 
     const {
       name,

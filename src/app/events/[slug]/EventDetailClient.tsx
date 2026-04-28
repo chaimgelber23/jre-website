@@ -4,6 +4,7 @@ import { useState, useEffect, useRef, use, useCallback } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 import {
   Calendar,
   Clock,
@@ -97,6 +98,9 @@ export default function EventDetailClient({
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [error, setError] = useState("");
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const captchaRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
   const [imageError, setImageError] = useState(false);
   const [sponsorshipClearedMsg, setSponsorshipClearedMsg] = useState(false);
 
@@ -285,6 +289,7 @@ export default function EventDetailClient({
         paymentMethod: promoApplied ? "promo" : paymentMethod,
         paymentProcessor: paymentMethod === "online" && !promoApplied ? paymentProcessor : undefined,
         promoCode: promoApplied ? promoCode : undefined,
+        turnstileToken: captchaToken,
       };
 
       // Include card data for online payment (skip if promo covers it or total is $0)
@@ -311,10 +316,12 @@ export default function EventDetailClient({
     } catch (err) {
       console.error("Registration error:", err);
       setError(err instanceof Error ? err.message : "Failed to complete registration. Please try again.");
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setIsSubmitting(false);
     }
-  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug, promoCode, promoApplied]);
+  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug, promoCode, promoApplied, captchaToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -342,6 +349,11 @@ export default function EventDetailClient({
         setError("Please enter the CVV code from your card.");
         return;
       }
+    }
+
+    if (captchaRequired && !captchaToken) {
+      setError("Please wait for verification to finish, then try again.");
+      return;
     }
 
     setIsSubmitting(true);
@@ -1476,6 +1488,17 @@ export default function EventDetailClient({
                         </div>
                       </div>
                     </div>
+                    )}
+
+                    {captchaRequired && (
+                      <div className="mb-3 flex justify-center">
+                        <TurnstileWidget
+                          onVerify={setCaptchaToken}
+                          onExpire={() => setCaptchaToken(null)}
+                          onError={() => setCaptchaToken(null)}
+                          resetSignal={captchaReset}
+                        />
+                      </div>
                     )}
 
                     {/* Submit */}

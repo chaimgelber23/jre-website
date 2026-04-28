@@ -5,6 +5,7 @@ import confetti from "canvas-confetti";
 import Image from "next/image";
 import Link from "next/link";
 import { motion, AnimatePresence } from "framer-motion";
+import TurnstileWidget from "@/components/ui/TurnstileWidget";
 import {
   Calendar,
   Clock,
@@ -126,6 +127,9 @@ export default function PurimEventPage() {
   const [error, setError] = useState<string | null>(null);
   const [guestErrors, setGuestErrors] = useState<boolean[]>([]);
   const [fieldErrors, setFieldErrors] = useState<{ name?: boolean; email?: boolean }>({});
+  const [captchaToken, setCaptchaToken] = useState<string | null>(null);
+  const [captchaReset, setCaptchaReset] = useState(0);
+  const captchaRequired = !!process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY;
 
   // Refs for auto-scroll
   const sponsorshipRef = useRef<HTMLDivElement>(null);
@@ -300,6 +304,7 @@ export default function PurimEventPage() {
         cardName: paymentMethod === "online" ? formState.cardName : undefined,
         message: formState.message,
         honoreeEmail: formState.honoreeEmail || null,
+        turnstileToken: captchaToken,
       };
 
       // Include card data for online payment (direct card input - matches old working site)
@@ -325,10 +330,12 @@ export default function PurimEventPage() {
     } catch (err) {
       console.error("Registration error:", err);
       setError(err instanceof Error ? err.message : "Failed to complete registration. Please try again.");
+      setCaptchaToken(null);
+      setCaptchaReset((n) => n + 1);
     } finally {
       setIsSubmitting(false);
     }
-  }, [formState, numAdults, numKids, guestDetails, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total]);
+  }, [formState, numAdults, numKids, guestDetails, selectedSponsorship, sponsorshipPrice, paymentMethod, paymentProcessor, total, captchaToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -400,6 +407,11 @@ export default function PurimEventPage() {
         setError("Please enter the CVV code from your card.");
         return;
       }
+    }
+
+    if (captchaRequired && !captchaToken) {
+      setError("Please wait for verification to finish, then try again.");
+      return;
     }
 
     setIsSubmitting(true);
@@ -1319,6 +1331,17 @@ export default function PurimEventPage() {
                         )}
                       </AnimatePresence>
                     </div>
+
+                    {captchaRequired && (
+                      <div className="mb-3 flex justify-center">
+                        <TurnstileWidget
+                          onVerify={setCaptchaToken}
+                          onExpire={() => setCaptchaToken(null)}
+                          onError={() => setCaptchaToken(null)}
+                          resetSignal={captchaReset}
+                        />
+                      </div>
+                    )}
 
                     {/* Submit */}
                     <motion.button

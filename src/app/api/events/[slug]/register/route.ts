@@ -6,6 +6,7 @@ import { appendEventRegistration, slugToSheetName, type EventSheetConfig, type E
 import { processDirectCardPayment } from "@/lib/banquest";
 import { sendRegistrationConfirmation } from "@/lib/email";
 import { syncContactToConstantContact } from "@/lib/constant-contact";
+import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type { Event, EventSponsorship, EventRegistration, EventRegistrationInsert } from "@/types/database";
 
 /** Convert 24-hour time (e.g. "19:30:00") to 12-hour (e.g. "7:30 PM") */
@@ -32,6 +33,14 @@ export async function POST(
   try {
     const { slug } = await params;
     const body = await request.json();
+
+    const captcha = await verifyTurnstileToken(body?.turnstileToken, getClientIp(request));
+    if (!captcha.ok) {
+      return NextResponse.json(
+        { success: false, error: "Verification failed. Please refresh the page and try again." },
+        { status: 400 }
+      );
+    }
 
     // Validate required fields
     const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests, promoCode } = body;

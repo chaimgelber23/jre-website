@@ -13,8 +13,10 @@ const KEY = process.env.SERVICE_KEY;
 const SITE = process.env.SITE_URL || "https://thejre.org";
 const CAMPAIGN_ID = "18dc277c-f8c5-4b39-9427-6cfee71773c4";
 const CAMPAIGN_SLUG = "onfire";
+const TEAM_HOFFMAN = "b4e8c0c9-2949-483b-a486-da32f0ad9ca2";
 const TEAM_ORATZ = "702a1a84-4c8d-40c0-8f2f-40f570094e84";
-const TEAM_WESTCHESTER = "fd17572f-da88-4e12-8f0a-b02ddd0cedf0";
+const TEAM_GELBER = "5a9dbec9-03eb-4ac5-8b28-fd0d44f3a947";
+const TEAM_FREIDBERG = "9fe2cd3b-a9c0-461e-bf89-b700bc115968";
 
 if (!KEY) {
   console.error("Missing SERVICE_KEY env var");
@@ -130,8 +132,8 @@ await donate("T2 $180 Team Oratz", {
   card: null, daf_sponsor: null, ojc_account_id: null, donors_fund: null,
 });
 
-await donate("T3 $100 Anon Westchester in-honor", {
-  amount_cents: 10000, tier_id: null, cause_id: null, team_id: TEAM_WESTCHESTER,
+await donate("T3 $100 Anon Hoffman in-honor", {
+  amount_cents: 10000, tier_id: null, cause_id: null, team_id: TEAM_HOFFMAN,
   payment_method: "other",
   name: "Test Three Hidden", email: "test-three@jre-test.local", phone: null,
   is_anonymous: true, message: "In honor of Rabbi Oratz",
@@ -153,10 +155,10 @@ await donate("T4 $250 Team Oratz 3x", {
   card: null, daf_sponsor: null, ojc_account_id: null, donors_fund: null,
 });
 
-await donate("T5 $500 Team Westchester 3x", {
-  amount_cents: 50000, tier_id: null, cause_id: null, team_id: TEAM_WESTCHESTER,
+await donate("T5 $500 Team Freidberg 3x", {
+  amount_cents: 50000, tier_id: null, cause_id: null, team_id: TEAM_FREIDBERG,
   payment_method: "check",
-  name: "Test Five Westchester", email: "test-five@jre-test.local", phone: null,
+  name: "Test Five Freidberg", email: "test-five@jre-test.local", phone: null,
   is_anonymous: false, message: "For the kids!",
   dedication_type: null, dedication_name: null, dedication_email: null,
   card: null, daf_sponsor: null, ojc_account_id: null, donors_fund: null,
@@ -191,7 +193,7 @@ const rows = await db(
 console.log("\nDB rows (test-*):");
 console.log(pad("NAME", 22) + pad("AMT", 6) + pad("MATCH", 7) + pad("STATUS", 10) + pad("METHOD", 8) + pad("TEAM", 8) + "FLAGS");
 for (const d of rows) {
-  const team = d.team_id === TEAM_ORATZ ? "Oratz" : d.team_id === TEAM_WESTCHESTER ? "Westch" : "-";
+  const team = d.team_id === TEAM_ORATZ ? "Oratz" : d.team_id === TEAM_HOFFMAN ? "Hoffman" : d.team_id === TEAM_FREIDBERG ? "Freidberg" : d.team_id === TEAM_GELBER ? "Gelber" : "-";
   const flags = [
     d.is_anonymous ? "ANON" : null,
     d.dedication_type ? `${d.dedication_type}:${d.dedication_name}` : null,
