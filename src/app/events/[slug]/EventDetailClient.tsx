@@ -44,6 +44,7 @@ export default function EventDetailClient({
   // Event data from DB
   const [event, setEvent] = useState<Event | null>(null);
   const [sponsorships, setSponsorships] = useState<EventSponsorship[]>([]);
+  const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
 
@@ -140,6 +141,7 @@ export default function EventDetailClient({
         if (data.success) {
           setEvent(data.event);
           setSponsorships(data.sponsorships || []);
+          setImageAspectRatio(typeof data.imageAspectRatio === "number" ? data.imageAspectRatio : null);
         } else {
           setNotFound(true);
         }
@@ -442,6 +444,7 @@ export default function EventDetailClient({
   const eventTime = formatTime(event.start_time, event.end_time);
   const hasEventImage = !!event.image_url && !imageError;
   const eventImage = event.image_url || "";
+  const isWideBanner = hasEventImage && imageAspectRatio != null && imageAspectRatio >= 2.5;
 
   // CSS custom properties for theming - applied to main wrapper
   const themeVars = {
@@ -575,141 +578,252 @@ export default function EventDetailClient({
       >
         <h1 className="sr-only">{event.title}</h1>
 
-        {/* Image / Placeholder area */}
-        <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[50vh] min-h-[360px] md:h-[65vh] md:min-h-[480px]"}`}>
-          {hasEventImage ? (
-            <>
-              {/* Blurred Background */}
-              <div className="absolute inset-0 z-0">
-                <Image
-                  src={eventImage}
-                  alt=""
-                  fill
-                  className="object-cover blur-[60px] opacity-30 scale-[1.2]"
-                  priority
-                />
-                <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
+        {isWideBanner ? (
+          <>
+            {/* Tier 1: full-bleed billboard banner */}
+            <div className="relative w-full aspect-[5/2] md:aspect-[4/1] overflow-hidden">
+              <Image
+                src={eventImage}
+                alt={event.title}
+                fill
+                className="object-cover"
+                priority
+                onError={() => setImageError(true)}
+              />
+              {/* Back to Events - top left over banner */}
+              <div className="absolute -top-20 left-0 right-0 container mx-auto px-6 z-10">
+                <Link
+                  href="/events"
+                  className={`inline-flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm ${isLightHero ? "text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white shadow-sm ring-1 ring-black/5" : "text-white/80 hover:text-white bg-black/30 hover:bg-black/50"}`}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <ArrowLeft className="w-4 h-4" />
+                  Back to Events
+                </Link>
               </div>
-              {/* Foreground flyer — floating card */}
-              <div className="absolute inset-0 z-10 p-3 pt-14 pb-24 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
-                  <Image
-                    src={eventImage}
-                    alt={event.title}
-                    fill
-                    className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-                    priority
-                    onError={() => setImageError(true)}
-                  />
-                </div>
-              </div>
-            </>
-          ) : (
-            <EventPlaceholder
-              title={event.title}
-              date={eventDate}
-              variant="hero"
-              themeColor={event.theme_color}
-              className="absolute inset-0"
-            />
-          )}
+            </div>
 
-          {/* Back to Events - top left */}
-          <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
-            <Link
-              href="/events"
-              className={`inline-flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm ${isLightHero ? "text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white shadow-sm ring-1 ring-black/5" : "text-white/80 hover:text-white bg-black/30 hover:bg-black/50"}`}
-              onClick={(e) => e.stopPropagation()}
-            >
-              <ArrowLeft className="w-4 h-4" />
-              Back to Events
-            </Link>
-          </div>
-
-          {/* Bottom overlay: info bar + click to register */}
-          <div className="absolute bottom-0 left-0 right-0 z-10">
-            {/* Gradient fade from transparent to dark bg */}
-            <div
-              className="h-32"
-              style={{ background: `linear-gradient(to bottom, transparent, ${theme.darkBg})` }}
-            />
-            <div className="pb-6 pt-1" style={{ backgroundColor: theme.darkBg }}>
-              <div className="container mx-auto px-6">
-                {/* Info icons row */}
+            {/* Tier 2: masthead on theme.darkBg */}
+            <div className="px-6 py-8 md:py-12" style={{ backgroundColor: theme.darkBg }}>
+              <div className="container mx-auto">
                 <motion.div
                   initial={{ opacity: 0, y: 15 }}
                   animate={{ opacity: 1, y: 0 }}
-                  transition={{ delay: 0.2 }}
-                  className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:gap-x-6 mb-4 md:mb-5"
+                  transition={{ delay: 0.15 }}
+                  className="text-center max-w-3xl mx-auto"
                 >
-                  <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
-                    <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
-                      <Calendar className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
-                    </div>
-                    <span className="font-medium">{eventDate}</span>
-                  </span>
-                  {eventTime && (
+                  <p className={`text-[10px] md:text-xs uppercase tracking-[0.3em] mb-3 md:mb-4 ${isLightHero ? "text-gray-500" : "text-white/70"}`}>
+                    The JRE Presents
+                  </p>
+                  <h2 className={`text-3xl md:text-5xl font-serif leading-tight mb-5 md:mb-6 ${isLightHero ? "text-gray-900" : "text-white"}`}>
+                    {event.title}
+                  </h2>
+                  {/* Info chips */}
+                  <div className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:gap-x-6 mb-6">
                     <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
                       <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
-                        <Clock className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                        <Calendar className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                       </div>
-                      <span className="font-medium">{eventTime}</span>
+                      <span className="font-medium">{eventDate}</span>
                     </span>
-                  )}
-                  {event.speaker && (
-                    <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
-                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
-                        <Users className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
-                      </div>
-                      <span className="font-medium">{event.speaker}</span>
-                    </span>
-                  )}
-                  {event.location && (
-                    event.location_url ? (
-                      <a
-                        href={event.location_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className={`flex items-center gap-2 text-sm transition-colors ${isLightHero ? "text-gray-800 hover:text-[var(--theme-primary)]" : "text-white hover:text-white/70"}`}
-                        onClick={(e) => e.stopPropagation()}
-                      >
-                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
-                          <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
-                        </div>
-                        <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
-                      </a>
-                    ) : (
+                    {eventTime && (
                       <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
                         <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
-                          <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                          <Clock className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                         </div>
-                        <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                        <span className="font-medium">{eventTime}</span>
                       </span>
-                    )
-                  )}
-                </motion.div>
-
-                {/* Click to Register */}
-                <motion.div
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.5 }}
-                  className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
-                >
-                  <span className={`text-sm font-medium tracking-wide ${isLightHero ? "text-gray-500" : "text-white/80"}`}>Click to Register</span>
+                    )}
+                    {event.speaker && (
+                      <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                          <Users className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                        </div>
+                        <span className="font-medium">{event.speaker}</span>
+                      </span>
+                    )}
+                    {event.location && (
+                      event.location_url ? (
+                        <a
+                          href={event.location_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 text-sm transition-colors ${isLightHero ? "text-gray-800 hover:text-[var(--theme-primary)]" : "text-white hover:text-white/70"}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                            <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                          </div>
+                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                        </a>
+                      ) : (
+                        <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                            <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                          </div>
+                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                        </span>
+                      )
+                    )}
+                  </div>
+                  {/* Click to Register */}
                   <motion.div
-                    animate={{ y: [0, 6, 0] }}
-                    transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.4 }}
+                    className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
                   >
-                    <svg className="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
-                    </svg>
+                    <span className={`text-sm font-medium tracking-wide ${isLightHero ? "text-gray-500" : "text-white/80"}`}>Click to Register</span>
+                    <motion.div
+                      animate={{ y: [0, 6, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <svg className="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    </motion.div>
                   </motion.div>
                 </motion.div>
               </div>
             </div>
+          </>
+        ) : (
+          /* Image / Placeholder area — floating card layout */
+          <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[50vh] min-h-[360px] md:h-[65vh] md:min-h-[480px]"}`}>
+            {hasEventImage ? (
+              <>
+                {/* Blurred Background */}
+                <div className="absolute inset-0 z-0">
+                  <Image
+                    src={eventImage}
+                    alt=""
+                    fill
+                    className="object-cover blur-[60px] opacity-30 scale-[1.2]"
+                    priority
+                  />
+                  <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
+                </div>
+                {/* Foreground flyer — floating card */}
+                <div className="absolute inset-0 z-10 p-3 pt-14 pb-24 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
+                  <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
+                    <Image
+                      src={eventImage}
+                      alt={event.title}
+                      fill
+                      className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                      priority
+                      onError={() => setImageError(true)}
+                    />
+                  </div>
+                </div>
+              </>
+            ) : (
+              <EventPlaceholder
+                title={event.title}
+                date={eventDate}
+                variant="hero"
+                themeColor={event.theme_color}
+                className="absolute inset-0"
+              />
+            )}
+
+            {/* Back to Events - top left */}
+            <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
+              <Link
+                href="/events"
+                className={`inline-flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm ${isLightHero ? "text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white shadow-sm ring-1 ring-black/5" : "text-white/80 hover:text-white bg-black/30 hover:bg-black/50"}`}
+                onClick={(e) => e.stopPropagation()}
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Back to Events
+              </Link>
+            </div>
+
+            {/* Bottom overlay: info bar + click to register */}
+            <div className="absolute bottom-0 left-0 right-0 z-10">
+              {/* Gradient fade from transparent to dark bg */}
+              <div
+                className="h-32"
+                style={{ background: `linear-gradient(to bottom, transparent, ${theme.darkBg})` }}
+              />
+              <div className="pb-6 pt-1" style={{ backgroundColor: theme.darkBg }}>
+                <div className="container mx-auto px-6">
+                  {/* Info icons row */}
+                  <motion.div
+                    initial={{ opacity: 0, y: 15 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.2 }}
+                    className="flex flex-wrap items-center justify-center gap-x-4 gap-y-2 md:gap-x-6 mb-4 md:mb-5"
+                  >
+                    <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                      <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                        <Calendar className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                      </div>
+                      <span className="font-medium">{eventDate}</span>
+                    </span>
+                    {eventTime && (
+                      <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                          <Clock className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                        </div>
+                        <span className="font-medium">{eventTime}</span>
+                      </span>
+                    )}
+                    {event.speaker && (
+                      <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                        <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                          <Users className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                        </div>
+                        <span className="font-medium">{event.speaker}</span>
+                      </span>
+                    )}
+                    {event.location && (
+                      event.location_url ? (
+                        <a
+                          href={event.location_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className={`flex items-center gap-2 text-sm transition-colors ${isLightHero ? "text-gray-800 hover:text-[var(--theme-primary)]" : "text-white hover:text-white/70"}`}
+                          onClick={(e) => e.stopPropagation()}
+                        >
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                            <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                          </div>
+                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                        </a>
+                      ) : (
+                        <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
+                          <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
+                            <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
+                          </div>
+                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                        </span>
+                      )
+                    )}
+                  </motion.div>
+
+                  {/* Click to Register */}
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    transition={{ delay: 0.5 }}
+                    className="flex flex-col items-center gap-1.5 opacity-70 group-hover:opacity-100 transition-opacity"
+                  >
+                    <span className={`text-sm font-medium tracking-wide ${isLightHero ? "text-gray-500" : "text-white/80"}`}>Click to Register</span>
+                    <motion.div
+                      animate={{ y: [0, 6, 0] }}
+                      transition={{ duration: 1.5, repeat: Infinity, ease: "easeInOut" }}
+                    >
+                      <svg className="w-5 h-5 text-[var(--theme-primary)]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 14l-7 7m0 0l-7-7m7 7V3" />
+                      </svg>
+                    </motion.div>
+                  </motion.div>
+                </div>
+              </div>
+            </div>
           </div>
-        </div>
+        )}
       </section>
 
       {/* Content */}
