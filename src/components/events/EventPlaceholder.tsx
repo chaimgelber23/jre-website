@@ -96,7 +96,7 @@ export default function EventPlaceholder({
       title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
       meta: "text-xs md:text-sm lg:text-base",
       metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
-      padding: "px-5 py-10 sm:px-8 sm:py-12 md:px-16 md:py-20",
+      padding: "px-4 py-8 sm:px-6 sm:py-10 md:px-12 md:py-16",
       maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
       eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
       metaGap: "mt-6 sm:mt-8 md:mt-10",

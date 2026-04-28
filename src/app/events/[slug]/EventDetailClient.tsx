@@ -689,7 +689,7 @@ export default function EventDetailClient({
           </>
         ) : (
           /* Image / Placeholder area — floating card layout */
-          <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[50vh] min-h-[360px] md:h-[65vh] md:min-h-[480px]"}`}>
+          <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[60vh] min-h-[460px] md:h-[75vh] md:min-h-[560px]"}`}>
             {hasEventImage ? (
               <>
                 {/* Blurred Background */}
@@ -718,13 +718,20 @@ export default function EventDetailClient({
                 </div>
               </>
             ) : (
-              <EventPlaceholder
-                title={event.title}
-                date={eventDate}
-                variant="hero"
-                themeColor={event.theme_color}
-                className="absolute inset-0"
-              />
+              // Placeholder also rendered as a "hung flyer" floating card so it matches
+              // the image variant AND naturally reserves bottom space for the info bar
+              // overlay (no mobile mushing into the title).
+              <div className="absolute inset-0 z-10 p-3 pt-14 pb-28 sm:p-6 sm:pt-16 sm:pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
+                <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
+                  <EventPlaceholder
+                    title={event.title}
+                    date={eventDate}
+                    variant="hero"
+                    themeColor={event.theme_color}
+                    className="absolute inset-0"
+                  />
+                </div>
+              </div>
             )}
 
             {/* Back to Events - top left */}
