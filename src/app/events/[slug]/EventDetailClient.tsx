@@ -732,20 +732,18 @@ export default function EventDetailClient({
                 </div>
               </>
             ) : (
-              // Placeholder also rendered as a "hung flyer" floating card so it matches
-              // the image variant AND naturally reserves bottom space for the info bar
-              // overlay (no mobile mushing into the title).
-              <div className="absolute inset-0 z-10 p-3 pt-14 pb-28 sm:p-6 sm:pt-16 sm:pb-32 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
-                  <EventPlaceholder
-                    title={event.title}
-                    date={eventDate}
-                    variant="hero"
-                    themeColor={event.theme_color}
-                    className="absolute inset-0"
-                  />
-                </div>
-              </div>
+              // Full-bleed placeholder. The hero variant has heavy bottom padding
+              // (pb-40 sm:pb-48 md:pb-56) so content sits in the upper portion of
+              // the hero, clear of the bottom info-bar overlay. No floating card —
+              // a visible card frame on a flat background reads as "hovering UI"
+              // rather than editorial design.
+              <EventPlaceholder
+                title={event.title}
+                date={eventDate}
+                variant="hero"
+                themeColor={event.theme_color}
+                className="absolute inset-0"
+              />
             )}
 
             {/* Back to Events - top left */}

@@ -65,17 +65,17 @@ export default function EventPlaceholder({
 
   const sizes = {
     card: {
-      eyebrow: "text-[8px]",
-      eyebrowTrack: "tracking-[0.25em]",
+      eyebrow: "text-[9px]",
+      eyebrowTrack: "tracking-[0.3em]",
       title: "text-base md:text-lg",
       meta: "text-[10px]",
-      metaTrack: "tracking-[0.2em]",
-      padding: "px-4 py-5",
+      metaTrack: "tracking-[0.25em]",
+      padding: "px-4 py-6",
       maxTitle: "max-w-[94%]",
       eyebrowGap: "mb-4",
       metaGap: "mt-4",
       eyebrowRule: "w-3",
-      metaRule: "w-4",
+      metaRule: "w-6",
     },
     featured: {
       eyebrow: "text-[10px]",
@@ -92,11 +92,13 @@ export default function EventPlaceholder({
     },
     hero: {
       eyebrow: "text-[10px] md:text-xs lg:text-sm",
-      eyebrowTrack: "tracking-[0.25em] md:tracking-[0.35em] lg:tracking-[0.4em]",
+      eyebrowTrack: "tracking-[0.3em] md:tracking-[0.4em] lg:tracking-[0.45em]",
       title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
       meta: "text-xs md:text-sm lg:text-base",
       metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
-      padding: "px-4 py-8 sm:px-6 sm:py-10 md:px-12 md:py-16",
+      // Heavy bottom padding so content sits in the upper portion of the hero,
+      // clear of the bottom info-bar overlay (~200-240px on mobile/desktop).
+      padding: "px-5 pt-12 pb-40 sm:px-8 sm:pt-16 sm:pb-48 md:px-16 md:pt-20 md:pb-56",
       maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
       eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
       metaGap: "mt-6 sm:mt-8 md:mt-10",
@@ -128,23 +130,51 @@ export default function EventPlaceholder({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`flex items-center gap-3 ${variant === "card" ? "" : s.eyebrowGap}`}
+            className={`flex items-center gap-3 ${variant === "card" ? "mb-3" : s.eyebrowGap}`}
           >
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
             <span
               className={`${s.eyebrow} ${s.eyebrowTrack} font-medium uppercase whitespace-nowrap`}
               style={{ color: `rgba(${theme.primaryRgb}, 0.9)` }}
             >
-              The JRE Presents
+              The JRE
             </span>
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
           </motion.div>
 
-          {/* Title + date are intentionally hidden in card variant — the parent
-              listing card already shows title/date/time/location below the image
-              area, and duplicating them here causes overflow clipping in the
-              fixed h-52 container. Card variant shows ONLY the eyebrow as a
-              subtle brand mark on the themed glow background. */}
+          {/* Card variant: stylized date stamp instead of title (parent card body
+              already renders title/description/date — duplicating title here
+              clipped on production). Date stamp gives the dark area presence
+              without redundancy. */}
+          {variant === "card" && dateParts && (
+            <motion.div
+              initial={{ opacity: 0, y: 6 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.5, delay: 0.1 }}
+              className="flex flex-col items-center"
+            >
+              <span
+                className="text-[10px] font-medium tracking-[0.3em] uppercase"
+                style={{ color: `rgba(${theme.primaryRgb}, 0.85)` }}
+              >
+                {dateParts.month}
+              </span>
+              <span
+                className={`text-5xl ${textColor} font-serif font-normal leading-none mt-1`}
+              >
+                {dateParts.day}
+              </span>
+              <span
+                className="block h-px w-8 my-3"
+                style={{ backgroundColor: ruleColor }}
+              />
+              <span className={`text-[10px] ${mutedColor} font-medium tracking-[0.3em] uppercase`}>
+                {dateParts.year}
+              </span>
+            </motion.div>
+          )}
+
+          {/* Hero + featured: full editorial — title + stacked date row */}
           {variant !== "card" && (
             <>
               {/* Title: light-weight system serif, single voice (no color-split halves) */}
