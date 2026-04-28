@@ -1,7 +1,6 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Sparkles } from "lucide-react";
 import { getEventTheme } from "@/lib/event-theme";
 
 interface EventPlaceholderProps {
@@ -16,10 +15,37 @@ interface EventPlaceholderProps {
   className?: string;
 }
 
+type DateParts = { month: string; day: string; year: string } | null;
+
+// Accepts ISO "2026-06-03" (parsed as local — no off-by-one),
+// formatted strings like "Wednesday, June 3, 2026", or anything Date can parse.
+function parseDateParts(input?: string): DateParts {
+  if (!input) return null;
+  const iso = input.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (iso) {
+    const [, y, m, d] = iso;
+    const dt = new Date(parseInt(y, 10), parseInt(m, 10) - 1, parseInt(d, 10));
+    return {
+      month: dt.toLocaleString("en-US", { month: "short" }).toUpperCase(),
+      day: String(parseInt(d, 10)).padStart(2, "0"),
+      year: y,
+    };
+  }
+  const dt = new Date(input);
+  if (!isNaN(dt.getTime())) {
+    return {
+      month: dt.toLocaleString("en-US", { month: "short" }).toUpperCase(),
+      day: String(dt.getDate()).padStart(2, "0"),
+      year: String(dt.getFullYear()),
+    };
+  }
+  return null;
+}
+
 /**
- * Professional text-based placeholder for events without a photo.
- * Designed to look like an elegant event poster/invitation using typography,
- * geometric accents, and brand colors. Supports per-event theming.
+ * Editorial-style placeholder for events without a photo.
+ * Restrained typography (system serif title, tracked-caps eyebrow + date),
+ * warm theme-colored ambient glow, no decorative brackets or diagonal lines.
  */
 export default function EventPlaceholder({
   title,
@@ -30,149 +56,128 @@ export default function EventPlaceholder({
   className = "",
 }: EventPlaceholderProps) {
   const theme = getEventTheme(themeColor);
-
-  // Split title for elegant two-line display if it's long
-  const words = title.split(" ");
-  const midpoint = Math.ceil(words.length / 2);
-  const line1 = words.slice(0, midpoint).join(" ");
-  const line2 = words.slice(midpoint).join(" ");
-  const isShortTitle = words.length <= 3;
-
-  const titleSizes = {
-    card: "text-lg md:text-xl",
-    featured: "text-2xl md:text-3xl",
-    hero: "text-3xl md:text-5xl",
-  };
-
-  const subtitleSizes = {
-    card: "text-[10px]",
-    featured: "text-xs",
-    hero: "text-sm",
-  };
-
-  const dateSizes = {
-    card: "text-xs",
-    featured: "text-sm",
-    hero: "text-base md:text-lg",
-  };
-
-  const accentLineWidth = {
-    card: "w-12",
-    featured: "w-16",
-    hero: "w-20",
-  };
-
-  const cornerSize = {
-    card: "w-8 h-8",
-    featured: "w-12 h-12",
-    hero: "w-16 h-16",
-  };
-
-  const padding = {
-    card: "p-5",
-    featured: "p-8",
-    hero: "p-10 md:p-16",
-  };
-
-  const borderWidth = variant === "hero" ? "3px" : "2px";
-  const cornerBorder = `${borderWidth} solid rgba(${theme.primaryRgb}, 0.4)`;
-
   const isLightTheme = theme.darkBg === "#ffffff" || theme.darkBg.toLowerCase() === "#fff";
   const textColor = isLightTheme ? "text-gray-900" : "text-white";
-  const mutedTextColor = isLightTheme ? "text-gray-500" : "text-gray-400";
+  const mutedColor = isLightTheme ? "text-gray-500" : "text-white/60";
+  const ruleColor = isLightTheme ? "rgba(0,0,0,0.14)" : "rgba(255,255,255,0.22)";
+
+  const dateParts = parseDateParts(date);
+
+  const sizes = {
+    card: {
+      eyebrow: "text-[8px]",
+      eyebrowTrack: "tracking-[0.25em]",
+      title: "text-base md:text-lg",
+      meta: "text-[10px]",
+      metaTrack: "tracking-[0.2em]",
+      padding: "px-4 py-5",
+      maxTitle: "max-w-[94%]",
+      eyebrowGap: "mb-4",
+      metaGap: "mt-4",
+      eyebrowRule: "w-3",
+      metaRule: "w-4",
+    },
+    featured: {
+      eyebrow: "text-[10px]",
+      eyebrowTrack: "tracking-[0.3em]",
+      title: "text-2xl md:text-3xl",
+      meta: "text-[11px] md:text-xs",
+      metaTrack: "tracking-[0.25em]",
+      padding: "px-5 py-7 md:px-6 md:py-8",
+      maxTitle: "max-w-[88%]",
+      eyebrowGap: "mb-5 md:mb-6",
+      metaGap: "mt-5 md:mt-6",
+      eyebrowRule: "w-4 md:w-6",
+      metaRule: "w-7 md:w-10",
+    },
+    hero: {
+      eyebrow: "text-[10px] md:text-xs lg:text-sm",
+      eyebrowTrack: "tracking-[0.25em] md:tracking-[0.35em] lg:tracking-[0.4em]",
+      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
+      meta: "text-xs md:text-sm lg:text-base",
+      metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
+      padding: "px-5 py-10 sm:px-8 sm:py-12 md:px-16 md:py-20",
+      maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
+      eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
+      metaGap: "mt-6 sm:mt-8 md:mt-10",
+      eyebrowRule: "w-5 sm:w-8 md:w-12 lg:w-14",
+      metaRule: "w-7 sm:w-12 md:w-16 lg:w-20",
+    },
+  };
+  const s = sizes[variant];
 
   return (
     <div
       className={`relative overflow-hidden ${className}`}
       style={{
-        background: `linear-gradient(135deg, ${theme.darkerBg} 0%, ${theme.darkBg} 40%, ${theme.darkerBg} 100%)`,
+        background: `linear-gradient(180deg, ${theme.darkerBg} 0%, ${theme.darkBg} 55%, ${theme.darkBg} 100%)`,
       }}
     >
-      {/* Dot pattern overlay */}
+      {/* Single soft warm glow at top — gives the title a subtle stage */}
       <div
-        className={`absolute inset-0 flex transition-opacity duration-300 opacity-[0.04]`}
+        className="absolute inset-0 pointer-events-none"
         style={{
-          backgroundImage: `radial-gradient(circle, ${isLightTheme ? '#000' : '#fff'} 1px, transparent 1px)`,
-          backgroundSize: variant === "card" ? "16px 16px" : "24px 24px",
+          background: `radial-gradient(ellipse 70% 50% at 50% 30%, rgba(${theme.primaryRgb}, 0.09) 0%, transparent 65%)`,
         }}
       />
 
-      {/* Subtle center radial glow */}
-      <div
-        className="absolute inset-0"
-        style={{
-          background: `radial-gradient(ellipse at center, rgba(${theme.primaryRgb}, 0.08) 0%, transparent 70%)`,
-        }}
-      />
-
-      {/* Decorative diagonal lines */}
-      <div
-        className="absolute inset-0 opacity-[0.03]"
-        style={{
-          backgroundImage: `repeating-linear-gradient(
-            45deg,
-            transparent,
-            transparent 30px,
-            rgba(${isLightTheme ? '0,0,0' : '255,255,255'},0.5) 30px,
-            rgba(${isLightTheme ? '0,0,0' : '255,255,255'},0.5) 31px
-          )`,
-        }}
-      />
-
-      {/* Corner accents */}
-      <div className={`absolute top-3 left-3 ${cornerSize[variant]} rounded-tl-lg`} style={{ borderTop: cornerBorder, borderLeft: cornerBorder }} />
-      <div className={`absolute top-3 right-3 ${cornerSize[variant]} rounded-tr-lg`} style={{ borderTop: cornerBorder, borderRight: cornerBorder }} />
-      <div className={`absolute bottom-3 left-3 ${cornerSize[variant]} rounded-bl-lg`} style={{ borderBottom: cornerBorder, borderLeft: cornerBorder }} />
-      <div className={`absolute bottom-3 right-3 ${cornerSize[variant]} rounded-br-lg`} style={{ borderBottom: cornerBorder, borderRight: cornerBorder }} />
-
-      {/* Content - hidden in backgroundOnly mode */}
       {!backgroundOnly && (
-        <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${padding[variant]}`}>
-          {/* "THE JRE PRESENTS" header */}
-          <div className="flex items-center gap-2 mb-3">
-            {variant !== "card" && (
-              <div className="w-6 h-px" style={{ background: `linear-gradient(to right, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
-            )}
-            <span className={`${subtitleSizes[variant]} font-semibold tracking-[0.25em] uppercase`} style={{ color: `rgba(${theme.primaryRgb}, 0.8)` }}>
+        <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${s.padding}`}>
+          {/* Eyebrow: tracked caps with hairline rules */}
+          <motion.div
+            initial={{ opacity: 0, y: 6 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.5 }}
+            className={`flex items-center gap-3 ${s.eyebrowGap}`}
+          >
+            <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
+            <span
+              className={`${s.eyebrow} ${s.eyebrowTrack} font-medium uppercase whitespace-nowrap`}
+              style={{ color: `rgba(${theme.primaryRgb}, 0.9)` }}
+            >
               The JRE Presents
             </span>
-            {variant !== "card" && (
-              <div className="w-6 h-px" style={{ background: `linear-gradient(to left, transparent, rgba(${theme.primaryRgb}, 0.5))` }} />
-            )}
-          </div>
+            <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
+          </motion.div>
 
-          {/* Decorative sparkle */}
-          {variant !== "card" && (
+          {/* Title: light-weight system serif, single voice (no color-split halves) */}
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.05] tracking-tight break-words [text-wrap:balance]`}
+          >
+            {title}
+          </motion.h1>
+
+          {/* Date: editorial stacked caps with hairline rules */}
+          {dateParts && (
             <motion.div
-              initial={{ opacity: 0, scale: 0 }}
-              animate={{ opacity: 1, scale: 1 }}
-              transition={{ delay: 0.3, type: "spring" }}
-              className="mb-3"
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              className={`flex items-center gap-3 md:gap-4 ${s.metaGap}`}
             >
-              <Sparkles className="w-5 h-5" style={{ color: `rgba(${theme.primaryRgb}, 0.6)` }} />
+              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
+              <span className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase whitespace-nowrap`}>
+                {dateParts.month} {dateParts.day}
+                <span className="mx-1.5 md:mx-2 opacity-50">·</span>
+                {dateParts.year}
+              </span>
+              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
             </motion.div>
           )}
 
-          {/* Event Title */}
-          <div className={`${titleSizes[variant]} font-bold ${textColor} leading-tight max-w-[90%]`}>
-            {isShortTitle ? (
-              <span>{title}</span>
-            ) : (
-              <>
-                <span className="block">{line1}</span>
-                <span className="block" style={{ color: theme.primary }}>{line2}</span>
-              </>
-            )}
-          </div>
-
-          {/* Accent line */}
-          <div className={`${accentLineWidth[variant]} h-0.5 my-3`} style={{ background: `linear-gradient(to right, transparent, ${theme.primary}, transparent)` }} />
-
-          {/* Date */}
-          {date && (
-            <p className={`${dateSizes[variant]} ${mutedTextColor} font-medium tracking-wide`}>
+          {/* Fallback for non-parseable date strings */}
+          {!dateParts && date && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.25 }}
+              className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase ${s.metaGap}`}
+            >
               {date}
-            </p>
+            </motion.p>
           )}
         </div>
       )}
