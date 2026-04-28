@@ -96,11 +96,12 @@ export default function EventPlaceholder({
       title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
       meta: "text-xs md:text-sm lg:text-base",
       metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
-      // Consistent pb-44 across all sizes — combined with justify-end below,
-      // gives content the SAME ~50px breathing room above the info-bar gradient
-      // on both mobile (460px hero) and desktop (560px hero). Heavy asymmetric
-      // padding produced "too far on desktop, too close on phone."
-      padding: "px-5 pt-16 pb-44 sm:px-8 sm:pt-20 md:px-16 md:pt-24",
+      // Balanced padding for vertically-centered content. The hero now lives
+      // in a flex-1 container above a natural-flow info bar, so the placeholder
+      // doesn't need heavy bottom padding to clear an absolute-positioned
+      // overlay anymore — the info bar takes whatever height it needs and the
+      // placeholder fills the remaining space cleanly.
+      padding: "px-5 py-12 sm:px-8 sm:py-14 md:px-16 md:py-16",
       maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
       eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
       metaGap: "mt-6 sm:mt-8 md:mt-10",
@@ -126,7 +127,7 @@ export default function EventPlaceholder({
       />
 
       {!backgroundOnly && (
-        <div className={`relative z-10 h-full flex flex-col items-center text-center ${variant === "hero" ? "justify-end" : "justify-center"} ${s.padding}`}>
+        <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${s.padding}`}>
           {/* Eyebrow: tracked caps with hairline rules */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}

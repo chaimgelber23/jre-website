@@ -668,14 +668,14 @@ export default function EventDetailClient({
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
                             <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                           </div>
-                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                          <span className="font-medium">{(() => { const dash = event.location.indexOf(' - '); return dash > -1 ? event.location.substring(0, dash).trim() : event.location.split(', ')[0].trim(); })()}</span>
                         </a>
                       ) : (
                         <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
                             <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                           </div>
-                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                          <span className="font-medium">{(() => { const dash = event.location.indexOf(' - '); return dash > -1 ? event.location.substring(0, dash).trim() : event.location.split(', ')[0].trim(); })()}</span>
                         </span>
                       )
                     )}
@@ -702,52 +702,15 @@ export default function EventDetailClient({
             </div>
           </>
         ) : (
-          /* Image / Placeholder area — floating card layout */
-          <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "h-[60vh] min-h-[460px] md:h-[75vh] md:min-h-[560px]"}`}>
-            {hasEventImage ? (
-              <>
-                {/* Blurred Background */}
-                <div className="absolute inset-0 z-0">
-                  <Image
-                    src={eventImage}
-                    alt=""
-                    fill
-                    className="object-cover blur-[60px] opacity-30 scale-[1.2]"
-                    priority
-                  />
-                  <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
-                </div>
-                {/* Foreground flyer — floating card */}
-                <div className="absolute inset-0 z-10 p-3 pt-14 pb-24 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                  <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
-                    <Image
-                      src={eventImage}
-                      alt={event.title}
-                      fill
-                      className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
-                      priority
-                      onError={() => setImageError(true)}
-                    />
-                  </div>
-                </div>
-              </>
-            ) : (
-              // Full-bleed placeholder. The hero variant has heavy bottom padding
-              // (pb-40 sm:pb-48 md:pb-56) so content sits in the upper portion of
-              // the hero, clear of the bottom info-bar overlay. No floating card —
-              // a visible card frame on a flat background reads as "hovering UI"
-              // rather than editorial design.
-              <EventPlaceholder
-                title={event.title}
-                date={eventDate}
-                variant="hero"
-                themeColor={event.theme_color}
-                className="absolute inset-0"
-              />
-            )}
-
-            {/* Back to Events - top left */}
-            <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-10">
+          /* Image / Placeholder area — flex column so the info bar takes its
+             natural height (which varies — 1 row on desktop with short
+             location, 4 rows on mobile with long address) and the
+             placeholder/image fills the remaining space above. Fixed-pb
+             reservations were brittle because the info bar's actual height
+             depends on viewport width AND content length. */
+          <div className={`relative flex flex-col ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px]" : "h-[60vh] min-h-[460px] md:h-[75vh] md:min-h-[560px]"}`}>
+            {/* Back to Events - top left, absolute over the whole hero */}
+            <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-20">
               <Link
                 href="/events"
                 className={`inline-flex items-center gap-2 backdrop-blur-md px-4 py-2 rounded-lg transition-colors text-sm ${isLightHero ? "text-gray-700 hover:text-gray-900 bg-white/80 hover:bg-white shadow-sm ring-1 ring-black/5" : "text-white/80 hover:text-white bg-black/30 hover:bg-black/50"}`}
@@ -758,8 +721,50 @@ export default function EventDetailClient({
               </Link>
             </div>
 
-            {/* Bottom overlay: info bar + click to register */}
-            <div className="absolute bottom-0 left-0 right-0 z-10">
+            {/* Image / placeholder area — fills remaining space above the info bar */}
+            <div className={`relative flex-1 min-h-0 ${hasEventImage ? "overflow-hidden" : ""}`}>
+              {hasEventImage ? (
+                <>
+                  {/* Blurred Background */}
+                  <div className="absolute inset-0 z-0">
+                    <Image
+                      src={eventImage}
+                      alt=""
+                      fill
+                      className="object-cover blur-[60px] opacity-30 scale-[1.2]"
+                      priority
+                    />
+                    <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
+                  </div>
+                  {/* Foreground flyer — floating card */}
+                  <div className="absolute inset-0 z-10 p-3 pt-14 md:p-12 md:pt-20 flex items-center justify-center">
+                    <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
+                      <Image
+                        src={eventImage}
+                        alt={event.title}
+                        fill
+                        className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                        priority
+                        onError={() => setImageError(true)}
+                      />
+                    </div>
+                  </div>
+                </>
+              ) : (
+                <EventPlaceholder
+                  title={event.title}
+                  date={eventDate}
+                  variant="hero"
+                  themeColor={event.theme_color}
+                  className="absolute inset-0"
+                />
+              )}
+            </div>
+
+            {/* Info bar — natural-flow at the bottom of the flex column.
+                No longer absolute, so it can take whatever height it needs
+                without overlapping the placeholder/image area above. */}
+            <div className="relative z-10">
               {/* Gradient fade from transparent to dark bg */}
               <div
                 className="h-32"
@@ -808,14 +813,14 @@ export default function EventDetailClient({
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
                             <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                           </div>
-                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                          <span className="font-medium">{(() => { const dash = event.location.indexOf(' - '); return dash > -1 ? event.location.substring(0, dash).trim() : event.location.split(', ')[0].trim(); })()}</span>
                         </a>
                       ) : (
                         <span className={`flex items-center gap-2 text-sm ${isLightHero ? "text-gray-800" : "text-white"}`}>
                           <div className={`w-7 h-7 rounded-lg flex items-center justify-center ${isLightHero ? "bg-[var(--theme-primary)]/10" : "bg-white/20"}`}>
                             <MapPin className={`w-4 h-4 ${isLightHero ? "text-[var(--theme-primary)]" : "text-white"}`} />
                           </div>
-                          <span className="font-medium">{event.location.split(' - ')[0] || event.location}</span>
+                          <span className="font-medium">{(() => { const dash = event.location.indexOf(' - '); return dash > -1 ? event.location.substring(0, dash).trim() : event.location.split(', ')[0].trim(); })()}</span>
                         </span>
                       )
                     )}
@@ -888,7 +893,7 @@ export default function EventDetailClient({
                                   rel="noopener noreferrer"
                                   className="text-sm font-semibold text-gray-900 hover:text-[var(--theme-primary)] transition-colors"
                                 >
-                                  {event.location.split(' - ')[0] || event.location}
+                                  {(() => { const dash = event.location.indexOf(' - '); return dash > -1 ? event.location.substring(0, dash).trim() : event.location.split(', ')[0].trim(); })()}
                                 </a>
                                 {event.location.includes(' - ') && (
                                   <a
