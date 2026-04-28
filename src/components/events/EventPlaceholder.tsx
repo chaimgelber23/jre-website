@@ -96,9 +96,11 @@ export default function EventPlaceholder({
       title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
       meta: "text-xs md:text-sm lg:text-base",
       metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
-      // Heavy bottom padding so content sits in the upper portion of the hero,
-      // clear of the bottom info-bar overlay (~200-240px on mobile/desktop).
-      padding: "px-5 pt-12 pb-40 sm:px-8 sm:pt-16 sm:pb-48 md:px-16 md:pt-20 md:pb-56",
+      // Consistent pb-44 across all sizes — combined with justify-end below,
+      // gives content the SAME ~50px breathing room above the info-bar gradient
+      // on both mobile (460px hero) and desktop (560px hero). Heavy asymmetric
+      // padding produced "too far on desktop, too close on phone."
+      padding: "px-5 pt-16 pb-44 sm:px-8 sm:pt-20 md:px-16 md:pt-24",
       maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
       eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
       metaGap: "mt-6 sm:mt-8 md:mt-10",
@@ -124,13 +126,13 @@ export default function EventPlaceholder({
       />
 
       {!backgroundOnly && (
-        <div className={`relative z-10 h-full flex flex-col items-center justify-center text-center ${s.padding}`}>
+        <div className={`relative z-10 h-full flex flex-col items-center text-center ${variant === "hero" ? "justify-end" : "justify-center"} ${s.padding}`}>
           {/* Eyebrow: tracked caps with hairline rules */}
           <motion.div
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`flex items-center gap-3 ${variant === "card" ? "mb-3" : s.eyebrowGap}`}
+            className={`flex items-center gap-3 ${variant === "card" ? "" : s.eyebrowGap}`}
           >
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
             <span
@@ -142,39 +144,10 @@ export default function EventPlaceholder({
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
           </motion.div>
 
-          {/* Card variant: stylized date stamp instead of title (parent card body
-              already renders title/description/date — duplicating title here
-              clipped on production). Date stamp gives the dark area presence
-              without redundancy. */}
-          {variant === "card" && dateParts && (
-            <motion.div
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: 0.1 }}
-              className="flex flex-col items-center"
-            >
-              <span
-                className="text-[10px] font-medium tracking-[0.3em] uppercase"
-                style={{ color: `rgba(${theme.primaryRgb}, 0.85)` }}
-              >
-                {dateParts.month}
-              </span>
-              <span
-                className={`text-5xl ${textColor} font-serif font-normal leading-none mt-1`}
-              >
-                {dateParts.day}
-              </span>
-              <span
-                className="block h-px w-8 my-3"
-                style={{ backgroundColor: ruleColor }}
-              />
-              <span className={`text-[10px] ${mutedColor} font-medium tracking-[0.3em] uppercase`}>
-                {dateParts.year}
-              </span>
-            </motion.div>
-          )}
-
-          {/* Hero + featured: full editorial — title + stacked date row */}
+          {/* Hero + featured: full editorial — title + stacked date row.
+              Card variant is eyebrow-only — the parent card body already shows
+              title/description/date/time/location, and any added text in the
+              image area either duplicated content or felt heavy. */}
           {variant !== "card" && (
             <>
               {/* Title: light-weight system serif, single voice (no color-split halves) */}
