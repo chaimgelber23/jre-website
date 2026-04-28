@@ -723,6 +723,146 @@ export async function sendPaymentFailureAlert(data: PaymentFailureAlertData) {
   }
 }
 
+interface DonationSaveFailedAlertData {
+  campaignTitle: string;
+  campaignSlug: string;
+  amount: number;
+  paymentMethod: string;
+  paymentReference: string | null;
+  cardRef: string | null;
+  dbError: string;
+  chargedSuccessfully: boolean;
+  donorName: string;
+  donorEmail: string;
+  donorPhone?: string | null;
+  dedicationType?: string | null;
+  dedicationName?: string | null;
+  tierId?: string | null;
+  teamId?: string | null;
+}
+
+// Fires when payment processing succeeded but the DB insert failed afterward.
+// The donor sees a generic error; the operator must reconcile manually using
+// the gateway transaction reference. Distinct from sendPaymentFailureAlert,
+// which fires when the gateway itself declines (no money moved).
+export async function sendDonationSaveFailedAlert(data: DonationSaveFailedAlertData) {
+  const resend = getResendClient();
+  if (!resend) {
+    console.log("Resend API key not configured, skipping save-failed alert");
+    return { success: false, error: "Email not configured" };
+  }
+
+  const primary =
+    process.env.PAYMENT_FAILURE_ALERT_EMAIL ||
+    process.env.ADMIN_ALERT_EMAIL ||
+    "office@thejre.org";
+  const to = Array.from(new Set([primary, "cgelber@thejre.org"]));
+
+  const timestamp = new Date().toLocaleString("en-US", {
+    timeZone: "America/New_York",
+    month: "short", day: "numeric", year: "numeric",
+    hour: "numeric", minute: "2-digit", hour12: true,
+  });
+
+  const dedicationLine =
+    data.dedicationType && data.dedicationName
+      ? `${data.dedicationType}: ${data.dedicationName}`
+      : null;
+
+  const subjectPrefix = data.chargedSuccessfully
+    ? "[JRE URGENT] CHARGE SUCCEEDED but DB save FAILED"
+    : "[JRE ALERT] Pledge save failed (no charge)";
+  const headerColor = data.chargedSuccessfully ? "#7f1d1d" : "#9a3412";
+  const accentColor = data.chargedSuccessfully ? "#dc2626" : "#ea580c";
+  const bannerText = data.chargedSuccessfully
+    ? "Money moved at the gateway. No row exists in campaign_donations. Manual reconciliation required."
+    : "Pledge attempt failed to save. No money moved. Reach out to confirm intent.";
+
+  try {
+    const { error } = await resend.emails.send({
+      from: FROM_EMAIL,
+      to,
+      replyTo: data.donorEmail,
+      subject: `${subjectPrefix} — $${data.amount.toFixed(2)} from ${data.donorName} (${data.campaignTitle})`,
+      html: `
+        <!DOCTYPE html>
+        <html>
+        <head><meta charset="utf-8"><title>Donation Save Failed</title></head>
+        <body style="margin:0;padding:0;background:#f7fafc;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Helvetica,Arial,sans-serif;">
+          <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+            <tr><td align="center" style="padding:32px 20px;">
+              <table role="presentation" width="600" cellspacing="0" cellpadding="0" style="max-width:600px;width:100%;">
+                <tr><td style="background:${headerColor};padding:24px 28px;border-radius:12px 12px 0 0;">
+                  <div style="color:#fecaca;font-size:11px;text-transform:uppercase;letter-spacing:2px;font-weight:700;">Reconciliation Required</div>
+                  <h1 style="color:#fff;margin:8px 0 0;font-size:22px;font-weight:700;">${data.chargedSuccessfully ? "Charge succeeded — DB save failed" : "Pledge save failed"}</h1>
+                  <p style="color:#fecaca;font-size:14px;margin:6px 0 0;">$${data.amount.toFixed(2)} · ${data.campaignTitle}</p>
+                </td></tr>
+                <tr><td style="background:#fff;padding:28px;border:1px solid #e5e7eb;border-top:none;">
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef2f2;border-radius:8px;border-left:4px solid ${accentColor};margin:0 0 24px;">
+                    <tr><td style="padding:16px 20px;">
+                      <div style="color:${headerColor};font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">What happened</div>
+                      <div style="color:#7f1d1d;font-size:13px;line-height:1.5;">${bannerText}</div>
+                    </td></tr>
+                  </table>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#1f2937;border-radius:8px;margin:0 0 24px;">
+                    <tr><td style="padding:16px 20px;">
+                      <div style="color:#9ca3af;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">Gateway reference (use this to reconcile)</div>
+                      <div style="color:#f9fafb;font-size:14px;font-family:ui-monospace,'SF Mono',Menlo,monospace;word-break:break-all;">${data.paymentReference ?? "(none — gateway returned no reference)"}</div>
+                      ${data.cardRef ? `<div style="color:#9ca3af;font-size:11px;margin-top:8px;">card_ref: <span style="color:#f9fafb;font-family:ui-monospace,monospace;">${data.cardRef}</span></div>` : ""}
+                    </td></tr>
+                  </table>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background:#fef3c7;border-radius:8px;border-left:4px solid #d97706;margin:0 0 24px;">
+                    <tr><td style="padding:16px 20px;">
+                      <div style="color:#78350f;font-size:11px;text-transform:uppercase;letter-spacing:1px;font-weight:700;margin-bottom:6px;">Postgres error</div>
+                      <div style="color:#78350f;font-size:13px;font-family:ui-monospace,'SF Mono',Menlo,monospace;word-break:break-word;">${data.dbError}</div>
+                    </td></tr>
+                  </table>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0">
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Donor</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;border-bottom:1px solid #f0f0f0;">${data.donorName}</td></tr>
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Email</td><td align="right" style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><a href="mailto:${data.donorEmail}" style="color:#EF8046;font-size:14px;font-weight:500;text-decoration:none;">${data.donorEmail}</a></td></tr>
+                    ${data.donorPhone ? `<tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Phone</td><td align="right" style="padding:8px 0;border-bottom:1px solid #f0f0f0;"><a href="tel:${data.donorPhone}" style="color:#1a1a1a;font-size:14px;font-weight:500;text-decoration:none;">${data.donorPhone}</a></td></tr>` : ""}
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Amount</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;border-bottom:1px solid #f0f0f0;">$${data.amount.toFixed(2)}</td></tr>
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Method</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;border-bottom:1px solid #f0f0f0;">${data.paymentMethod}</td></tr>
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Campaign</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;border-bottom:1px solid #f0f0f0;">${data.campaignSlug}</td></tr>
+                    ${dedicationLine ? `<tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Dedication</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;border-bottom:1px solid #f0f0f0;">${dedicationLine}</td></tr>` : ""}
+                    ${data.tierId ? `<tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Tier</td><td align="right" style="color:#1a1a1a;font-size:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;padding:8px 0;border-bottom:1px solid #f0f0f0;">${data.tierId}</td></tr>` : ""}
+                    ${data.teamId ? `<tr><td style="color:#6b7280;font-size:13px;padding:8px 0;border-bottom:1px solid #f0f0f0;">Team</td><td align="right" style="color:#1a1a1a;font-size:12px;font-family:ui-monospace,'SF Mono',Menlo,monospace;padding:8px 0;border-bottom:1px solid #f0f0f0;">${data.teamId}</td></tr>` : ""}
+                    <tr><td style="color:#6b7280;font-size:13px;padding:8px 0;">Time</td><td align="right" style="color:#1a1a1a;font-size:14px;font-weight:500;padding:8px 0;">${timestamp} ET</td></tr>
+                  </table>
+
+                  <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin-top:28px;">
+                    <tr><td align="center">
+                      <a href="mailto:${data.donorEmail}?subject=${encodeURIComponent("Confirming your donation to The JRE")}" style="display:inline-block;background:#EF8046;color:#fff;padding:12px 24px;text-decoration:none;border-radius:8px;font-weight:600;font-size:14px;">Reach out to ${data.donorName.split(" ")[0]}</a>
+                    </td></tr>
+                  </table>
+
+                  ${data.chargedSuccessfully ? `
+                  <p style="color:#374151;font-size:12px;margin:24px 0 0;line-height:1.6;">
+                    <strong>Next steps:</strong> 1) Confirm the charge in the gateway dashboard using the reference above. 2) Insert a row into <code style="background:#f3f4f6;padding:1px 6px;border-radius:3px;">campaign_donations</code> with <code style="background:#f3f4f6;padding:1px 6px;border-radius:3px;">payment_status: 'completed'</code> and the gateway reference. 3) Send the donor a manual receipt.
+                  </p>` : `
+                  <p style="color:#9ca3af;font-size:12px;margin:24px 0 0;line-height:1.6;">No money moved. The donor saw a generic error; reach out to confirm whether they want to retry.</p>`}
+                </td></tr>
+              </table>
+            </td></tr>
+          </table>
+        </body></html>
+      `,
+    });
+    if (error) {
+      console.error("Error sending donation-save-failed alert:", error);
+      return { success: false, error: error.message };
+    }
+    return { success: true };
+  } catch (err) {
+    console.error("Failed to send donation-save-failed alert:", err);
+    return { success: false, error: "Failed to send alert" };
+  }
+}
+
 export async function sendContactFormNotification(data: {
   name: string;
   email: string;

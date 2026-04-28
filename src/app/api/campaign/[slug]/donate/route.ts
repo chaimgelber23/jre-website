@@ -8,7 +8,7 @@ import {
   getActiveMatcher,
   maskDonorName,
 } from "@/lib/campaign";
-import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert } from "@/lib/email";
+import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert, sendDonationSaveFailedAlert } from "@/lib/email";
 import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type {
   CampaignMatcher,
@@ -473,6 +473,26 @@ export async function POST(
         p_amount: matchedCents,
       }).catch((e: unknown) => console.error("revert_matcher_increment failed:", e));
     }
+    // Page the operator immediately. If paymentStatus is "completed" the
+    // gateway already moved the donor's money — the alert carries the
+    // gateway reference so the row can be reconstructed manually.
+    void sendDonationSaveFailedAlert({
+      campaignTitle: campaign.title,
+      campaignSlug: campaign.slug ?? String(campaign.id),
+      amount: body.amount_cents / 100,
+      paymentMethod: body.payment_method,
+      paymentReference,
+      cardRef,
+      dbError: insertError?.message ?? "unknown postgres error (no insertData returned)",
+      chargedSuccessfully: paymentStatus === "completed",
+      donorName: body.name.trim(),
+      donorEmail: body.email.trim(),
+      donorPhone: body.phone,
+      dedicationType: body.dedication_type,
+      dedicationName: body.dedication_name,
+      tierId: body.tier_id,
+      teamId: body.team_id,
+    }).catch((e) => console.error("save-failed alert failed:", e));
     return NextResponse.json(
       { success: false, error: "Donation was processed but failed to save. Please contact us." },
       { status: 500 }
