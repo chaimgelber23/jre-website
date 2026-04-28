@@ -255,6 +255,37 @@ Run this checklist. Don't trust "it worked last time" — every campaign pulls i
 
 If the audit ever needs to be re-run, the canonical script is at `scripts/load-test-campaign.mjs`. The matcher-RPC unit test is a one-off node block; happy to be re-codified into a script if it gets re-run more than twice.
 
+## Recent additions (2026-04-28)
+
+### `payment_method` lives in THREE places — keep them in sync
+
+A donor selecting Donor's Fund got their TDF grant charged but the `campaign_donations` INSERT was rejected because `'donors_fund'` wasn't in the table's CHECK constraint. The donor saw "Donation was processed but failed to save"; we never heard about it (even the failure-row safety net hit the same constraint and silently failed too). One donor's $36 had to be reconciled by hand from a TDF confirmation email.
+
+**The lesson — `payment_method` is duplicated across three sources of truth:**
+
+| Source | Where | Must include every method |
+|---|---|---|
+| TS union | `src/types/campaign.ts` → `PaymentMethod` | yes |
+| Server-side allow-list | `validMethods` in `src/app/api/campaign/[slug]/donate/route.ts` | yes |
+| DB CHECK constraint | `campaign_donations.payment_method` | yes |
+
+When adding ANY new payment method (Apple Pay, Stripe Link, Givebutter, whatever), update **all three** in the same PR. Schema is the one most likely to drift because the migration has to be pasted into Supabase Studio separately. Use the existing extension migration as a template: `supabase/migrations/campaign_donations_payment_method_extend.sql`.
+
+Also, the `donations` table (used by `/donate`, the simple path) has no `payment_method` column at all — gateway is encoded in the `payment_reference` prefix (`bq_…`, `tdf_…`, `ojc_…`). When wiring a new gateway into that path, add a new prefix; no schema change needed.
+
+### Donate route now alerts on post-charge save-failures
+
+[src/app/api/campaign/[slug]/donate/route.ts](../../src/app/api/campaign/%5Bslug%5D/donate/route.ts) catch block fires `sendDonationSaveFailedAlert` whenever the INSERT fails after the gateway moved money. Email subject is `[JRE URGENT] CHARGE SUCCEEDED but DB save FAILED — $X from {donor}`, includes the gateway reference for manual reconciliation, and goes to `office@thejre.org` + `cgelber@thejre.org`. **Don't remove this alert.** It's the safety net that makes future schema/RLS drift loud instead of silent. If you fork the donate route for a new campaign type, port the catch block as-is.
+
+### Reconciling a lost grant — the playbook
+
+If a donor reports "donation processed but failed to save" and the row really isn't in `campaign_donations`:
+1. **Search Gitty's inbox** (`scripts/find-tdf-freedberg.mjs` template) for `from:thedonorsfund.org subject:"Grant received"` around the timestamp. The TDF confirmation email has name, amount, confirmation number, address.
+2. **Reconstruct the row** (`scripts/reconcile-friedberg-grant.mjs` template) with `payment_status='completed'`, `payment_reference='tdf_<conf#>'`, `daf_grant_id=<conf#>`, `daf_sponsor='The Donors\' Fund'`, and an `admin_notes` block explaining the reconstruction.
+3. **Send a manual receipt** (TDF doesn't send one on the charity's behalf — the donor only got the TDF system email).
+
+For Banquest charges, the equivalent path is the Banquest Control Panel — there's no programmatic search API in `src/lib/banquest.ts`. For OJC, same deal.
+
 ## Skill Chain
 
 After creating a campaign: remind the user they can call `/manage-sponsorships` to edit tiers in bulk, or visit `/admin/campaigns/<id>` for full control. If they want to add teams, ask if the pages should be linked publicly (no — default is unlisted) or shared individually. **Before flipping the new campaign to `live`, run the "Before flipping any campaign to `live`" checklist above — it takes 60 seconds and catches infra drift.**
