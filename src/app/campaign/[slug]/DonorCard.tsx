@@ -52,14 +52,14 @@ export default function DonorCard({ d, accent, hideTeam = false, campaignSlug }:
       className="group relative h-full min-h-[170px] bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-transparent"
       style={{ ["--accent" as string]: accent }}
     >
-      {/* Tier badge — top-right corner (e.g. "DOUBLE CHAI · לו") shows when donor picks a preset amount tablet */}
+      {/* Tier badge — small ribbon floating above the top-right corner so it never collides with the amount */}
       {d.tier_label && (
-        <div className="absolute -top-2 right-4 z-10">
+        <div className="absolute right-4 bottom-full -mb-1 z-10">
           <span
-            className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-white text-[10px] font-bold uppercase tracking-[0.1em] shadow-sm"
+            className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-md text-white text-[9px] font-bold uppercase tracking-[0.08em] shadow-sm whitespace-nowrap"
             style={{
               background: `linear-gradient(135deg, ${accent} 0%, rgba(${accentRgb}, 0.85) 100%)`,
-              boxShadow: `0 4px 12px -2px rgba(${accentRgb}, 0.45)`,
+              boxShadow: `0 2px 8px -2px rgba(${accentRgb}, 0.45)`,
             }}
           >
             <span>{d.tier_label}</span>
