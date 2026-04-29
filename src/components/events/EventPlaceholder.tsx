@@ -67,11 +67,11 @@ export default function EventPlaceholder({
     card: {
       eyebrow: "text-[9px]",
       eyebrowTrack: "tracking-[0.35em]",
-      title: "text-xl md:text-2xl",
+      title: "text-lg md:text-xl",
       meta: "text-[10px]",
       metaTrack: "tracking-[0.25em]",
-      padding: "px-5 py-5",
-      maxTitle: "max-w-[94%]",
+      padding: "px-5 py-6",
+      maxTitle: "max-w-[90%]",
       eyebrowGap: "mb-3",
       metaGap: "mt-4",
       eyebrowRule: "w-4",
@@ -153,7 +153,7 @@ export default function EventPlaceholder({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.1] tracking-tight break-words ${variant === "card" ? "line-clamp-3" : "[text-wrap:balance]"}`}
+            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.15] tracking-tight break-words ${variant === "card" ? "line-clamp-2" : "[text-wrap:balance]"}`}
           >
             {title}
           </motion.h1>
