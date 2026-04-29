@@ -47,6 +47,8 @@ export default function EventDetailClient({
   const [imageAspectRatio, setImageAspectRatio] = useState<number | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
+  // Optional opt-in suggested donation (driven by event.description's |||DONATION|||N marker)
+  const [donationOpted, setDonationOpted] = useState(false);
 
   // Theme colors (defaults to orange when event not loaded yet)
   const theme = getEventTheme(event?.theme_color);
@@ -229,7 +231,11 @@ export default function EventDetailClient({
   const baseTotal = event
     ? adults * event.price_per_adult + kids * event.kids_price
     : 0;
-  const total = promoApplied ? 0 : (sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal);
+  // Suggested donation comes from the |||DONATION|||N marker the API extracts; null/0 = no donation feature
+  const suggestedDonation = (event as (Event & { suggested_donation?: number | null }) | null)?.suggested_donation ?? null;
+  const donationAmount = donationOpted && suggestedDonation && suggestedDonation > 0 ? suggestedDonation : 0;
+  // Donation only applies when no sponsorship is selected — sponsor tiers already cover it
+  const total = promoApplied ? 0 : (sponsorshipPrice > 0 ? sponsorshipPrice : baseTotal + donationAmount);
 
   // For free events, every tier is eligible; otherwise sponsorship must be $180+ above cover
   const isFreeEvent = !!event && event.price_per_adult === 0 && event.kids_price === 0;
@@ -300,6 +306,7 @@ export default function EventDetailClient({
         phone: formState.phone,
         guests: guestDetails.filter((g) => g.name.trim()),
         sponsorshipId: selectedSponsorship || null,
+        donationAmount,
         message: formState.message || null,
         honoreeEmail: formState.honoreeEmail || null,
         paymentMethod: promoApplied ? "promo" : paymentMethod,
@@ -337,7 +344,7 @@ export default function EventDetailClient({
     } finally {
       setIsSubmitting(false);
     }
-  }, [adults, kids, formState, guestDetails, selectedSponsorship, paymentMethod, paymentProcessor, slug, promoCode, promoApplied, captchaToken]);
+  }, [adults, kids, formState, guestDetails, selectedSponsorship, donationAmount, total, paymentMethod, paymentProcessor, slug, promoCode, promoApplied, captchaToken]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -1187,6 +1194,45 @@ export default function EventDetailClient({
                         </div>
                       )}
                     </div>
+
+                    {/* Suggested-donation opt-in toggle.
+                        Driven by the |||DONATION|||N marker in event.description (extracted server-side
+                        into event.suggested_donation). Only shows on free events with a suggested donation
+                        configured AND when no sponsorship is selected (sponsor tiers already cover it).
+                        Tap to add → total becomes the donation amount → card form appears.
+                        Tap again to remove → reverts to free registration with no payment. */}
+                    {isFreeEvent && suggestedDonation && suggestedDonation > 0 && !selectedSponsorship && (
+                      <div className="pt-5 border-t border-gray-100/80">
+                        <button
+                          type="button"
+                          onClick={() => setDonationOpted((v) => !v)}
+                          className={`w-full rounded-2xl p-4 transition-all text-left flex items-center gap-4 ${
+                            donationOpted
+                              ? "bg-[var(--theme-primary)]/10 border-2 border-[var(--theme-primary)]"
+                              : "bg-gradient-to-br from-[var(--theme-primary)]/5 via-transparent to-transparent border border-dashed border-[var(--theme-primary)]/30 hover:border-[var(--theme-primary)]/60 hover:bg-[var(--theme-primary)]/8"
+                          }`}
+                        >
+                          <span
+                            className={`flex-shrink-0 w-6 h-6 rounded-md flex items-center justify-center transition-all ${
+                              donationOpted
+                                ? "bg-[var(--theme-primary)] text-white"
+                                : "border-2 border-[var(--theme-primary)]/40 bg-white"
+                            }`}
+                            aria-hidden="true"
+                          >
+                            {donationOpted && <Check className="w-4 h-4" />}
+                          </span>
+                          <span className="flex-1">
+                            <span className="block text-[var(--theme-primary)] font-semibold">
+                              {donationOpted ? `Suggested donation added: $${suggestedDonation}` : `Add suggested donation: $${suggestedDonation}`}
+                            </span>
+                            <span className="block text-xs text-gray-500 mt-0.5">
+                              {donationOpted ? "Tap to remove. You'll pay by card on the next step." : "Optional — your support keeps these gatherings going."}
+                            </span>
+                          </span>
+                        </button>
+                      </div>
+                    )}
 
                     {/* Sponsorship Toggle.
                         For FREE events with sponsorships, we skip this dark "Become a Sponsor" toggle

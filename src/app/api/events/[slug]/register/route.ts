@@ -43,7 +43,7 @@ export async function POST(
     }
 
     // Validate required fields
-    const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests, promoCode } = body;
+    const { adults, kids, name, email, phone, sponsorshipId, message, cardName, cardNumber, cardExpiry, cardCvv, paymentMethod, guests, promoCode, donationAmount } = body;
 
     if (!name || !email) {
       return NextResponse.json(
@@ -92,8 +92,24 @@ export async function POST(
 
     const event = eventData as Event;
 
+    // Parse the |||DONATION|||N marker from the raw description (the public API strips it before
+    // returning the event, but this route reads the raw row directly, so the marker is still here).
+    let suggestedDonation = 0;
+    {
+      const m = (event.description || "").match(/\|\|\|DONATION\|\|\|(\d+)/);
+      if (m) suggestedDonation = parseInt(m[1], 10);
+    }
+    // Validate donation: must be 0 OR exactly the event's configured suggested-donation amount.
+    // Anything else is a tampered request — reject silently by snapping to 0 rather than charging
+    // an arbitrary client-supplied amount.
+    const validatedDonation = Number(donationAmount) === suggestedDonation && suggestedDonation > 0
+      ? suggestedDonation
+      : 0;
+
     // Calculate subtotal
     let subtotal = numAdults * event.price_per_adult + numKids * event.kids_price;
+    // Donation only stacks on the base path — it never adds to a sponsorship (sponsor tiers replace base)
+    if (validatedDonation > 0) subtotal += validatedDonation;
 
     // If sponsorship is selected, get sponsorship price + FMV
     let sponsorshipName: string | null = null;
@@ -110,7 +126,7 @@ export async function POST(
         const sponsorship = sponsorshipData as EventSponsorship;
         sponsorshipPrice = sponsorship.price;
         sponsorshipFMV = sponsorship.fair_market_value ?? 0;
-        subtotal = sponsorship.price; // Sponsorship replaces base price
+        subtotal = sponsorship.price; // Sponsorship replaces base price (and any donation)
         sponsorshipName = sponsorship.name;
       }
     }
@@ -304,7 +320,12 @@ export async function POST(
       paymentMethod: promoApplied ? "promo" : (body.paymentMethod || "online"),
       paymentStatus,
       paymentReference,
-      notes: promoApplied ? `PROMO CODE: ${promoCode}${message ? ` | ${message}` : ""}` : (message || ""),
+      notes: promoApplied
+        ? `PROMO CODE: ${promoCode}${message ? ` | ${message}` : ""}`
+        : [
+            validatedDonation > 0 && !sponsorshipName ? `Donation: $${validatedDonation}` : "",
+            message || "",
+          ].filter(Boolean).join(" | "),
     };
     // Await sheets sync before responding — fire-and-forget gets killed on Vercel serverless
     try {

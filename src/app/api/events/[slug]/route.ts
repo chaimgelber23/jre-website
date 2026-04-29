@@ -28,10 +28,12 @@ export async function GET(
     const event = eventData as Event;
 
     // Parse description markers:
-    //   |||DATES|||...   → displayDate override (shown instead of formatted event.date)
-    //   |||EMAIL|||...   → email-only HTML (stripped from public page, used by confirmation email)
+    //   |||DATES|||...    → displayDate override (shown instead of formatted event.date)
+    //   |||EMAIL|||...    → email-only HTML (stripped from public page, used by confirmation email)
+    //   |||DONATION|||N   → suggested-donation amount in dollars (drives the opt-in donation toggle on free events)
     let desc = event.description || "";
     let displayDate: string | null = null;
+    let suggestedDonation: number | null = null;
     if (desc.includes("|||EMAIL|||")) {
       const idx = desc.indexOf("|||EMAIL|||");
       desc = desc.substring(0, idx).trim();
@@ -41,8 +43,17 @@ export async function GET(
       displayDate = desc.substring(idx + "|||DATES|||".length).trim();
       desc = desc.substring(0, idx).trim();
     }
+    {
+      const re = /\|\|\|DONATION\|\|\|(\d+)/;
+      const m = desc.match(re);
+      if (m) {
+        suggestedDonation = parseInt(m[1], 10);
+        desc = desc.replace(re, "").trim();
+      }
+    }
     event.description = desc;
-    (event as Event & { display_date?: string | null }).display_date = displayDate;
+    (event as Event & { display_date?: string | null; suggested_donation?: number | null }).display_date = displayDate;
+    (event as Event & { display_date?: string | null; suggested_donation?: number | null }).suggested_donation = suggestedDonation;
 
     // Get sponsorship tiers for this event
     const { data: sponsorshipsData } = await supabase
