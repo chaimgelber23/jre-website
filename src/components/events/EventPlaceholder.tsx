@@ -66,15 +66,15 @@ export default function EventPlaceholder({
   const sizes = {
     card: {
       eyebrow: "text-[9px]",
-      eyebrowTrack: "tracking-[0.3em]",
-      title: "text-base md:text-lg",
+      eyebrowTrack: "tracking-[0.35em]",
+      title: "text-xl md:text-2xl",
       meta: "text-[10px]",
       metaTrack: "tracking-[0.25em]",
-      padding: "px-4 py-6",
+      padding: "px-5 py-5",
       maxTitle: "max-w-[94%]",
-      eyebrowGap: "mb-4",
+      eyebrowGap: "mb-3",
       metaGap: "mt-4",
-      eyebrowRule: "w-3",
+      eyebrowRule: "w-4",
       metaRule: "w-6",
     },
     featured: {
@@ -133,7 +133,7 @@ export default function EventPlaceholder({
             initial={{ opacity: 0, y: 6 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.5 }}
-            className={`flex items-center gap-3 ${variant === "card" ? "" : s.eyebrowGap}`}
+            className={`flex items-center gap-3 ${s.eyebrowGap}`}
           >
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
             <span
@@ -145,52 +145,48 @@ export default function EventPlaceholder({
             <span className={`block h-px ${s.eyebrowRule}`} style={{ backgroundColor: ruleColor }} />
           </motion.div>
 
-          {/* Hero + featured: full editorial — title + stacked date row.
-              Card variant is eyebrow-only — the parent card body already shows
-              title/description/date/time/location, and any added text in the
-              image area either duplicated content or felt heavy. */}
-          {variant !== "card" && (
-            <>
-              {/* Title: light-weight system serif, single voice (no color-split halves) */}
-              <motion.h1
-                initial={{ opacity: 0, y: 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ duration: 0.7, delay: 0.1 }}
-                className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.05] tracking-tight break-words [text-wrap:balance]`}
-              >
-                {title}
-              </motion.h1>
+          {/* Title — shown in all variants. Card variant uses line-clamp-2
+              to prevent overflow in the fixed h-52 (208px) image area; longer
+              titles get an ellipsis. Hero/featured have no clamp because their
+              containers grow with content. */}
+          <motion.h1
+            initial={{ opacity: 0, y: 12 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7, delay: 0.1 }}
+            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.1] tracking-tight break-words [text-wrap:balance] ${variant === "card" ? "line-clamp-2" : ""}`}
+          >
+            {title}
+          </motion.h1>
 
-              {/* Date: editorial stacked caps with hairline rules */}
-              {dateParts && (
-                <motion.div
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ duration: 0.6, delay: 0.25 }}
-                  className={`flex items-center gap-3 md:gap-4 ${s.metaGap}`}
-                >
-                  <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
-                  <span className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase whitespace-nowrap`}>
-                    {dateParts.month} {dateParts.day}
-                    <span className="mx-1.5 md:mx-2 opacity-50">·</span>
-                    {dateParts.year}
-                  </span>
-                  <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
-                </motion.div>
-              )}
+          {/* Date row: shown only in hero/featured. Card body already shows
+              the formatted date below the image area. */}
+          {variant !== "card" && dateParts && (
+            <motion.div
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.6, delay: 0.25 }}
+              className={`flex items-center gap-3 md:gap-4 ${s.metaGap}`}
+            >
+              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
+              <span className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase whitespace-nowrap`}>
+                {dateParts.month} {dateParts.day}
+                <span className="mx-1.5 md:mx-2 opacity-50">·</span>
+                {dateParts.year}
+              </span>
+              <span className={`block h-px ${s.metaRule}`} style={{ backgroundColor: ruleColor }} />
+            </motion.div>
+          )}
 
-              {/* Fallback for non-parseable date strings */}
-              {!dateParts && date && (
-                <motion.p
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ delay: 0.25 }}
-                  className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase ${s.metaGap}`}
-                >
-                  {date}
-                </motion.p>
-              )}
-            </>
+          {/* Fallback for non-parseable date strings (hero/featured only) */}
+          {variant !== "card" && !dateParts && date && (
+            <motion.p
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              transition={{ delay: 0.25 }}
+              className={`${s.meta} ${s.metaTrack} ${mutedColor} font-medium uppercase ${s.metaGap}`}
+            >
+              {date}
+            </motion.p>
           )}
         </div>
       )}
