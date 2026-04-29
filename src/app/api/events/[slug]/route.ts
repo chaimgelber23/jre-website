@@ -43,6 +43,14 @@ export async function GET(
       displayDate = desc.substring(idx + "|||DATES|||".length).trim();
       desc = desc.substring(0, idx).trim();
     }
+    // |||ADMIN_LABEL|||...   → admin-only display title (admin portal only). Public side just strips it.
+    // Process this BEFORE DONATION so the regex's [^\n|]+ stops at the next |||...||| boundary
+    // instead of swallowing prose after sibling markers get stripped.
+    {
+      const re = /\|\|\|ADMIN_LABEL\|\|\|([^\n|]+)/;
+      const m = desc.match(re);
+      if (m) desc = desc.replace(re, "").trim();
+    }
     {
       const re = /\|\|\|DONATION\|\|\|(\d+)/;
       const m = desc.match(re);

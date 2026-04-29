@@ -24,6 +24,21 @@ export async function GET(
       );
     }
 
+    // Parse |||ADMIN_LABEL|||X from description — admin-only display title.
+    // Strip marker from description so it doesn't show in the admin UI either.
+    {
+      const eventRow = event as Record<string, unknown>;
+      const desc: string = (eventRow.description as string) || "";
+      const re = /\|\|\|ADMIN_LABEL\|\|\|([^\n|]+)/;
+      const m = desc.match(re);
+      if (m) {
+        eventRow.admin_label = m[1].trim();
+        eventRow.description = desc.replace(re, "").trim();
+      } else {
+        eventRow.admin_label = null;
+      }
+    }
+
     // Get sponsorships for this event
     const { data: sponsorshipsData } = await supabase
       .from("event_sponsorships")

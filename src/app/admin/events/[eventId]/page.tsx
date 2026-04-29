@@ -47,8 +47,12 @@ interface EventRegistrationWithSponsorship extends EventRegistration {
   sponsorship_name: string | null;
 }
 
+// Admin-only display label; falls back to title when absent. Driven by
+// |||ADMIN_LABEL|||X marker in the event's description.
+type EventWithAdminLabel = Event & { admin_label?: string | null };
+
 interface EventDetailData {
-  event: Event;
+  event: EventWithAdminLabel;
   sponsorships: EventSponsorship[];
   registrations: EventRegistrationWithSponsorship[];
   stats: {
@@ -537,7 +541,7 @@ export default function EventDetailPage({
         <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
           <div className="flex-1 min-w-0">
             <div className="flex items-center gap-2 sm:gap-3 mb-1">
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{event.title}</h1>
+              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 truncate">{event.admin_label || event.title}</h1>
               <span
                 className={`px-2 py-0.5 rounded-full text-[10px] sm:text-xs font-medium flex-shrink-0 ${
                   event.is_active
@@ -1927,7 +1931,7 @@ export default function EventDetailPage({
                 <p className="text-sm text-gray-500 mb-1">
                   Are you sure you want to delete{" "}
                   <span className="font-medium text-gray-700">
-                    {event.title}
+                    {event.admin_label || event.title}
                   </span>
                   ?
                 </p>

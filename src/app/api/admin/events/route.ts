@@ -51,8 +51,23 @@ export async function GET(request: NextRequest) {
 
         const registrations = (registrationsData || []) as RegistrationStats[];
 
+        // Parse |||ADMIN_LABEL|||X from description — admin-only display title.
+        // Strip marker from description so it doesn't show in the admin UI either.
+        let desc = event.description || "";
+        let adminLabel: string | null = null;
+        {
+          const re = /\|\|\|ADMIN_LABEL\|\|\|([^\n|]+)/;
+          const m = desc.match(re);
+          if (m) {
+            adminLabel = m[1].trim();
+            desc = desc.replace(re, "").trim();
+          }
+        }
+
         return {
           ...event,
+          description: desc,
+          admin_label: adminLabel,
           stats: {
             totalRegistrations: registrations.length,
             totalAttendees: registrations.reduce((sum, r) => sum + r.adults + r.kids, 0),

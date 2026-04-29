@@ -8,6 +8,9 @@ import StatsCard from "@/components/admin/StatsCard";
 import type { Event } from "@/types/database";
 
 interface EventWithStats extends Event {
+  // Admin-only display label; falls back to title when absent. Driven by
+  // |||ADMIN_LABEL|||X marker in the event's description.
+  admin_label?: string | null;
   stats: {
     totalRegistrations: number;
     totalAttendees: number;
@@ -166,7 +169,7 @@ export default function AdminEventsPage() {
                     <div className="flex-1">
                       <div className="flex items-center gap-2">
                         <h3 className="text-lg font-semibold text-gray-900 group-hover:text-[#EF8046] transition-colors">
-                          {event.title}
+                          {event.admin_label || event.title}
                         </h3>
                         {!event.is_active && (
                           <span className="px-2 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-500">
