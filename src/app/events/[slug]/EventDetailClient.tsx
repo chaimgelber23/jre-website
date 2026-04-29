@@ -715,7 +715,7 @@ export default function EventDetailClient({
              rendered tiny because the floating card was height-constrained
              by flex-1 instead of filling the full hero minus pb reserve).
           */
-          <div className={`relative ${hasEventImage ? "h-[55vh] min-h-[400px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "flex flex-col h-[60vh] min-h-[460px] md:h-[75vh] md:min-h-[560px]"}`}>
+          <div className={`relative ${hasEventImage ? "h-[70vh] min-h-[560px] md:h-[85vh] md:min-h-[600px] overflow-hidden" : "flex flex-col h-[60vh] min-h-[460px] md:h-[75vh] md:min-h-[560px]"}`}>
             {/* Back to Events - top left */}
             <div className="absolute top-4 left-0 right-0 container mx-auto px-6 z-20">
               <Link
@@ -743,7 +743,7 @@ export default function EventDetailClient({
                 </div>
                 {/* Foreground flyer — floating card. pb-24 / pb-36 reserves
                     space for the absolute-positioned info bar overlay below. */}
-                <div className="absolute inset-0 z-10 p-3 pt-14 pb-24 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
+                <div className="absolute inset-0 z-10 p-3 pt-14 pb-44 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
                   <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
                     <Image
                       src={eventImage}
