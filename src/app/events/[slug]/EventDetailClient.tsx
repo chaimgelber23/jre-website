@@ -757,8 +757,13 @@ export default function EventDetailClient({
                     className={`relative rounded-2xl overflow-hidden shadow-2xl ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}
                     style={{
                       aspectRatio: imageAspectRatio ? String(imageAspectRatio) : "1",
-                      maxWidth: "min(100%, 768px)",
-                      maxHeight: "100%",
+                      // For portrait images (aspect < 1), height-bound to fit
+                      // available area, width derives from aspect.
+                      // For square/landscape (aspect >= 1), width-bound up to
+                      // max-w-3xl (768px), height derives from aspect.
+                      ...(imageAspectRatio && imageAspectRatio < 1
+                        ? { height: "100%", width: "auto", maxWidth: "100%" }
+                        : { width: "100%", height: "auto", maxWidth: "768px", maxHeight: "100%" }),
                     }}
                   >
                     <Image
