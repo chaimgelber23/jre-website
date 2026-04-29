@@ -741,15 +741,32 @@ export default function EventDetailClient({
                   />
                   <div className={`absolute inset-0 ${isLightHero ? "bg-white/60" : "bg-black/50"}`} />
                 </div>
-                {/* Foreground flyer — floating card. pb-24 / pb-36 reserves
-                    space for the absolute-positioned info bar overlay below. */}
+                {/* Foreground flyer — floating card sized by image aspect
+                    ratio. The card matches the flyer's exact proportions so
+                    the WHOLE flyer renders inside without any cropping or
+                    letterbox surprises. max-h caps card height so it never
+                    extends into the bottom info-bar overlay zone. */}
+                {/* Card sized to match the flyer's aspect ratio. Using aspectRatio
+                    + width:100% + max-height:100% means the card fits the full
+                    flyer at any viewport — width fills container up to max-w-3xl,
+                    height auto-derives from aspect, and if the natural height
+                    exceeds the available area, the card scales down (preserving
+                    aspect via aspect-ratio) until it fits. No cropping possible. */}
                 <div className="absolute inset-0 z-10 p-3 pt-14 pb-44 md:p-12 md:pt-20 md:pb-36 flex items-center justify-center">
-                  <div className={`relative w-full h-full max-w-3xl mx-auto rounded-2xl overflow-hidden shadow-2xl p-2 ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}>
+                  <div
+                    className={`relative rounded-2xl overflow-hidden shadow-2xl ${isLightHero ? "ring-1 ring-black/5" : "ring-1 ring-white/10"}`}
+                    style={{
+                      aspectRatio: imageAspectRatio ? String(imageAspectRatio) : "1",
+                      maxWidth: "min(100%, 768px)",
+                      maxHeight: "100%",
+                    }}
+                  >
                     <Image
                       src={eventImage}
                       alt={event.title}
                       fill
-                      className="object-contain transition-transform duration-300 group-hover:scale-[1.02]"
+                      sizes="(max-width: 768px) 100vw, 768px"
+                      className="object-cover transition-transform duration-300 group-hover:scale-[1.02]"
                       priority
                       onError={() => setImageError(true)}
                     />
