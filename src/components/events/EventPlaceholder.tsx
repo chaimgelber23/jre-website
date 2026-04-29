@@ -153,7 +153,7 @@ export default function EventPlaceholder({
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
-            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.1] tracking-tight break-words [text-wrap:balance] ${variant === "card" ? "line-clamp-2" : ""}`}
+            className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.1] tracking-tight break-words ${variant === "card" ? "line-clamp-3" : "[text-wrap:balance]"}`}
           >
             {title}
           </motion.h1>
