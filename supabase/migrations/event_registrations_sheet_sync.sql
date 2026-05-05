@@ -18,6 +18,14 @@ ALTER TABLE event_registrations
   ADD COLUMN IF NOT EXISTS sheet_sync_attempts integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS sheet_sync_error text;
 
+-- Treat all rows that existed before this migration as already-synced. We
+-- backfilled the LagBaomer26 tab manually on 2026-05-05; every other prior
+-- event sheet has been verified by Chaim. Without this UPDATE the drain cron
+-- would try to re-append every historical registration and create duplicates.
+UPDATE event_registrations
+  SET synced_to_sheet = true
+  WHERE synced_to_sheet = false;
+
 CREATE INDEX IF NOT EXISTS event_registrations_unsynced_idx
   ON event_registrations (created_at)
   WHERE synced_to_sheet = false;
