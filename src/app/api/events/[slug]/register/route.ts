@@ -327,16 +327,45 @@ export async function POST(
             message || "",
           ].filter(Boolean).join(" | "),
     };
-    // Await sheets sync before responding — fire-and-forget gets killed on Vercel serverless
+    // Await sheets sync before responding — fire-and-forget gets killed on Vercel serverless.
+    // appendEventRegistration retries 3x internally; if it still fails, the cron drain at
+    // /api/cron/sync-event-sheets-drain replays it later via the synced_to_sheet flag.
     try {
       const sheetResult = await appendEventRegistration(sheetName, rowData, sheetConfig);
       if (sheetResult.success) {
         console.log(`Registration synced to Google Sheets: ${sheetName} / ${registration.id}`);
+        // Mark synced. Wrapped so a missing column (pre-migration) can't break the response.
+        try {
+          await supabase
+            .from("event_registrations")
+            .update({ synced_to_sheet: true } as never)
+            .eq("id", registration.id);
+        } catch (flagErr) {
+          console.error("Failed to set synced_to_sheet flag (column may be missing):", flagErr);
+        }
       } else {
         console.error(`Failed to sync to Google Sheets (${sheetName}):`, sheetResult.error);
+        try {
+          await supabase
+            .from("event_registrations")
+            .update({
+              sheet_sync_attempts: 1,
+              sheet_sync_error: sheetResult.error || "unknown",
+            } as never)
+            .eq("id", registration.id);
+        } catch {}
       }
     } catch (sheetError) {
       console.error("Google Sheets sync error:", sheetError);
+      try {
+        await supabase
+          .from("event_registrations")
+          .update({
+            sheet_sync_attempts: 1,
+            sheet_sync_error: sheetError instanceof Error ? sheetError.message : String(sheetError),
+          } as never)
+          .eq("id", registration.id);
+      } catch {}
     }
 
     // Send confirmation email

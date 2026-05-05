@@ -171,9 +171,29 @@ export function slugToSheetName(slug: string): string {
   return parts.map(p => p.charAt(0).toUpperCase() + p.slice(1)).join("");
 }
 
+async function runWithRetry<T>(fn: () => Promise<T>, maxAttempts = 3): Promise<T> {
+  let lastErr: unknown;
+  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+    try {
+      return await fn();
+    } catch (err) {
+      lastErr = err;
+      if (attempt < maxAttempts) {
+        await new Promise((r) => setTimeout(r, 1000 * 2 ** (attempt - 1)));
+      }
+    }
+  }
+  throw lastErr;
+}
+
 /**
  * Appends a registration row to an event sheet, creating the sheet if needed.
  * Headers are built dynamically based on the event config.
+ *
+ * Retries up to 3x with exponential backoff (1s, 2s) on transient Google Sheets
+ * API failures. The cron drain at /api/cron/sync-event-sheets-drain catches
+ * anything still missing and replays via the synced_to_sheet flag on
+ * event_registrations.
  */
 export async function appendEventRegistration(
   sheetName: string,
@@ -185,7 +205,7 @@ export async function appendEventRegistration(
   }
 
   try {
-    const sheetReady = await ensureSheetExists(sheetName, config);
+    const sheetReady = await runWithRetry(() => ensureSheetExists(sheetName, config));
     if (!sheetReady) {
       return { success: false, error: "Failed to prepare sheet" };
     }
@@ -193,16 +213,18 @@ export async function appendEventRegistration(
     const row = buildRow(rowData, config);
     const lastCol = String.fromCharCode(64 + row.length);
 
-    await sheets.spreadsheets.values.append({
-      spreadsheetId: SPREADSHEET_ID,
-      range: `${sheetName}!A:${lastCol}`,
-      valueInputOption: "USER_ENTERED",
-      requestBody: { values: [row] },
-    });
+    await runWithRetry(() =>
+      sheets.spreadsheets.values.append({
+        spreadsheetId: SPREADSHEET_ID,
+        range: `${sheetName}!A:${lastCol}`,
+        valueInputOption: "USER_ENTERED",
+        requestBody: { values: [row] },
+      })
+    );
 
     return { success: true };
   } catch (error) {
-    console.error("Failed to append registration:", error);
+    console.error("Failed to append registration after retries:", error);
     return {
       success: false,
       error: error instanceof Error ? error.message : "Unknown error",
