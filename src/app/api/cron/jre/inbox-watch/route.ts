@@ -173,6 +173,20 @@ export async function GET(req: NextRequest) {
   const shabbos = enforceShabbos();
   if (shabbos) return shabbos;
 
+  try {
+    return await runInboxWatch();
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    const stack = err instanceof Error ? err.stack?.split("\n").slice(0, 5).join("\n") : null;
+    console.error("[inbox-watch] unhandled:", err);
+    return NextResponse.json(
+      { ok: false, error: msg, stack },
+      { status: 500 },
+    );
+  }
+}
+
+async function runInboxWatch() {
   const results = { mrsOratzMatches: 0, rabbiOratzMatches: 0, moneyOwedPaid: 0, skipped: 0 };
 
   // --- 1. Mrs. Oratz → speaker confirmation ------------------------------
