@@ -28,6 +28,7 @@ const DRY = process.argv.includes("--dry-run");
 // slugToSheetName() will miss these, so map them explicitly.
 const MANUAL_OVERRIDES = {
   "lag-baomer-2026": "LunchandLearn26",
+  "springtime-renewal-2026": "Springtime26",
 };
 
 function slugToSheetName(slug) {
