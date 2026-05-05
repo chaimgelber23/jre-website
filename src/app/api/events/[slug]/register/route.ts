@@ -330,11 +330,15 @@ export async function POST(
     // Await sheets sync before responding — fire-and-forget gets killed on Vercel serverless.
     // appendEventRegistration retries 3x internally; if it still fails, the cron drain at
     // /api/cron/sync-event-sheets-drain replays it later via the synced_to_sheet flag.
+    //
+    // Pass event.sheet_tab_id (gid) so renaming the tab in Sheets UI does NOT cause
+    // future registrations to land in an auto-created duplicate tab. On first sync we
+    // persist the gid back to events.sheet_tab_id.
+    const eventTabId = (event as Record<string, unknown>).sheet_tab_id as number | null | undefined;
     try {
-      const sheetResult = await appendEventRegistration(sheetName, rowData, sheetConfig);
+      const sheetResult = await appendEventRegistration(sheetName, rowData, sheetConfig, eventTabId ?? null);
       if (sheetResult.success) {
-        console.log(`Registration synced to Google Sheets: ${sheetName} / ${registration.id}`);
-        // Mark synced. Wrapped so a missing column (pre-migration) can't break the response.
+        console.log(`Registration synced to Google Sheets: ${sheetName} / ${registration.id} (gid=${sheetResult.tabId})`);
         try {
           await supabase
             .from("event_registrations")
@@ -342,6 +346,17 @@ export async function POST(
             .eq("id", registration.id);
         } catch (flagErr) {
           console.error("Failed to set synced_to_sheet flag (column may be missing):", flagErr);
+        }
+        // Persist the gid on the event so future appends are rename-safe.
+        if (sheetResult.tabId != null && eventTabId !== sheetResult.tabId) {
+          try {
+            await supabase
+              .from("events")
+              .update({ sheet_tab_id: sheetResult.tabId } as never)
+              .eq("id", event.id);
+          } catch (e) {
+            console.error("Failed to persist sheet_tab_id on event (column may be missing):", e);
+          }
         }
       } else {
         console.error(`Failed to sync to Google Sheets (${sheetName}):`, sheetResult.error);

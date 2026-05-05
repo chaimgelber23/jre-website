@@ -170,7 +170,8 @@ export async function GET(request: NextRequest) {
     };
 
     const sheetName = slugToSheetName(ev.slug);
-    const result = await appendEventRegistration(sheetName, rowData, sheetConfig);
+    const eventTabId = (ev as Record<string, unknown>).sheet_tab_id as number | null | undefined;
+    const result = await appendEventRegistration(sheetName, rowData, sheetConfig, eventTabId ?? null);
     const newAttempts = (reg.sheet_sync_attempts ?? 0) + 1;
 
     if (result.success) {
@@ -182,6 +183,16 @@ export async function GET(request: NextRequest) {
           sheet_sync_error: null,
         } as never)
         .eq("id", reg.id);
+      if (result.tabId != null && eventTabId !== result.tabId) {
+        try {
+          await supabase
+            .from("events")
+            .update({ sheet_tab_id: result.tabId } as never)
+            .eq("id", ev.id);
+        } catch (e) {
+          console.error("drain: failed to persist sheet_tab_id on event", e);
+        }
+      }
       synced++;
     } else {
       await supabase

@@ -1,16 +1,24 @@
 -- ============================================================================
--- event_registrations sheet-sync tracking
+-- event_registrations sheet-sync tracking + rename-safe tab mapping
 --
--- Adds three columns so we can durably track whether a registration has been
--- written to its per-event Google Sheet tab. Without this, sheet append
--- failures inside /api/events/[slug]/register are caught + logged but the
--- registration row has no flag — it sits in the DB forever, invisibly
--- out-of-sync with the sheet (this exact bug hit Lag Ba'omer 2026: 16 of 19
--- registrations silently failed to reach the LagBaomer26 tab).
+-- Two separate problems this migration fixes — both surfaced together by the
+-- Lag Ba'omer 2026 incident on 2026-05-05:
 --
--- The cron /api/cron/sync-event-sheets-drain reads rows where
--- synced_to_sheet = false and replays the append. If a row's age > 30 min
--- after multiple attempts, it fires a Telegram + email alert to Gitty.
+-- (A) Silent failures: sheet append failures inside /api/events/[slug]/register
+--     were caught + logged but the registration row had no flag. We added retry
+--     logic, but a flag is the only way to drain anything that still fails.
+--     Columns: synced_to_sheet, sheet_sync_attempts, sheet_sync_error.
+--
+-- (B) Tab renames: when admin renames a tab in the Sheets UI ("LagBaomer26" →
+--     "LunchandLearn26"), the auto-generated slug-derived name no longer
+--     matches and the code creates a brand-new empty tab — splitting
+--     registrations across two tabs. Fix: track Google Sheets gid (sheetId,
+--     immutable across renames) per event and use it to look up the current
+--     title before each append.
+--     Column: sheet_tab_id.
+--
+-- The cron /api/cron/sync-event-sheets-drain reads unsynced rows, replays the
+-- append, and emails glevi+cgelber if any row stays stuck >= 30 min.
 -- ============================================================================
 
 ALTER TABLE event_registrations
@@ -18,10 +26,13 @@ ALTER TABLE event_registrations
   ADD COLUMN IF NOT EXISTS sheet_sync_attempts integer NOT NULL DEFAULT 0,
   ADD COLUMN IF NOT EXISTS sheet_sync_error text;
 
+ALTER TABLE events
+  ADD COLUMN IF NOT EXISTS sheet_tab_id bigint;
+
 -- Treat all rows that existed before this migration as already-synced. We
--- backfilled the LagBaomer26 tab manually on 2026-05-05; every other prior
--- event sheet has been verified by Chaim. Without this UPDATE the drain cron
--- would try to re-append every historical registration and create duplicates.
+-- backfilled the affected tab manually on 2026-05-05; every other prior event
+-- sheet has been verified. Without this UPDATE the drain cron would try to
+-- re-append every historical registration and create duplicates.
 UPDATE event_registrations
   SET synced_to_sheet = true
   WHERE synced_to_sheet = false;
