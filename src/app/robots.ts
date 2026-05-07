@@ -6,7 +6,7 @@ export default function robots(): MetadataRoute.Robots {
       {
         userAgent: "*",
         allow: "/",
-        disallow: ["/admin/", "/api/", "/banquest-setup"],
+        disallow: ["/admin/", "/api/", "/banquest-setup", "/interest/"],
       },
     ],
     sitemap: "https://thejre.org/sitemap.xml",
