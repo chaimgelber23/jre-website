@@ -137,7 +137,7 @@ export default function IsraelTripInterestPage() {
                   <p className="text-gray-700 leading-relaxed mb-8">
                     We&apos;re currently planning a women&apos;s Israel trip for the week of November 1st, 2026.
                     This trip requires a minimum number of attendees to move forward.
-                    Please share your interest below so we can finalize plans.
+                    Please share your interest below so we can start planning the trip.
                   </p>
 
                   <form onSubmit={handleSubmit} className="space-y-6">
