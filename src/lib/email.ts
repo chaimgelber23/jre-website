@@ -23,6 +23,7 @@ interface DonationEmailData {
   isRecurring: boolean;
   sponsorship?: string;
   transactionId?: string;
+  receiptUrl?: string;
 }
 
 interface RegistrationEmailData {
@@ -157,7 +158,7 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
                             </table>
 
                             <!-- Tax Notice -->
-                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin: 0 0 40px;">
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="background: #f0fdf4; border-radius: 8px; border-left: 4px solid #10b981; margin: 0 0 ${data.receiptUrl ? "24px" : "40px"};">
                               <tr>
                                 <td style="padding: 20px;">
                                   <p style="color: #065f46; font-size: 13px; margin: 0; line-height: 1.6;">
@@ -166,6 +167,18 @@ export async function sendDonationConfirmation(data: DonationEmailData) {
                                 </td>
                               </tr>
                             </table>
+
+                            ${data.receiptUrl ? `
+                            <!-- Tax Receipt CTA -->
+                            <table role="presentation" width="100%" cellspacing="0" cellpadding="0" style="margin: 0 0 40px;">
+                              <tr>
+                                <td align="center">
+                                  <a href="${data.receiptUrl}" style="display: inline-block; background: #111827; color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 8px; font-weight: 500; font-size: 14px; letter-spacing: 0.3px;">Download your tax receipt (PDF)</a>
+                                  <p style="color: #9ca3af; font-size: 11px; margin: 12px 0 0; line-height: 1.5;">Opens a printable receipt. Use your browser&rsquo;s Print dialog and choose &ldquo;Save as PDF.&rdquo;</p>
+                                </td>
+                              </tr>
+                            </table>
+                            ` : ""}
 
                             <p style="color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5;">With gratitude,<br><span style="color: #1a1a1a; font-weight: 500;">The JRE Team</span></p>
                           </td>

@@ -9,6 +9,7 @@ import {
   maskDonorName,
 } from "@/lib/campaign";
 import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert, sendDonationSaveFailedAlert } from "@/lib/email";
+import { buildReceiptUrl } from "@/lib/receipt-token";
 import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type {
   CampaignMatcher,
@@ -512,6 +513,17 @@ export async function POST(
       if (tier?.label) tierLabel = tier.label;
     }
 
+    // Receipt URL is signed with RECEIPT_SECRET; skip if unset so the email
+    // still goes out without a broken button.
+    let receiptUrl: string | undefined;
+    if (process.env.RECEIPT_SECRET) {
+      try {
+        receiptUrl = buildReceiptUrl(insertData.id);
+      } catch (e) {
+        console.error("buildReceiptUrl failed:", e);
+      }
+    }
+
     void sendDonationConfirmation({
       to: body.email.trim(),
       name: body.name.trim(),
@@ -519,6 +531,7 @@ export async function POST(
       isRecurring: persistRecurring,
       sponsorship: tierLabel,
       transactionId: paymentReference ?? insertData.id,
+      receiptUrl,
     }).catch((e) => console.error("donation receipt email failed:", e));
 
     if (body.dedication_email && EMAIL_RE.test(body.dedication_email) && body.dedication_name) {
