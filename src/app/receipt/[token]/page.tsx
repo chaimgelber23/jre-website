@@ -88,119 +88,214 @@ export default async function ReceiptPage({ params }: Props) {
   const method = methodLabel(d.payment_method, d.payment_reference);
   const legalNote =
     c.tax_deductible_note ||
-    "The Jewish Renaissance Experience is a registered 501(c)(3) nonprofit organization. This serves as your official tax receipt. No goods or services were provided in exchange for this donation.";
+    "The JRE is a registered 501(c)(3) nonprofit. Please save this receipt for your tax records. No goods or services were provided in exchange for this donation.";
+  const firstName = (d.name?.trim().split(/\s+/)[0]) || "Friend";
 
   return (
-    <main className="receipt-page">
+    <div className="receipt-shell">
       <style
         dangerouslySetInnerHTML={{
           __html: `
-            body { background: #f3f4f6; }
-            .receipt-page {
-              max-width: 720px;
-              margin: 48px auto;
-              padding: 56px 56px 40px;
+            html, body { background: #f8f9fa; }
+            .receipt-shell {
+              min-height: 100vh;
+              background: #f8f9fa;
+              padding: 60px 20px;
+              display: flex;
+              justify-content: center;
+            }
+            .receipt-wrap { max-width: 600px; width: 100%; }
+            .receipt-logo { text-align: center; padding: 0 0 8px; }
+            .receipt-logo img { max-width: 140px; height: auto; display: inline-block; }
+            .receipt-card {
               background: #ffffff;
-              color: #111827;
-              font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', Helvetica, Arial, sans-serif;
-              box-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 8px 24px rgba(0,0,0,0.06);
-              border-radius: 4px;
+              border-radius: 16px;
+              overflow: hidden;
+              box-shadow: 0 4px 6px rgba(0,0,0,0.05), 0 1px 3px rgba(0,0,0,0.1);
             }
-            .receipt-header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 32px; border-bottom: 1px solid #e5e7eb; }
-            .receipt-org-name { font-size: 18px; font-weight: 600; color: #111827; letter-spacing: -0.2px; margin: 0 0 4px; }
-            .receipt-org-meta { font-size: 12px; color: #6b7280; line-height: 1.5; }
-            .receipt-title { font-size: 11px; font-weight: 700; letter-spacing: 2px; color: #EF8046; text-transform: uppercase; text-align: right; }
-            .receipt-subtitle { font-size: 22px; font-weight: 600; color: #111827; letter-spacing: -0.4px; margin: 8px 0 0; text-align: right; }
-            .receipt-rows { padding: 36px 0 8px; }
-            .receipt-row { display: flex; justify-content: space-between; padding: 14px 0; border-bottom: 1px solid #f3f4f6; font-size: 14px; }
-            .receipt-row .k { color: #6b7280; font-weight: 500; }
-            .receipt-row .v { color: #111827; font-weight: 500; text-align: right; max-width: 60%; word-break: break-word; }
-            .receipt-row .v.ref { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 12px; color: #4b5563; }
-            .receipt-total { display: flex; justify-content: space-between; padding: 24px 0 8px; margin-top: 12px; border-top: 2px solid #111827; }
-            .receipt-total .k { font-size: 13px; font-weight: 600; color: #111827; text-transform: uppercase; letter-spacing: 1px; }
-            .receipt-total .v { font-size: 28px; font-weight: 700; color: #EF8046; letter-spacing: -0.5px; }
-            .receipt-legal { margin-top: 36px; padding: 20px 24px; background: #f9fafb; border-left: 3px solid #EF8046; border-radius: 4px; }
-            .receipt-legal p { margin: 0; font-size: 12px; line-height: 1.7; color: #4b5563; }
-            .receipt-actions { margin-top: 40px; display: flex; flex-direction: column; align-items: center; gap: 12px; }
-            .receipt-print-btn { background: #111827; color: #ffffff; border: none; padding: 12px 28px; font-size: 14px; font-weight: 500; letter-spacing: 0.3px; border-radius: 6px; cursor: pointer; font-family: inherit; }
-            .receipt-print-btn:hover { background: #1f2937; }
-            .receipt-hint { font-size: 12px; color: #9ca3af; text-align: center; }
+            .receipt-accent { height: 3px; background: linear-gradient(90deg, #EF8046, #f59e0b); }
+            .receipt-head { padding: 56px 48px 48px; text-align: center; border-bottom: 1px solid #f0f0f0; }
+            .receipt-head-rule { width: 40px; height: 2px; background: linear-gradient(90deg, transparent, #EF8046, transparent); margin: 0 auto 32px; }
+            .receipt-head h1 { color: #1a1a1a; margin: 0 0 12px; font-size: 36px; font-weight: 600; letter-spacing: -0.8px; }
+            .receipt-head p { color: #6b7280; margin: 0; font-size: 15px; font-weight: 400; line-height: 1.6; }
+            .receipt-body { padding: 48px 48px 40px; }
+            .receipt-greeting { color: #1a1a1a; font-size: 16px; margin: 0 0 8px; line-height: 1.5; }
+            .receipt-thank { color: #6b7280; font-size: 15px; margin: 0 0 40px; line-height: 1.6; }
+            .receipt-amount-block {
+              padding: 32px;
+              background: #fafafa;
+              border-left: 4px solid #EF8046;
+              border-radius: 8px;
+              text-align: center;
+              margin: 0 0 32px;
+            }
+            .receipt-amount-label { color: #9ca3af; font-size: 11px; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px; font-weight: 600; }
+            .receipt-amount-value { color: #EF8046; font-size: 40px; font-weight: 600; letter-spacing: -1px; line-height: 1.1; }
+            .receipt-details-title { color: #9ca3af; font-size: 11px; margin: 0 0 16px; text-transform: uppercase; letter-spacing: 1px; font-weight: 600; }
+            .receipt-details { width: 100%; margin: 0 0 32px; border-collapse: collapse; }
+            .receipt-details td { padding: 10px 0; border-bottom: 1px solid #f0f0f0; font-size: 14px; }
+            .receipt-details td.k { color: #6b7280; }
+            .receipt-details td.v { color: #1a1a1a; font-weight: 500; text-align: right; word-break: break-word; }
+            .receipt-details td.ref { color: #9ca3af; font-size: 12px; padding-top: 12px; padding-bottom: 0; font-family: ui-monospace, 'SF Mono', Menlo, monospace; border-bottom: none; }
+            .receipt-tax {
+              background: #f0fdf4;
+              border-radius: 8px;
+              border-left: 4px solid #10b981;
+              margin: 0 0 40px;
+              padding: 20px;
+            }
+            .receipt-tax p { color: #065f46; font-size: 13px; margin: 0; line-height: 1.6; }
+            .receipt-tax strong { font-weight: 600; }
+            .receipt-actions { text-align: center; margin: 0 0 24px; }
+            .receipt-print-btn {
+              display: inline-block;
+              background: #EF8046;
+              color: #ffffff;
+              border: none;
+              padding: 14px 32px;
+              font-size: 14px;
+              font-weight: 600;
+              letter-spacing: 0.3px;
+              border-radius: 8px;
+              cursor: pointer;
+              font-family: inherit;
+              transition: filter 150ms ease-out;
+            }
+            .receipt-print-btn:hover { filter: brightness(0.94); }
+            .receipt-hint { color: #9ca3af; font-size: 12px; margin: 12px 0 0; line-height: 1.5; }
+            .receipt-closing { color: #9ca3af; font-size: 13px; margin: 0; line-height: 1.5; }
+            .receipt-closing span { color: #1a1a1a; font-weight: 500; }
+            .receipt-footer { padding: 48px 20px; text-align: center; }
+            .receipt-footer-rule { width: 32px; height: 1px; background: linear-gradient(90deg, transparent, #d1d5db, transparent); margin: 0 auto 24px; }
+            .receipt-footer-brand { color: #1a1a1a; font-size: 11px; margin: 0 0 4px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; }
+            .receipt-footer-name { color: #9ca3af; font-size: 12px; margin: 0 0 12px; font-weight: 400; }
+            .receipt-footer-addr { color: #d1d5db; font-size: 11px; margin: 0 0 12px; line-height: 1.6; }
+            .receipt-footer-contact { color: #d1d5db; font-size: 11px; margin: 0; }
+            .receipt-footer-contact a { color: #9ca3af; text-decoration: none; }
+            .receipt-footer-contact .dot { color: #e5e7eb; margin: 0 8px; }
             @media print {
-              body { background: #ffffff; }
-              .receipt-page { margin: 0; padding: 32px; box-shadow: none; border-radius: 0; max-width: none; }
+              html, body { background: #ffffff !important; }
+              .receipt-shell { padding: 0; background: #ffffff; }
+              .receipt-card { box-shadow: none; border-radius: 0; }
               .no-print { display: none !important; }
+              .receipt-footer { padding: 24px 0 0; }
             }
-            @media (max-width: 600px) {
-              .receipt-page { margin: 0; padding: 32px 24px; box-shadow: none; border-radius: 0; }
-              .receipt-header { flex-direction: column; gap: 20px; }
-              .receipt-title, .receipt-subtitle { text-align: left; }
+            @media (max-width: 640px) {
+              .receipt-shell { padding: 32px 0; }
+              .receipt-head { padding: 40px 24px 32px; }
+              .receipt-head h1 { font-size: 28px; }
+              .receipt-body { padding: 32px 24px 32px; }
+              .receipt-amount-value { font-size: 32px; }
+              .receipt-card { border-radius: 0; }
             }
           `,
         }}
       />
 
-      <header className="receipt-header">
-        <div>
-          <p className="receipt-org-name">The Jewish Renaissance Experience</p>
-          <p className="receipt-org-meta">
-            1495 Weaver Street, Scarsdale, NY 10583
+      <div className="receipt-wrap">
+        <div className="receipt-logo">
+          {/* eslint-disable-next-line @next/next/no-img-element -- static logo on a print-target page; next/image adds no value here */}
+          <img src="https://thejre.org/images/logo.png" alt="The JRE" width={140} />
+        </div>
+
+        <div className="receipt-card">
+          <div className="receipt-accent" />
+
+          <div className="receipt-head">
+            <div className="receipt-head-rule" />
+            <h1>Tax Receipt</h1>
+            <p>Official 501(c)(3) record of your donation</p>
+          </div>
+
+          <div className="receipt-body">
+            <p className="receipt-greeting">Dear {firstName},</p>
+            <p className="receipt-thank">
+              Thank you for your gift to The JRE. Your generosity helps us provide meaningful
+              Jewish experiences for the Westchester community. Please keep this receipt for
+              your tax records.
+            </p>
+
+            <div className="receipt-amount-block">
+              <div className="receipt-amount-label">Tax-deductible amount</div>
+              <div className="receipt-amount-value">{amount}</div>
+            </div>
+
+            <div>
+              <h3 className="receipt-details-title">Transaction Details</h3>
+              <table className="receipt-details">
+                <tbody>
+                  <tr>
+                    <td className="k">Donor</td>
+                    <td className="v">{d.name}</td>
+                  </tr>
+                  <tr>
+                    <td className="k">Email</td>
+                    <td className="v">{d.email}</td>
+                  </tr>
+                  <tr>
+                    <td className="k">Campaign</td>
+                    <td className="v">{c.title}</td>
+                  </tr>
+                  <tr>
+                    <td className="k">Date of gift</td>
+                    <td className="v">{dateStr}</td>
+                  </tr>
+                  <tr>
+                    <td className="k">Payment method</td>
+                    <td className="v">{method}</td>
+                  </tr>
+                  {c.tax_id ? (
+                    <tr>
+                      <td className="k">EIN</td>
+                      <td className="v">{c.tax_id}</td>
+                    </tr>
+                  ) : null}
+                  <tr>
+                    <td colSpan={2} className="ref">
+                      Reference: {reference}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <div className="receipt-tax">
+              <p>
+                <strong>Tax-Deductible:</strong> {legalNote}
+              </p>
+            </div>
+
+            <div className="receipt-actions no-print">
+              <button type="button" className="receipt-print-btn">
+                Print or save as PDF
+              </button>
+              <p className="receipt-hint">
+                Tip: choose &ldquo;Save as PDF&rdquo; as the destination in your browser&rsquo;s print dialog.
+              </p>
+            </div>
+
+            <p className="receipt-closing">
+              With gratitude,
+              <br />
+              <span>The JRE Team</span>
+            </p>
+          </div>
+        </div>
+
+        <div className="receipt-footer no-print">
+          <div className="receipt-footer-rule" />
+          <p className="receipt-footer-brand">The JRE</p>
+          <p className="receipt-footer-name">Jewish Renaissance Experience</p>
+          <p className="receipt-footer-addr">
+            1495 Weaver Street
             <br />
-            office@thejre.org · 914-713-4355
-            {c.tax_id ? (
-              <>
-                <br />
-                EIN: {c.tax_id}
-              </>
-            ) : null}
+            Scarsdale, NY 10583
           </p>
-        </div>
-        <div>
-          <div className="receipt-title">Official Tax Receipt</div>
-          <div className="receipt-subtitle">501(c)(3) Donation</div>
-        </div>
-      </header>
-
-      <section className="receipt-rows">
-        <div className="receipt-row">
-          <span className="k">Donor</span>
-          <span className="v">{d.name}</span>
-        </div>
-        <div className="receipt-row">
-          <span className="k">Email</span>
-          <span className="v">{d.email}</span>
-        </div>
-        <div className="receipt-row">
-          <span className="k">Campaign</span>
-          <span className="v">{c.title}</span>
-        </div>
-        <div className="receipt-row">
-          <span className="k">Date of gift</span>
-          <span className="v">{dateStr}</span>
-        </div>
-        <div className="receipt-row">
-          <span className="k">Payment method</span>
-          <span className="v">{method}</span>
-        </div>
-        <div className="receipt-row">
-          <span className="k">Reference</span>
-          <span className="v ref">{reference}</span>
-        </div>
-        <div className="receipt-total">
-          <span className="k">Tax-deductible amount</span>
-          <span className="v">{amount}</span>
-        </div>
-      </section>
-
-      <section className="receipt-legal">
-        <p>{legalNote}</p>
-      </section>
-
-      <div className="receipt-actions no-print">
-        <button type="button" className="receipt-print-btn">
-          Print or save as PDF
-        </button>
-        <div className="receipt-hint">
-          Tip: choose &ldquo;Save as PDF&rdquo; as the destination in your browser&rsquo;s print dialog.
+          <p className="receipt-footer-contact">
+            <a href="mailto:office@thejre.org">office@thejre.org</a>
+            <span className="dot">·</span>
+            <a href="tel:914-713-4355">914-713-4355</a>
+          </p>
         </div>
       </div>
 
@@ -209,6 +304,6 @@ export default async function ReceiptPage({ params }: Props) {
           __html: `(function(){var b=document.querySelector('.receipt-print-btn');if(b)b.addEventListener('click',function(){window.print();});})();`,
         }}
       />
-    </main>
+    </div>
   );
 }
