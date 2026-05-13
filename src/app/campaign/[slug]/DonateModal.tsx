@@ -2,14 +2,14 @@
 
 import { useState, useRef, useEffect, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
+import confetti from "canvas-confetti";
 import {
-  X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft, Gift,
+  X, CreditCard, Lock, Heart, Check, ChevronRight, ChevronLeft,
 } from "lucide-react";
 import { formatUsd, centsFromDollars, getActiveMatcher } from "@/lib/campaign";
 import type {
   CampaignSnapshot,
   CampaignTier,
-  CampaignCause,
   CampaignTeamWithProgress,
   CampaignMatcher,
   PaymentMethod,
@@ -21,15 +21,21 @@ interface Props {
   snapshot: CampaignSnapshot;
   preselectedTierId?: string | null;
   preselectedTeamId?: string | null;
+  preselectedAmountDollars?: number | null;
   onDonated?: () => void;
 }
 
-type Step = "amount" | "details" | "payment" | "success";
+type Step = "details" | "payment" | "success";
+
+const MAX_DISPLAY_NAME = 55;
+const MAX_MESSAGE = 75;
 
 interface DonateForm {
-  name: string;
+  fullName: string;
+  displayName: string;
   email: string;
   phone: string;
+  phoneCountry: string; // "+1"
   isAnonymous: boolean;
   message: string;
   dedicationType: "" | "honor" | "memory";
@@ -39,11 +45,26 @@ interface DonateForm {
   cardNumber: string;
   cardExpiry: string;
   cardCvv: string;
+  addrCountry: string;
+  addrLine1: string;
+  addrApt: string;
+  addrZip: string;
+  addrCity: string;
+  addrState: string;
   dafSponsor: string;
   ojcAccountId: string;
-  dfDonor: string;      // Donor's Fund Giving Card # or email
-  dfAuth: string;       // Donor's Fund CVV or PIN
+  dfDonor: string;
+  dfAuth: string;
 }
+
+const COUNTRIES = [
+  { code: "+1", label: "US +1" },
+  { code: "+972", label: "IL +972" },
+  { code: "+44", label: "UK +44" },
+  { code: "+61", label: "AU +61" },
+  { code: "+33", label: "FR +33" },
+  { code: "+49", label: "DE +49" },
+];
 
 export default function DonateModal({
   open,
@@ -51,22 +72,28 @@ export default function DonateModal({
   snapshot,
   preselectedTierId,
   preselectedTeamId,
+  preselectedAmountDollars,
   onDonated,
 }: Props) {
-  const { campaign, tiers, causes, teams, matchers } = snapshot;
+  const { campaign, tiers, teams, matchers } = snapshot;
   const activeMatcher = useMemo(() => getActiveMatcher(matchers), [matchers]);
+  const multiplier = activeMatcher ? Number(activeMatcher.multiplier) : 1;
 
-  const [step, setStep] = useState<Step>("amount");
+  const [step, setStep] = useState<Step>("details");
 
   const [amountDollars, setAmountDollars] = useState<number | "">("");
   const [tierId, setTierId] = useState<string | null>(preselectedTierId ?? null);
-  const [causeId, setCauseId] = useState<string | null>(causes[0]?.id ?? null);
   const [teamId, setTeamId] = useState<string | null>(preselectedTeamId ?? null);
+  const [installments, setInstallments] = useState<number>(1); // 1 = one-time
+
+  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
 
   const [form, setForm] = useState<DonateForm>({
-    name: "",
+    fullName: "",
+    displayName: "",
     email: "",
     phone: "",
+    phoneCountry: "+1",
     isAnonymous: false,
     message: "",
     dedicationType: "",
@@ -76,16 +103,23 @@ export default function DonateModal({
     cardNumber: "",
     cardExpiry: "",
     cardCvv: "",
+    addrCountry: "United States",
+    addrLine1: "",
+    addrApt: "",
+    addrZip: "",
+    addrCity: "",
+    addrState: "",
     dafSponsor: "",
     ojcAccountId: "",
     dfDonor: "",
     dfAuth: "",
   });
 
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("card");
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
 
+  // Preselect logic
   useEffect(() => {
     if (preselectedTierId) {
       setTierId(preselectedTierId);
@@ -98,10 +132,40 @@ export default function DonateModal({
     if (preselectedTeamId) setTeamId(preselectedTeamId);
   }, [preselectedTeamId]);
 
+  useEffect(() => {
+    if (preselectedAmountDollars && preselectedAmountDollars > 0 && !preselectedTierId) {
+      setAmountDollars(preselectedAmountDollars);
+      setTierId(null);
+    }
+  }, [preselectedAmountDollars, preselectedTierId]);
+
+  // Body scroll lock + Escape to close
+  useEffect(() => {
+    if (!open) return;
+    const prevOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    const onKey = (e: KeyboardEvent) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => {
+      document.body.style.overflow = prevOverflow;
+      window.removeEventListener("keydown", onKey);
+    };
+  }, [open, onClose]);
+
+  // When step changes, scroll the modal body back to top
+  useEffect(() => {
+    scrollRef.current?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [step]);
+
   const amountCents = useMemo(
     () => (typeof amountDollars === "number" ? centsFromDollars(amountDollars) : 0),
     [amountDollars]
   );
+  const matchedCents = activeMatcher && amountCents > 0
+    ? Math.round(amountCents * Math.max(0, multiplier - 1))
+    : 0;
+  const totalCents = amountCents + matchedCents;
+  const perInstallmentCents = installments > 1 ? Math.round(amountCents / installments) : amountCents;
 
   const cardNumberRef = useRef<HTMLInputElement>(null);
   const cardExpiryRef = useRef<HTMLInputElement>(null);
@@ -139,25 +203,12 @@ export default function DonateModal({
     return d;
   };
 
-  const goToDetails = () => {
-    if (!amountDollars || amountCents < 100) {
-      setError("Please choose an amount (minimum $1).");
-      return;
-    }
-    setError(null);
-    setStep("details");
-  };
-
   const goToPayment = () => {
-    if (!form.name.trim() || !form.email.trim()) {
-      setError("Name and email are required.");
-      return;
-    }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) {
-      setError("Please enter a valid email.");
-      return;
-    }
     setError(null);
+    if (!amountDollars || amountCents < 100) return setError("Please choose an amount (minimum $1).");
+    if (!form.fullName.trim()) return setError("Full name is required.");
+    if (!form.email.trim()) return setError("Email is required.");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(form.email)) return setError("Please enter a valid email.");
     setStep("payment");
   };
 
@@ -169,6 +220,7 @@ export default function DonateModal({
       if (num.length < 13) return setError("Please enter a valid card number.");
       if (!form.cardExpiry.includes("/")) return setError("Enter expiry as MM/YY.");
       if (form.cardCvv.length < 3) return setError("Please enter the CVV.");
+      if (!form.addrZip.trim()) return setError("Please enter the billing ZIP code.");
     }
     if (paymentMethod === "daf" && !form.dafSponsor.trim()) {
       return setError("Please tell us which DAF sponsor (e.g. Fidelity Charitable).");
@@ -180,25 +232,37 @@ export default function DonateModal({
 
     setSubmitting(true);
     try {
+      const displayName = form.displayName.trim() || form.fullName.trim();
+      const phoneFull = form.phone.trim() ? `${form.phoneCountry} ${form.phone.trim()}` : "";
+
       const payload = {
         amount_cents: amountCents,
         tier_id: tierId,
-        cause_id: causeId,
+        cause_id: null,
         team_id: teamId,
         payment_method: paymentMethod,
-        name: form.name.trim(),
+        name: form.fullName.trim(),
+        display_name: displayName,
         email: form.email.trim(),
-        phone: form.phone.trim() || null,
+        phone: phoneFull || null,
         is_anonymous: form.isAnonymous,
         message: form.message.trim() || null,
         dedication_type: form.dedicationType || null,
         dedication_name: form.dedicationName.trim() || null,
         dedication_email: form.dedicationEmail.trim() || null,
         card: paymentMethod === "card" ? {
-          name: form.cardName || form.name,
+          name: form.cardName || form.fullName,
           number: form.cardNumber.replace(/\s/g, ""),
           expiry: form.cardExpiry,
           cvv: form.cardCvv,
+          billing: {
+            country: form.addrCountry,
+            line1: form.addrLine1,
+            apt: form.addrApt,
+            zip: form.addrZip,
+            city: form.addrCity,
+            state: form.addrState,
+          },
         } : null,
         daf_sponsor: paymentMethod === "daf" ? form.dafSponsor.trim() : null,
         ojc_account_id: paymentMethod === "ojc_fund" ? form.ojcAccountId.trim() : null,
@@ -206,6 +270,7 @@ export default function DonateModal({
           donor: form.dfDonor.trim(),
           authorization: form.dfAuth.trim(),
         } : null,
+        installments: installments > 1 ? installments : null,
       };
 
       const res = await fetch(`/api/campaign/${campaign.slug}/donate`, {
@@ -225,7 +290,9 @@ export default function DonateModal({
     }
   };
 
-  const activeTier = tiers.find((t) => t.id === tierId);
+  const isPledge = paymentMethod !== "card" && paymentMethod !== "donors_fund";
+  const displayNameLeft = MAX_DISPLAY_NAME - form.displayName.length;
+  const messageLeft = MAX_MESSAGE - form.message.length;
 
   return (
     <AnimatePresence>
@@ -233,366 +300,465 @@ export default function DonateModal({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm overflow-y-auto"
+        className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex items-center justify-center p-3 md:p-6"
         onClick={onClose}
+        role="dialog"
+        aria-modal="true"
       >
-        <div className="min-h-screen flex items-start justify-center p-4 py-10">
-          <motion.div
-            initial={{ opacity: 0, scale: 0.96, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.96 }}
-            onClick={(e) => e.stopPropagation()}
-            className="bg-white rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden"
-          >
-            <div className="relative bg-gradient-to-b from-[#2d3748] to-[#1a202c] text-white px-6 py-5">
-              <button
-                onClick={onClose}
-                className="absolute top-4 right-4 w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
-                aria-label="Close"
-              >
-                <X className="w-4 h-4" />
-              </button>
-              <div className="text-[10px] uppercase tracking-[0.2em] text-[#EF8046] font-semibold mb-1">
-                Donate
+        <motion.div
+          initial={{ opacity: 0, scale: 0.96, y: 20 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.96 }}
+          onClick={(e) => e.stopPropagation()}
+          className="bg-white rounded-2xl shadow-2xl w-full max-w-xl flex flex-col overflow-hidden"
+          style={{ maxHeight: "min(92vh, 900px)" }}
+        >
+          {/* Sticky header */}
+          <div className="relative bg-gradient-to-b from-[#2d3748] to-[#1a202c] text-white px-6 py-5 flex-shrink-0">
+            <button
+              onClick={onClose}
+              className="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center transition-colors"
+              aria-label="Close"
+            >
+              <X className="w-5 h-5" />
+            </button>
+            <div className="text-[10px] uppercase tracking-[0.2em] text-[#EF8046] font-semibold mb-1">
+              Donate · {campaign.title}
+            </div>
+            <h2 className="text-lg font-bold pr-10">
+              {step === "success" ? "Thank you!" : step === "payment" ? "Payment" : "Your Donation"}
+            </h2>
+            {step !== "success" && (
+              <div className="flex items-center gap-2 mt-3 text-xs text-white/70">
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === "details" || step === "payment" ? "bg-[#EF8046] text-white" : "bg-white/15"}`}>1</span>
+                  <span>Details</span>
+                </div>
+                <div className="h-px flex-1 bg-white/15" />
+                <div className="flex items-center gap-1.5">
+                  <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold ${step === "payment" ? "bg-[#EF8046] text-white" : "bg-white/15"}`}>2</span>
+                  <span>Payment</span>
+                </div>
               </div>
-              <h2 className="text-xl font-bold">{campaign.title}</h2>
-              {step !== "success" && (
-                <div className="flex items-center gap-1.5 mt-3">
-                  {(["amount", "details", "payment"] as Step[]).map((s, i) => {
-                    const order = ["amount", "details", "payment"];
-                    const active = order.indexOf(step) >= i;
-                    return (
-                      <div
-                        key={s}
-                        className={`h-1 flex-1 rounded-full ${active ? "bg-[#EF8046]" : "bg-white/15"}`}
-                      />
-                    );
-                  })}
-                </div>
-              )}
-            </div>
+            )}
+          </div>
 
-            <div className="p-6">
-              {error && step !== "success" && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
-                  {error}
-                </div>
-              )}
+          {/* Scrollable body */}
+          <div
+            ref={scrollRef}
+            className="flex-1 overflow-y-auto overscroll-contain px-6 py-5"
+            style={{ WebkitOverflowScrolling: "touch" }}
+          >
+            {error && step !== "success" && (
+              <div className="mb-4 bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg text-sm">
+                {error}
+              </div>
+            )}
 
-              {step === "amount" && (
-                <AmountStep
-                  tiers={tiers}
-                  causes={causes}
-                  teams={teams}
-                  matcher={activeMatcher}
-                  amountCents={amountCents}
-                  amountDollars={amountDollars}
-                  tierId={tierId}
-                  causeId={causeId}
-                  teamId={teamId}
-                  onPickTier={selectTier}
-                  onPickCustom={selectCustom}
-                  onPickCause={setCauseId}
-                  onPickTeam={setTeamId}
-                  onNext={goToDetails}
-                />
-              )}
+            {step === "details" && (
+              <DetailsStep
+                tiers={tiers}
+                teams={teams}
+                matcher={activeMatcher}
+                allowAnonymous={campaign.allow_anonymous}
+                allowDedication={campaign.allow_dedication}
+                allowRecurring={campaign.allow_recurring}
+                amountDollars={amountDollars}
+                amountCents={amountCents}
+                matchedCents={matchedCents}
+                totalCents={totalCents}
+                multiplier={multiplier}
+                installments={installments}
+                perInstallmentCents={perInstallmentCents}
+                tierId={tierId}
+                teamId={teamId}
+                form={form}
+                displayNameLeft={displayNameLeft}
+                messageLeft={messageLeft}
+                onPickTier={selectTier}
+                onPickCustom={selectCustom}
+                onPickTeam={setTeamId}
+                onSetInstallments={setInstallments}
+                onChange={change}
+                orgName="Jewish Renaissance Experience"
+              />
+            )}
 
+            {step === "payment" && (
+              <PaymentStep
+                paymentMethod={paymentMethod}
+                setPaymentMethod={setPaymentMethod}
+                form={form}
+                onChange={change}
+                setForm={setForm}
+                formatCardNumber={formatCardNumber}
+                formatExpiry={formatExpiry}
+                cardNumberRef={cardNumberRef}
+                cardExpiryRef={cardExpiryRef}
+                cardCvvRef={cardCvvRef}
+                amountCents={amountCents}
+                matchedCents={matchedCents}
+                totalCents={totalCents}
+                orgName="Jewish Renaissance Experience"
+              />
+            )}
+
+            {step === "success" && (
+              <SuccessStep
+                amountCents={amountCents}
+                isPledge={isPledge}
+                email={form.email.trim()}
+                onClose={onClose}
+              />
+            )}
+          </div>
+
+          {/* Sticky footer */}
+          {step !== "success" && (
+            <div className="flex-shrink-0 border-t border-gray-100 bg-white px-6 py-4">
               {step === "details" && (
-                <DetailsStep
-                  form={form}
-                  onChange={change}
-                  allowAnonymous={campaign.allow_anonymous}
-                  allowDedication={campaign.allow_dedication}
-                  onBack={() => setStep("amount")}
-                  onNext={goToPayment}
-                  amountCents={amountCents}
-                  activeTierLabel={activeTier?.label}
-                />
+                <button
+                  type="button"
+                  onClick={goToPayment}
+                  className="w-full py-3.5 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all"
+                >
+                  Continue to Payment <ChevronRight className="w-4 h-4" />
+                </button>
               )}
-
               {step === "payment" && (
-                <PaymentStep
-                  form={form}
-                  onChange={change}
-                  paymentMethod={paymentMethod}
-                  setPaymentMethod={setPaymentMethod}
-                  amountCents={amountCents}
-                  submitting={submitting}
-                  onBack={() => setStep("details")}
-                  onSubmit={submit}
-                  formatCardNumber={formatCardNumber}
-                  formatExpiry={formatExpiry}
-                  cardNumberRef={cardNumberRef}
-                  cardExpiryRef={cardExpiryRef}
-                  cardCvvRef={cardCvvRef}
-                  setForm={setForm}
-                />
+                <div className="flex gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setStep("details")}
+                    className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center gap-1 hover:bg-gray-200 transition-colors"
+                  >
+                    <ChevronLeft className="w-4 h-4" /> Back
+                  </button>
+                  <button
+                    type="button"
+                    onClick={submit}
+                    disabled={submitting || amountCents <= 0}
+                    className="flex-1 py-3 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {submitting ? (
+                      <>
+                        <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+                          className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
+                        Processing…
+                      </>
+                    ) : (
+                      <>
+                        <Heart className="w-4 h-4" />
+                        {paymentMethod === "card" || paymentMethod === "donors_fund"
+                          ? `Donate ${formatUsd(amountCents)}`
+                          : `Pledge ${formatUsd(amountCents)}`}
+                      </>
+                    )}
+                  </button>
+                </div>
               )}
-
-              {step === "success" && (
-                <SuccessStep
-                  amountCents={amountCents}
-                  paymentMethod={paymentMethod}
-                  onClose={onClose}
-                />
-              )}
+              <p className="text-center text-gray-400 text-[11px] mt-2.5">
+                <Lock className="inline w-3 h-3 mr-1 text-green-500" />
+                Secure · tax-deductible · JRE is a 501(c)(3) non-profit
+              </p>
             </div>
-          </motion.div>
-        </div>
+          )}
+        </motion.div>
       </motion.div>
     </AnimatePresence>
   );
 }
 
-// ---------- step components ----------
+// ======================== STEP 1: DETAILS ========================
 
-function AmountStep({
-  tiers, causes, teams, matcher, amountCents, amountDollars, tierId, causeId, teamId,
-  onPickTier, onPickCustom, onPickCause, onPickTeam, onNext,
+function DetailsStep({
+  tiers, teams, matcher,
+  allowAnonymous, allowDedication, allowRecurring,
+  amountDollars, amountCents, matchedCents, totalCents, multiplier,
+  installments, perInstallmentCents,
+  tierId, teamId,
+  form, displayNameLeft, messageLeft,
+  onPickTier, onPickCustom, onPickTeam, onSetInstallments, onChange,
+  orgName,
 }: {
   tiers: CampaignTier[];
-  causes: CampaignCause[];
   teams: CampaignTeamWithProgress[];
   matcher: CampaignMatcher | null;
-  amountCents: number;
+  allowAnonymous: boolean;
+  allowDedication: boolean;
+  allowRecurring: boolean;
   amountDollars: number | "";
+  amountCents: number;
+  matchedCents: number;
+  totalCents: number;
+  multiplier: number;
+  installments: number;
+  perInstallmentCents: number;
   tierId: string | null;
-  causeId: string | null;
   teamId: string | null;
+  form: DonateForm;
+  displayNameLeft: number;
+  messageLeft: number;
   onPickTier: (t: CampaignTier) => void;
   onPickCustom: (v: string) => void;
-  onPickCause: (id: string | null) => void;
   onPickTeam: (id: string | null) => void;
-  onNext: () => void;
+  onSetInstallments: (n: number) => void;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  orgName: string;
 }) {
-  const multiplier = matcher ? Number(matcher.multiplier) : 1;
-  const matchedCents = matcher && amountCents > 0
-    ? Math.round(amountCents * Math.max(0, multiplier - 1))
-    : 0;
-  const totalCents = amountCents + matchedCents;
-
   return (
-    <div>
-      <h3 className="text-sm font-semibold text-gray-900 mb-3">Choose an amount</h3>
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-3">
-        {tiers.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => onPickTier(t)}
-            className={`relative py-3 px-2 rounded-xl font-bold text-sm transition-all ${
-              tierId === t.id
-                ? "bg-[#EF8046] text-white shadow-md"
-                : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-[#EF8046]"
-            }`}
-          >
-            {t.is_featured && (
-              <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded">
-                Popular
-              </span>
-            )}
-            <div>{formatUsd(t.amount_cents)}</div>
-            {t.label && <div className="text-[10px] font-medium opacity-80 mt-0.5">{t.label}</div>}
-          </button>
-        ))}
-      </div>
-
-      <div className="relative mb-3">
-        <span className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 font-medium">$</span>
-        <input
-          type="number"
-          inputMode="numeric"
-          value={amountDollars === "" ? "" : amountDollars}
-          onChange={(e) => onPickCustom(e.target.value)}
-          placeholder="Custom amount"
-          min={1}
-          className="w-full pl-8 pr-4 py-3 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none transition-all"
-        />
-      </div>
-
-      {matcher && multiplier > 1 && amountCents > 0 && (
-        <div className="mb-4 p-3 rounded-xl border border-[#EF8046]/25 bg-gradient-to-r from-[#fff5f0] to-[#fef7e6]">
-          <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#EF8046] text-white text-[11px] font-bold tracking-wide">
-              x{multiplier} MATCH
-            </span>
-            <div className="flex-1 text-sm leading-tight">
-              <div className="text-gray-900 font-semibold tabular-nums">
-                Your {formatUsd(amountCents)} becomes {formatUsd(totalCents)}
-              </div>
-              <div className="text-xs text-gray-600">
-                <span className="font-medium">{matcher.name}</span> adds {formatUsd(matchedCents)}
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {causes.length > 1 && (
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-            Direct my gift to
-          </label>
-          <div className="grid grid-cols-2 gap-2">
-            {causes.map((c) => (
+    <div className="space-y-5">
+      {/* Amount */}
+      <Fieldset label="Your Amount">
+        {tiers.length > 0 && (
+          <div className="grid grid-cols-3 gap-2 mb-3">
+            {tiers.map((t) => (
               <button
-                key={c.id}
+                key={t.id}
                 type="button"
-                onClick={() => onPickCause(c.id)}
-                className={`text-left p-3 rounded-xl border text-sm transition-all ${
-                  causeId === c.id
-                    ? "border-[#EF8046] bg-[#fff5f0]"
-                    : "border-gray-200 bg-white hover:border-gray-300"
+                onClick={() => onPickTier(t)}
+                className={`relative py-2.5 px-2 rounded-xl font-bold text-sm transition-all ${
+                  tierId === t.id
+                    ? "bg-[#EF8046] text-white shadow-md"
+                    : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-[#EF8046]"
                 }`}
               >
-                <div className="font-semibold text-gray-900">{c.name}</div>
-                {c.description && <div className="text-xs text-gray-500 mt-0.5">{c.description}</div>}
+                {t.is_featured && (
+                  <span className="absolute -top-2 left-1/2 -translate-x-1/2 bg-amber-400 text-amber-900 text-[9px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded">
+                    Popular
+                  </span>
+                )}
+                <div>{formatUsd(t.amount_cents)}</div>
+                {t.label && <div className="text-[10px] font-medium opacity-80 mt-0.5">{t.label}</div>}
               </button>
             ))}
           </div>
-        </div>
-      )}
-
-      {teams.length > 0 && (
-        <div className="mb-4">
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-            Credit a team (optional)
-          </label>
-          <select
-            value={teamId ?? ""}
-            onChange={(e) => onPickTeam(e.target.value || null)}
-            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm"
-          >
-            <option value="">No team</option>
-            {teams.map((t) => (
-              <option key={t.id} value={t.id}>{t.name}</option>
-            ))}
-          </select>
-        </div>
-      )}
-
-      <button
-        type="button"
-        onClick={onNext}
-        className="w-full py-4 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all"
-      >
-        Continue <ChevronRight className="w-4 h-4" />
-      </button>
-    </div>
-  );
-}
-
-function DetailsStep({
-  form, onChange, allowAnonymous, allowDedication, onBack, onNext, amountCents, activeTierLabel,
-}: {
-  form: DonateForm;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
-  allowAnonymous: boolean;
-  allowDedication: boolean;
-  onBack: () => void;
-  onNext: () => void;
-  amountCents: number;
-  activeTierLabel?: string;
-}) {
-  return (
-    <div>
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900">Your info</h3>
-        <span className="text-xs text-gray-500">
-          {formatUsd(amountCents)}{activeTierLabel ? ` • ${activeTierLabel}` : ""}
-        </span>
-      </div>
-
-      <div className="space-y-3">
-        <Input label="Full name *" name="name" value={form.name} onChange={onChange} autoComplete="name" />
-        <Input label="Email *" name="email" type="email" value={form.email} onChange={onChange} autoComplete="email" />
-        <Input label="Phone (optional)" name="phone" value={form.phone} onChange={onChange} autoComplete="tel" />
-
-        {allowAnonymous && (
-          <label className="flex items-center gap-2 cursor-pointer pt-1">
-            <input type="checkbox" name="isAnonymous" checked={form.isAnonymous} onChange={onChange}
-              className="w-4 h-4 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]" />
-            <span className="text-sm text-gray-700">List me as Anonymous on the donor wall</span>
-          </label>
         )}
 
-        {allowDedication && (
-          <div className="border border-gray-200 rounded-xl p-4 bg-gray-50/40">
+        <div className="flex items-stretch rounded-xl border-2 border-gray-200 bg-[#FAFAFA] focus-within:border-[#EF8046] focus-within:bg-white transition-colors duration-200">
+          <span className="pl-4 pr-2 flex items-center text-gray-500 font-medium text-lg select-none">$</span>
+          <input
+            type="text"
+            inputMode="numeric"
+            value={amountDollars === "" ? "" : amountDollars}
+            onChange={(e) => onPickCustom(e.target.value.replace(/\D/g, ""))}
+            placeholder="0"
+            className="flex-1 min-w-0 py-3 bg-transparent text-xl font-bold tabular-nums text-gray-900 outline-none border-0 focus:outline-none focus:ring-0 focus:border-0"
+          />
+          <span className="pr-4 pl-2 flex items-center text-gray-400 text-sm font-semibold uppercase tracking-wide select-none">USD</span>
+        </div>
+
+        {allowRecurring && (
+          <div className="mt-3">
             <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">
-              Dedicate this gift (optional)
+              Donate in installments
             </label>
-            <select name="dedicationType" value={form.dedicationType} onChange={onChange}
-              className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm mb-2">
-              <option value="">No dedication</option>
+            <div className="flex items-center gap-2 flex-wrap">
+              {[1, 3, 6, 12].map((n) => (
+                <button
+                  key={n}
+                  type="button"
+                  onClick={() => onSetInstallments(n)}
+                  className={`px-3 py-1.5 rounded-lg text-xs font-semibold transition-all ${
+                    installments === n
+                      ? "bg-[#EF8046] text-white"
+                      : "bg-gray-50 border border-gray-200 text-gray-700 hover:border-[#EF8046]"
+                  }`}
+                >
+                  {n === 1 ? "One-time" : `${n}×`}
+                </button>
+              ))}
+            </div>
+            {installments > 1 && amountCents > 0 && (
+              <p className="text-[11px] text-gray-500 mt-2 tabular-nums">
+                {formatUsd(perInstallmentCents)} × {installments} monthly payments
+              </p>
+            )}
+          </div>
+        )}
+
+        {matcher && multiplier > 1 && amountCents > 0 && (
+          <div className="mt-3 p-3 rounded-xl border border-[#EF8046]/25 bg-gradient-to-r from-[#fff5f0] to-[#fef7e6]">
+            <div className="flex items-center gap-3">
+              <span className="inline-flex items-center justify-center px-2.5 py-1 rounded-md bg-[#EF8046] text-white text-[11px] font-bold tracking-wide">
+                x{multiplier} MATCH
+              </span>
+              <div className="flex-1 text-sm leading-tight">
+                <div className="text-gray-900 font-semibold tabular-nums">
+                  Your {formatUsd(amountCents)} becomes {formatUsd(totalCents)}
+                </div>
+                <div className="text-xs text-gray-600">
+                  <span className="font-medium">{matcher.name}</span> adds {formatUsd(matchedCents)}
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        <p className="text-[11px] text-gray-500 mt-2">
+          {orgName} receives:{" "}
+          <span className="font-semibold text-gray-700 tabular-nums">{formatUsd(amountCents)}</span>
+          {matchedCents > 0 && (
+            <> + <span className="font-semibold tabular-nums text-[#EF8046]">{formatUsd(matchedCents)}</span> match</>
+          )}
+        </p>
+      </Fieldset>
+
+      {/* Name */}
+      <Fieldset label="Full Name" required>
+        <Input name="fullName" value={form.fullName} onChange={onChange} autoComplete="name" placeholder="Your full name" />
+      </Fieldset>
+
+      <Fieldset
+        label="Name to be displayed"
+        hint={<span className="tabular-nums">{displayNameLeft} characters left</span>}
+      >
+        <Input
+          name="displayName"
+          value={form.displayName}
+          onChange={onChange}
+          maxLength={MAX_DISPLAY_NAME}
+          placeholder="e.g. The Cohen Family"
+        />
+        {allowAnonymous && (
+          <label className="flex items-center gap-2 cursor-pointer mt-2">
+            <input
+              type="checkbox"
+              name="isAnonymous"
+              checked={form.isAnonymous}
+              onChange={onChange}
+              className="w-4 h-4 rounded border-gray-300 text-[#EF8046] focus:ring-[#EF8046]"
+            />
+            <span className="text-sm text-gray-700">Donate anonymously</span>
+          </label>
+        )}
+      </Fieldset>
+
+      {/* Email */}
+      <Fieldset label="Email" required>
+        <Input name="email" type="email" value={form.email} onChange={onChange} autoComplete="email" placeholder="you@example.com" />
+      </Fieldset>
+
+      {/* Phone */}
+      <Fieldset label="Phone" hint="Optional">
+        <div className="flex gap-2">
+          <select
+            name="phoneCountry"
+            value={form.phoneCountry}
+            onChange={onChange}
+            className="px-2 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm focus:border-[#EF8046] outline-none"
+          >
+            {COUNTRIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.label}</option>
+            ))}
+          </select>
+          <input
+            type="tel"
+            name="phone"
+            value={form.phone}
+            onChange={onChange}
+            autoComplete="tel"
+            placeholder="(555) 123-4567"
+            className="flex-1 px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm focus:border-[#EF8046] outline-none"
+          />
+        </div>
+      </Fieldset>
+
+      {/* Message */}
+      <Fieldset
+        label="Message or Dedication"
+        hint={<span className="tabular-nums">{messageLeft} characters left</span>}
+      >
+        <textarea
+          name="message"
+          value={form.message}
+          onChange={onChange}
+          rows={2}
+          maxLength={MAX_MESSAGE}
+          className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm resize-none focus:border-[#EF8046] outline-none"
+          placeholder="Message or dedication (optional)"
+        />
+        {allowDedication && (
+          <div className="mt-2 border border-gray-200 rounded-xl p-3 bg-gray-50/40">
+            <select
+              name="dedicationType"
+              value={form.dedicationType}
+              onChange={onChange}
+              className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm mb-2"
+            >
+              <option value="">No formal dedication</option>
               <option value="honor">In honor of</option>
               <option value="memory">In memory of</option>
             </select>
             {form.dedicationType && (
               <div className="space-y-2">
-                <input name="dedicationName" value={form.dedicationName} onChange={onChange}
+                <input
+                  name="dedicationName"
+                  value={form.dedicationName}
+                  onChange={onChange}
                   placeholder="Name of honoree"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm" />
-                <input name="dedicationEmail" value={form.dedicationEmail} onChange={onChange}
-                  placeholder="Honoree's email (optional — we'll notify them)"
-                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm" />
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+                />
+                <input
+                  name="dedicationEmail"
+                  value={form.dedicationEmail}
+                  onChange={onChange}
+                  placeholder="Honoree's email (we'll notify them)"
+                  className="w-full px-3 py-2 rounded-lg border border-gray-200 bg-white text-sm"
+                />
               </div>
             )}
           </div>
         )}
+      </Fieldset>
 
-        <div>
-          <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
-            Message on donor wall (optional)
-          </label>
-          <textarea
-            name="message"
-            value={form.message}
-            onChange={onChange}
-            rows={2}
-            maxLength={240}
-            className="w-full px-3 py-2 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm resize-none focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none"
-            placeholder="Share why you gave..."
-          />
-        </div>
-      </div>
+      {/* Team */}
+      {teams.length > 0 && (
+        <Fieldset label="I would like to donate to the following individual or team" hint="Optional">
+          <select
+            value={teamId ?? ""}
+            onChange={(e) => onPickTeam(e.target.value || null)}
+            className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm"
+          >
+            <option value="">Select team</option>
+            {teams.map((t) => (
+              <option key={t.id} value={t.id}>{t.name}</option>
+            ))}
+          </select>
+        </Fieldset>
+      )}
 
-      <div className="flex gap-2 mt-5">
-        <button type="button" onClick={onBack}
-          className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center gap-1 hover:bg-gray-200 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-        <button type="button" onClick={onNext}
-          className="flex-1 py-3 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all">
-          Continue <ChevronRight className="w-4 h-4" />
-        </button>
-      </div>
     </div>
   );
 }
 
+// ======================== STEP 2: PAYMENT ========================
+
 function PaymentStep({
-  form, onChange, paymentMethod, setPaymentMethod, amountCents, submitting, onBack, onSubmit,
-  formatCardNumber, formatExpiry, cardNumberRef, cardExpiryRef, cardCvvRef, setForm,
+  paymentMethod, setPaymentMethod, form, onChange, setForm,
+  formatCardNumber, formatExpiry, cardNumberRef, cardExpiryRef, cardCvvRef,
+  amountCents, matchedCents, totalCents, orgName,
 }: {
-  form: DonateForm;
-  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
   paymentMethod: PaymentMethod;
   setPaymentMethod: (m: PaymentMethod) => void;
-  amountCents: number;
-  submitting: boolean;
-  onBack: () => void;
-  onSubmit: () => void;
+  form: DonateForm;
+  onChange: (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => void;
+  setForm: React.Dispatch<React.SetStateAction<DonateForm>>;
   formatCardNumber: (v: string) => string;
   formatExpiry: (v: string, prev: string) => string;
   cardNumberRef: React.RefObject<HTMLInputElement | null>;
   cardExpiryRef: React.RefObject<HTMLInputElement | null>;
   cardCvvRef: React.RefObject<HTMLInputElement | null>;
-  setForm: React.Dispatch<React.SetStateAction<DonateForm>>;
+  amountCents: number;
+  matchedCents: number;
+  totalCents: number;
+  orgName: string;
 }) {
+  const isCharge = paymentMethod === "card" || paymentMethod === "donors_fund";
   type TileKind =
     | { kind: "icon"; icon: React.ElementType }
-    | { kind: "logo"; src: string; alt: string; heightClass?: string };
+    | { kind: "logo"; src: string; alt: string; heightClass?: string }
+    | { kind: "badge"; text: string };
 
   const MethodTile = ({
     m, label, subtitle, visual,
@@ -605,7 +771,6 @@ function PaymentStep({
     const active = paymentMethod === m;
     return (
       <button
-        key={m}
         type="button"
         onClick={() => setPaymentMethod(m)}
         className={`relative p-3 pt-7 rounded-xl border transition-all text-center flex flex-col items-center justify-start gap-1.5 min-h-[128px] ${
@@ -615,7 +780,6 @@ function PaymentStep({
         }`}
         aria-pressed={active}
       >
-        {/* Radio indicator */}
         <span
           className={`absolute top-2.5 left-2.5 w-4 h-4 rounded-full border-2 flex items-center justify-center ${
             active ? "border-[#EF8046] bg-[#EF8046]" : "border-gray-300 bg-white"
@@ -624,10 +788,13 @@ function PaymentStep({
           {active && <Check className="w-2.5 h-2.5 text-white" strokeWidth={3.5} />}
         </span>
 
-        {/* Visual: icon or logo */}
         <div className="h-8 flex items-center justify-center">
           {visual.kind === "icon" ? (
             <visual.icon className="w-7 h-7 text-gray-700" strokeWidth={1.75} />
+          ) : visual.kind === "badge" ? (
+            <div className="px-3 py-1.5 rounded-md bg-gray-900 text-white text-xs font-extrabold tracking-[0.15em]">
+              {visual.text}
+            </div>
           ) : (
             // eslint-disable-next-line @next/next/no-img-element
             <img
@@ -645,52 +812,41 @@ function PaymentStep({
   };
 
   return (
-    <div>
-      <div className="flex items-baseline justify-between mb-4">
-        <h3 className="text-sm font-semibold text-gray-900">Payment method</h3>
-        <div className="flex items-center gap-1 text-xs text-gray-500">
-          <Lock className="w-3 h-3 text-green-500" /> Secure
+    <div className="space-y-5">
+      <div>
+        <div className="flex items-baseline justify-between mb-3">
+          <h3 className="text-sm font-semibold text-gray-900">Payment method</h3>
+          <div className="flex items-center gap-1 text-xs text-gray-500">
+            <Lock className="w-3 h-3 text-green-500" /> Secure payment
+          </div>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          <MethodTile
+            m="card"
+            label="Credit Card"
+            subtitle="US tax-deductible receipt"
+            visual={{ kind: "icon", icon: CreditCard }}
+          />
+          <MethodTile
+            m="ojc_fund"
+            label="OJC Fund"
+            subtitle="Grant — we email instructions"
+            visual={{ kind: "badge", text: "OJC" }}
+          />
+          <MethodTile
+            m="donors_fund"
+            label="The Donors Fund"
+            subtitle="Charge Giving Card instantly"
+            visual={{ kind: "logo", src: "/logos/donors-fund.svg", alt: "The Donors' Fund", heightClass: "h-8" }}
+          />
         </div>
       </div>
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 mb-4">
-        <MethodTile
-          m="card"
-          label="Credit Card"
-          subtitle="Instant tax-deductible receipt"
-          visual={{ kind: "icon", icon: CreditCard }}
-        />
-        <MethodTile
-          m="donors_fund"
-          label="The Donors' Fund"
-          subtitle="Charge your Giving Card instantly"
-          visual={{ kind: "logo", src: "/logos/donors-fund.svg", alt: "The Donors' Fund", heightClass: "h-8" }}
-        />
-        <MethodTile
-          m="fidelity"
-          label="Fidelity Charitable"
-          subtitle="Grant request — we'll email instructions"
-          visual={{ kind: "logo", src: "/logos/fidelity-charitable.png", alt: "Fidelity Charitable", heightClass: "h-5" }}
-        />
-        <MethodTile
-          m="ojc_fund"
-          label="OJC Fund"
-          subtitle="Grant request — we'll email instructions"
-          visual={{ kind: "logo", src: "/logos/ojc-fund.png", alt: "OJC Fund", heightClass: "h-8" }}
-        />
-        <MethodTile
-          m="daf"
-          label="Other DAF"
-          subtitle="Schwab, JCF, Vanguard, etc."
-          visual={{ kind: "icon", icon: Gift }}
-        />
-      </div>
+      <OrgBadge />
 
       {paymentMethod === "card" && (
-        <div className="bg-[#FAFAFA] rounded-2xl p-4 space-y-3 border border-gray-100">
-          <Input label="Name on card" name="cardName" value={form.cardName} onChange={onChange} autoComplete="cc-name" />
-          <div>
-            <label className="text-xs text-gray-500 mb-1 block font-medium">Card number</label>
+        <div className="space-y-3">
+          <Fieldset label="Card Number" required>
             <div className="relative">
               <input
                 ref={cardNumberRef}
@@ -704,15 +860,15 @@ function PaymentStep({
                 }}
                 maxLength={19}
                 autoComplete="cc-number"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white tabular-nums tracking-wide pr-10"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm tabular-nums tracking-wide pr-10"
                 placeholder="1234 5678 9012 3456"
               />
               <CreditCard className="absolute right-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-300" />
             </div>
-          </div>
+          </Fieldset>
+
           <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block font-medium">Expiry</label>
+            <Fieldset label="Expiry" required>
               <input
                 ref={cardExpiryRef}
                 type="text"
@@ -725,12 +881,11 @@ function PaymentStep({
                 }}
                 maxLength={5}
                 autoComplete="cc-exp"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white tabular-nums"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm tabular-nums"
                 placeholder="MM / YY"
               />
-            </div>
-            <div>
-              <label className="text-xs text-gray-500 mb-1 block font-medium">CVV</label>
+            </Fieldset>
+            <Fieldset label="CVV" required>
               <input
                 ref={cardCvvRef}
                 type="text"
@@ -742,9 +897,57 @@ function PaymentStep({
                 }}
                 maxLength={4}
                 autoComplete="cc-csc"
-                className="w-full px-3 py-2.5 rounded-lg border border-gray-200 focus:border-[#EF8046] focus:ring-2 focus:ring-[#EF8046]/20 outline-none text-sm bg-white tabular-nums"
+                className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm tabular-nums"
                 placeholder="CVV"
               />
+            </Fieldset>
+          </div>
+
+          <Fieldset label="Name on card" hint="Leave blank to use your full name">
+            <Input name="cardName" value={form.cardName} onChange={onChange} autoComplete="cc-name" placeholder="As it appears on card" />
+          </Fieldset>
+
+          <div className="pt-2">
+            <div className="text-xs font-semibold text-gray-700 uppercase tracking-wide mb-2">Billing address</div>
+            <div className="space-y-2.5">
+              <div>
+                <label className="block text-[11px] text-gray-500 mb-1">Country</label>
+                <select
+                  name="addrCountry"
+                  value={form.addrCountry}
+                  onChange={onChange}
+                  className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm focus:border-[#EF8046] outline-none"
+                >
+                  <option>United States</option>
+                  <option>Israel</option>
+                  <option>Canada</option>
+                  <option>United Kingdom</option>
+                  <option>Australia</option>
+                  <option>Other</option>
+                </select>
+              </div>
+
+              <AddressAutocomplete
+                value={form.addrLine1}
+                onChange={(v) => setForm((p) => ({ ...p, addrLine1: v }))}
+                onPick={(s) =>
+                  setForm((p) => ({
+                    ...p,
+                    addrLine1: s.line1 || s.label,
+                    addrCity: s.city || p.addrCity,
+                    addrState: s.state || p.addrState,
+                    addrZip: s.zip || p.addrZip,
+                    addrCountry: s.country || p.addrCountry,
+                  }))
+                }
+              />
+
+              <Input name="addrApt" value={form.addrApt} onChange={onChange} autoComplete="address-line2" placeholder="Apt. / Suite (optional)" />
+              <div className="grid grid-cols-2 gap-2.5">
+                <Input name="addrZip" value={form.addrZip} onChange={onChange} autoComplete="postal-code" placeholder="Zip / Post Code" />
+                <Input name="addrCity" value={form.addrCity} onChange={onChange} autoComplete="address-level2" placeholder="City" />
+              </div>
+              <Input name="addrState" value={form.addrState} onChange={onChange} autoComplete="address-level1" placeholder="State / Province / Region (optional)" />
             </div>
           </div>
         </div>
@@ -774,24 +977,6 @@ function PaymentStep({
         </div>
       )}
 
-      {paymentMethod === "daf" && (
-        <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-600 mb-3">
-            Pledge now — we&apos;ll email you instructions to request the grant from your DAF sponsor. Your pledge counts toward the campaign goal immediately.
-          </p>
-          <Input label="DAF sponsor name *" name="dafSponsor" value={form.dafSponsor} onChange={onChange}
-            placeholder="Fidelity Charitable, Schwab Charitable, Jewish Communal Fund..." />
-        </div>
-      )}
-
-      {paymentMethod === "fidelity" && (
-        <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
-          <p className="text-xs text-gray-600 leading-relaxed">
-            Pledge now — we&apos;ll email you Fidelity Charitable&apos;s grant-request link prefilled for JRE. Your pledge counts toward the goal immediately.
-          </p>
-        </div>
-      )}
-
       {paymentMethod === "ojc_fund" && (
         <div className="bg-[#FAFAFA] rounded-2xl p-4 border border-gray-100">
           <p className="text-xs text-gray-600 mb-3">
@@ -802,100 +987,315 @@ function PaymentStep({
         </div>
       )}
 
-      <div className="flex gap-2 mt-5">
-        <button type="button" onClick={onBack}
-          className="px-4 py-3 bg-gray-100 text-gray-700 rounded-xl font-semibold flex items-center gap-1 hover:bg-gray-200 transition-colors">
-          <ChevronLeft className="w-4 h-4" /> Back
-        </button>
-        <button
-          type="button"
-          onClick={onSubmit}
-          disabled={submitting || amountCents <= 0}
-          className="flex-1 py-3 bg-gradient-to-r from-[#EF8046] to-[#d96a2f] text-white rounded-xl font-bold flex items-center justify-center gap-2 hover:shadow-[0_8px_30px_rgba(239,128,70,0.35)] transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-        >
-          {submitting ? (
-            <>
-              <motion.div animate={{ rotate: 360 }} transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
-                className="w-4 h-4 border-2 border-white border-t-transparent rounded-full" />
-              Processing...
-            </>
-          ) : (
-            <>
-              <Heart className="w-4 h-4" />
-              {paymentMethod === "card" || paymentMethod === "donors_fund"
-                ? `Donate ${formatUsd(amountCents)}`
-                : `Pledge ${formatUsd(amountCents)}`}
-            </>
-          )}
-        </button>
+      {/* Confirmation panel */}
+      <div className="rounded-2xl border-2 border-gray-200 bg-white px-4 py-4 space-y-2.5">
+        <div className="text-[11px] uppercase tracking-[0.18em] font-bold text-gray-500">Confirm your donation</div>
+        <div className="flex items-baseline justify-between text-sm">
+          <span className="text-gray-600">You donate</span>
+          <span className="font-bold text-gray-900 tabular-nums">{formatUsd(amountCents)}</span>
+        </div>
+        {matchedCents > 0 && (
+          <div className="flex items-baseline justify-between text-sm">
+            <span className="text-gray-600">+ Match</span>
+            <span className="font-bold tabular-nums text-[#EF8046]">{formatUsd(matchedCents)}</span>
+          </div>
+        )}
+        <div className="flex items-baseline justify-between text-sm pt-2 border-t border-gray-100">
+          <span className="font-semibold text-gray-700">{orgName} receives</span>
+          <span className="font-extrabold text-gray-900 tabular-nums">{formatUsd(totalCents)}</span>
+        </div>
+        <p className="text-[11px] text-gray-500 leading-relaxed pt-1">
+          {isCharge
+            ? <>You will be <span className="font-semibold text-gray-700">charged now</span>. A tax-deductible receipt will be emailed to you.</>
+            : <>Your pledge is recorded immediately. We&apos;ll email you next steps to complete the grant.</>}
+        </p>
+        <p className="text-[11px] text-gray-500 leading-relaxed">
+          By clicking Donate, you confirm that you accept our{" "}
+          <a href="/terms" target="_blank" rel="noreferrer" className="underline text-[#EF8046]">terms &amp; conditions</a>
+          {" "}and acknowledge our{" "}
+          <a href="/privacy" target="_blank" rel="noreferrer" className="underline text-[#EF8046]">privacy policy</a>.
+        </p>
       </div>
-      <p className="text-center text-gray-500 text-[11px] mt-3">
-        Tax-deductible. JRE is a 501(c)(3) nonprofit.
-      </p>
     </div>
   );
 }
 
+// ======================== SUCCESS ========================
+
 function SuccessStep({
-  amountCents, paymentMethod, onClose,
-}: { amountCents: number; paymentMethod: PaymentMethod; onClose: () => void }) {
-  const isPledge = paymentMethod !== "card" && paymentMethod !== "donors_fund";
+  amountCents, isPledge, email, onClose,
+}: { amountCents: number; isPledge: boolean; email: string; onClose: () => void }) {
+  // Fire confetti once when the success step appears. Skip for pledges (no charge)
+  // and for users who prefer reduced motion.
+  useEffect(() => {
+    if (isPledge) return;
+    if (typeof window === "undefined") return;
+    if (window.matchMedia?.("(prefers-reduced-motion: reduce)").matches) return;
+    const colors = ["#EF8046", "#d96a2f", "#ffd86b", "#ffffff"];
+    confetti({ particleCount: 140, spread: 90, origin: { y: 0.55 }, colors, scalar: 0.95 });
+    const t1 = window.setTimeout(
+      () => confetti({ particleCount: 70, angle: 60, spread: 55, origin: { x: 0, y: 0.65 }, colors }),
+      220,
+    );
+    const t2 = window.setTimeout(
+      () => confetti({ particleCount: 70, angle: 120, spread: 55, origin: { x: 1, y: 0.65 }, colors }),
+      340,
+    );
+    return () => { window.clearTimeout(t1); window.clearTimeout(t2); };
+  }, [isPledge]);
+
   return (
-    <div className="text-center py-6">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
-      >
-        <Check className="w-8 h-8 text-green-500" />
-      </motion.div>
-      <h3 className="text-2xl font-bold text-gray-900 mb-2">
-        {isPledge ? "Pledge received!" : "Thank you!"}
-      </h3>
-      <p className="text-gray-600 mb-5">
-        {isPledge
-          ? `Your ${formatUsd(amountCents)} pledge is recorded. Check your email — we've sent next steps to complete your grant.`
-          : `Your ${formatUsd(amountCents)} donation has been processed. A receipt is on its way to your inbox.`}
-      </p>
+    <div className="py-2">
+      <div className="text-center">
+        <motion.div
+          initial={{ scale: 0 }}
+          animate={{ scale: 1 }}
+          transition={{ type: "spring", stiffness: 200, damping: 15 }}
+          className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"
+        >
+          <Check className="w-8 h-8 text-green-500" />
+        </motion.div>
+        <h3 className="text-2xl font-bold text-gray-900 mb-2">
+          {isPledge ? "Pledge received!" : "Thank you!"}
+        </h3>
+        <p className="text-gray-600 text-sm">
+          Your {formatUsd(amountCents)} {isPledge ? "pledge" : "donation"} has been {isPledge ? "recorded" : "processed"}.
+        </p>
+        {email && (
+          <p className="text-sm text-gray-500 mt-1">
+            A confirmation email will be sent to{" "}
+            <span className="font-semibold text-gray-700">{email}</span>.
+          </p>
+        )}
+      </div>
+
+      {/* Increase your impact */}
+      <div className="mt-6 rounded-2xl border-2 border-[#EF8046]/30 bg-gradient-to-br from-[#fff5f0] to-[#fef7e6] p-4">
+        <div className="flex items-center gap-2 mb-3">
+          <span className="inline-flex items-center justify-center w-7 h-7 rounded-full bg-[#EF8046] text-white text-xs font-bold">
+            3×
+          </span>
+          <h4 className="text-sm font-bold text-gray-900">Increase your impact up to 300%</h4>
+        </div>
+        <p className="text-xs text-gray-700 leading-relaxed mb-3">
+          Thanks to matching sponsors, your gift can be multiplied. Pick an option below to deepen its effect:
+        </p>
+        <div className="space-y-2">
+          <ImpactLink
+            label="Share with a friend"
+            sub="One share can 3× your gift's reach"
+            href={typeof window !== "undefined" ? `https://api.whatsapp.com/send?text=${encodeURIComponent(`I just gave to JRE. Join me: ${window.location.href}`)}` : "#"}
+          />
+          <ImpactLink
+            label="Make it monthly"
+            sub="Contact us to set up a recurring gift"
+            href="mailto:office@thejre.org?subject=Set%20up%20recurring%20gift"
+          />
+          <ImpactLink
+            label="Ask your employer to match"
+            sub="Many companies double charitable gifts"
+            href="mailto:office@thejre.org?subject=Employer%20match"
+          />
+        </div>
+      </div>
+
       <button
         type="button"
         onClick={onClose}
-        className="px-6 py-2.5 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors"
+        className="mt-5 w-full py-3 bg-gray-900 text-white rounded-xl font-semibold hover:bg-gray-800 transition-colors"
       >
-        Close
+        Return to campaign
       </button>
     </div>
   );
 }
 
-// ---------- small shared pieces ----------
+function ImpactLink({ label, sub, href }: { label: string; sub: string; href: string }) {
+  return (
+    <a
+      href={href}
+      target="_blank"
+      rel="noreferrer"
+      className="block rounded-xl border border-white/60 bg-white/70 px-3 py-2.5 hover:bg-white hover:border-[#EF8046] transition-colors group"
+    >
+      <div className="flex items-center justify-between gap-2">
+        <div className="min-w-0">
+          <div className="text-sm font-semibold text-gray-900 leading-tight">{label}</div>
+          <div className="text-[11px] text-gray-600 leading-tight mt-0.5">{sub}</div>
+        </div>
+        <ChevronRight className="w-4 h-4 text-gray-400 group-hover:text-[#EF8046] flex-shrink-0" />
+      </div>
+    </a>
+  );
+}
 
-function Input({
-  label, name, value, onChange, type = "text", placeholder, autoComplete,
+// ======================== SHARED ATOMS ========================
+
+function OrgBadge() {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50/50 px-4 py-3 text-[11px] text-gray-600 leading-relaxed space-y-0.5">
+      <div><span className="font-semibold text-gray-700">Organization Legal Name:</span> Jewish Renaissance Experience Inc.</div>
+      <div><span className="font-semibold text-gray-700">Bank Statement:</span> JRE THEJRE.ORG</div>
+      <div><span className="font-semibold text-gray-700">Tax ID:</span> 45-3421900</div>
+      <div className="text-gray-500">This organization is a US registered 501(c)(3) non-profit.</div>
+    </div>
+  );
+}
+
+function Fieldset({
+  label, hint, required, children,
 }: {
   label: string;
+  hint?: React.ReactNode;
+  required?: boolean;
+  children: React.ReactNode;
+}) {
+  return (
+    <div>
+      <div className="flex items-baseline justify-between mb-1.5">
+        <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide">
+          {label}{required && <span className="text-[#EF8046] ml-0.5">*</span>}
+        </label>
+        {hint && <span className="text-[11px] text-gray-400">{hint}</span>}
+      </div>
+      {children}
+    </div>
+  );
+}
+
+interface AddrSuggestion {
+  label: string;
+  line1: string;
+  city: string;
+  state: string;
+  zip: string;
+  country: string;
+}
+
+function AddressAutocomplete({
+  value, onChange, onPick,
+}: {
+  value: string;
+  onChange: (v: string) => void;
+  onPick: (s: AddrSuggestion) => void;
+}) {
+  const [suggestions, setSuggestions] = useState<AddrSuggestion[]>([]);
+  const [open, setOpen] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [highlighted, setHighlighted] = useState(-1);
+  const wrapRef = useRef<HTMLDivElement>(null);
+
+  // Debounce the query — 300ms after last keystroke
+  useEffect(() => {
+    const q = value.trim();
+    if (q.length < 3) { setSuggestions([]); return; }
+    const id = setTimeout(async () => {
+      setLoading(true);
+      try {
+        const res = await fetch(`/api/geocode?q=${encodeURIComponent(q)}`);
+        if (!res.ok) return;
+        const data = await res.json();
+        setSuggestions((data.suggestions as AddrSuggestion[]) ?? []);
+      } catch { /* ignore */ }
+      finally { setLoading(false); }
+    }, 300);
+    return () => clearTimeout(id);
+  }, [value]);
+
+  // Close on outside click
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false);
+    };
+    document.addEventListener("mousedown", onDoc);
+    return () => document.removeEventListener("mousedown", onDoc);
+  }, []);
+
+  const pick = (s: AddrSuggestion) => {
+    onPick(s);
+    setOpen(false);
+    setSuggestions([]);
+    setHighlighted(-1);
+  };
+
+  return (
+    <div ref={wrapRef} className="relative">
+      <input
+        type="text"
+        value={value}
+        onChange={(e) => { onChange(e.target.value); setOpen(true); }}
+        onFocus={() => setOpen(true)}
+        onKeyDown={(e) => {
+          if (!open || suggestions.length === 0) return;
+          if (e.key === "ArrowDown") { e.preventDefault(); setHighlighted((h) => Math.min(suggestions.length - 1, h + 1)); }
+          else if (e.key === "ArrowUp") { e.preventDefault(); setHighlighted((h) => Math.max(0, h - 1)); }
+          else if (e.key === "Enter" && highlighted >= 0) { e.preventDefault(); pick(suggestions[highlighted]); }
+          else if (e.key === "Escape") { setOpen(false); }
+        }}
+        autoComplete="off"
+        placeholder="Start typing address — e.g. 1327 E 26…"
+        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm transition-all"
+      />
+      {open && (suggestions.length > 0 || loading) && (
+        <div className="absolute left-0 right-0 top-full mt-1 bg-white border border-gray-200 rounded-xl shadow-lg overflow-hidden z-10 max-h-64 overflow-y-auto">
+          {loading && suggestions.length === 0 && (
+            <div className="px-3 py-2.5 text-xs text-gray-400">Searching…</div>
+          )}
+          {suggestions.map((s, i) => (
+            <button
+              key={`${s.label}-${i}`}
+              type="button"
+              onMouseEnter={() => setHighlighted(i)}
+              onMouseDown={(e) => { e.preventDefault(); pick(s); }}
+              className={`block w-full text-left px-3 py-2.5 text-sm border-b border-gray-50 last:border-0 ${
+                highlighted === i ? "bg-[#fff5f0]" : "bg-white hover:bg-gray-50"
+              }`}
+            >
+              <div className="font-medium text-gray-900 leading-tight truncate">
+                {s.line1 || s.label.split(",")[0]}
+              </div>
+              <div className="text-[11px] text-gray-500 leading-tight truncate mt-0.5">
+                {[s.city, s.state, s.zip, s.country].filter(Boolean).join(", ")}
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Input({
+  label, name, value, onChange, type = "text", placeholder, autoComplete, maxLength,
+}: {
+  label?: string;
   name: string;
   value: string;
   onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   type?: string;
   placeholder?: string;
   autoComplete?: string;
+  maxLength?: number;
 }) {
+  const input = (
+    <input
+      type={type}
+      name={name}
+      value={value}
+      onChange={onChange}
+      placeholder={placeholder}
+      autoComplete={autoComplete}
+      maxLength={maxLength}
+      className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] outline-none text-sm transition-all"
+    />
+  );
+  if (!label) return input;
   return (
     <div>
       <label className="block text-xs font-semibold text-gray-700 uppercase tracking-wide mb-1">
         {label}
       </label>
-      <input
-        type={type}
-        name={name}
-        value={value}
-        onChange={onChange}
-        placeholder={placeholder}
-        autoComplete={autoComplete}
-        className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] focus:border-[#EF8046] focus:ring-4 focus:ring-[#EF8046]/10 outline-none text-sm transition-all"
-      />
+      {input}
     </div>
   );
 }

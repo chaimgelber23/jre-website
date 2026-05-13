@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { motion } from "framer-motion";
 import {
-  Search, Share2, Heart, Facebook, Twitter, Mail, MessageCircle, Copy, Check, ArrowLeft,
+  Search, Share2, Heart, Mail, MessageCircle, Copy, Check, ArrowLeft,
 } from "lucide-react";
 import Header from "@/components/layout/Header";
 import Footer from "@/components/layout/Footer";
@@ -289,8 +289,6 @@ export default function TeamClient({
             <Share2 className="w-4 h-4" /> Share {team.name}&apos;s team page
           </div>
           <div className="flex items-center justify-center gap-2 flex-wrap">
-            <ShareBtn href={`https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(shareUrl)}`} label="Facebook" Icon={Facebook} accent={accent} />
-            <ShareBtn href={`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareText)}&url=${encodeURIComponent(shareUrl)}`} label="X" Icon={Twitter} accent={accent} />
             <ShareBtn href={`https://api.whatsapp.com/send?text=${encodeURIComponent(`${shareText} ${shareUrl}`)}`} label="WhatsApp" Icon={MessageCircle} accent={accent} />
             <ShareBtn href={`mailto:?subject=${encodeURIComponent(`${team.name} — ${campaign.title}`)}&body=${encodeURIComponent(`${shareText}\n\n${shareUrl}`)}`} label="Email" Icon={Mail} accent={accent} />
             <button
