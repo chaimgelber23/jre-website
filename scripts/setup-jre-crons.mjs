@@ -49,6 +49,13 @@ const JOBS = [
     // Daily 7am ET = 11:00 UTC (during EDT)
     schedule: { hours: [11], minutes: [3], wdays: [-1], months: [-1], mdays: [-1] },
   },
+  {
+    title: "JRE — morning-sponsor-list (6am ET)",
+    url: `${BASE_URL}/api/cron/morning-sponsor-list`,
+    // Daily 6am ET = 10:00 UTC (during EDT). Emails Chaim the sponsor list for
+    // any event whose DB date is today and has ≥1 paid sponsor.
+    schedule: { hours: [10], minutes: [7], wdays: [-1], months: [-1], mdays: [-1] },
+  },
   // {
   //   title: "JRE — zelle-digest (M/W/F 9:07am ET)",
   //   url: `${BASE_URL}/api/cron/jre/zelle-digest`,
