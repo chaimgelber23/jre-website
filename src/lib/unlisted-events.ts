@@ -10,6 +10,7 @@
 export const UNLISTED_EVENT_SLUGS = new Set<string>([
   "challah-bake-2026",
   "bat-mitzvah-now-what-3",
+  "book-club-2026",
 ]);
 
 export function isUnlistedSlug(slug: string | null | undefined): boolean {
