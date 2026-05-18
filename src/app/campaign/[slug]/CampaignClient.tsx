@@ -15,6 +15,7 @@ import {
   MessageCircle, Copy, Check,
 } from "lucide-react";
 import Footer from "@/components/layout/Footer";
+import HeroImage from "./HeroImage";
 import { formatUsd, getActiveMatcher, getTimeRemaining } from "@/lib/campaign";
 import type { CampaignSnapshot, CampaignTeamWithProgress, CampaignMatcher, Campaign, CampaignTier } from "@/types/campaign";
 import DonateModal from "./DonateModal";
@@ -65,11 +66,12 @@ function Reveal({
 
 /** Animated integer that counts up from 0 → target when it enters the viewport. */
 function CountUp({
-  value, format = (n) => Math.round(n).toLocaleString(), className, durationMs = 1400,
+  value, format = (n) => Math.round(n).toLocaleString(), className, style, durationMs = 1400,
 }: {
   value: number;
   format?: (n: number) => string;
   className?: string;
+  style?: React.CSSProperties;
   durationMs?: number;
 }) {
   const reduced = useReducedMotion();
@@ -88,7 +90,7 @@ function CountUp({
     return () => controls.stop();
   }, [inView, value, durationMs, reduced]);
 
-  return <span ref={ref} className={className} aria-live="polite">{format(display)}</span>;
+  return <span ref={ref} className={className} style={style} aria-live="polite">{format(display)}</span>;
 }
 
 /** Standard stagger parent for card grids. */
@@ -162,6 +164,16 @@ export default function CampaignClient({
   const [search, setSearch] = useState("");
   const [showAllDonors, setShowAllDonors] = useState(false);
   const [copied, setCopied] = useState(false);
+
+  // Switch tab + bring the tab strip into view, so a click from the hero or a
+  // tab below the fold actually shows the content the visitor asked for.
+  const tabsRef = useRef<HTMLElement>(null);
+  const goToTab = useCallback((next: Tab) => {
+    setTab(next);
+    requestAnimationFrame(() => {
+      tabsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
+    });
+  }, []);
 
   // live inline amount input (drives the big $ display and the modal preload)
   const [inlineAmount, setInlineAmount] = useState<string>("");
@@ -291,11 +303,7 @@ export default function CampaignClient({
     <main className="min-h-screen bg-white">
       {heroImageUrl && (
         <section className="w-full bg-black">
-          <img
-            src={heroImageUrl}
-            alt={campaign.title}
-            className="block w-full max-h-[70vh] object-contain mx-auto"
-          />
+          <HeroImage src={heroImageUrl} alt={campaign.title} />
         </section>
       )}
       {/* ============ TITLE BAND ============ */}
@@ -343,7 +351,7 @@ export default function CampaignClient({
           <motion.button
             variants={HERO_CHILD}
             type="button"
-            onClick={() => setTab("about")}
+            onClick={() => goToTab("about")}
             whileHover={{ scale: 1.04, backgroundColor: "rgba(255,255,255,0.22)" }}
             whileTap={{ scale: 0.97 }}
             transition={{ duration: 0.2, ease: EASE_OUT_EXPO }}
@@ -382,16 +390,17 @@ export default function CampaignClient({
                   format={(n) => formatUsd(Math.round(n) * 100)}
                 />
               </div>
-              <div className="mt-3 text-[12px] uppercase tracking-[0.15em] text-gray-500">
+              <div className="mt-3 flex items-baseline justify-center gap-1.5">
                 <CountUp
                   value={pctRaw}
                   durationMs={1400}
                   format={(n) => `${n.toFixed(0)}%`}
-                  className="font-bold text-gray-900 tabular-nums"
+                  className="text-lg sm:text-xl font-bold tabular-nums leading-none"
+                  style={{ color: accent }}
                 />
-                <span className="mx-1.5 text-gray-400">of</span>
-                <span className="font-semibold text-gray-700 tabular-nums normal-case">{formatUsd(progress.goal_cents)}</span>
-                <span className="ml-1.5 text-gray-400">goal</span>
+                <span className="text-[12px] uppercase tracking-[0.15em] text-gray-500">
+                  of <span className="font-semibold text-gray-700 tabular-nums normal-case">{formatUsd(progress.goal_cents)}</span> goal
+                </span>
               </div>
               <ProgressBar pctRaw={pctRaw} accent={accent} />
             </div>
@@ -494,7 +503,7 @@ export default function CampaignClient({
       </Reveal>
 
       {/* ============ TABS STRIP — NUMBER STACKED ABOVE LABEL ============ */}
-      <section className="bg-gray-50 border-b border-gray-200">
+      <section ref={tabsRef} className="bg-gray-50 border-b border-gray-200 scroll-mt-4">
         <div className="container mx-auto px-6">
           <div className="flex flex-wrap justify-center items-end gap-x-12 gap-y-2">
             {([
@@ -510,7 +519,7 @@ export default function CampaignClient({
                 <button
                   key={t.id}
                   type="button"
-                  onClick={() => setTab(t.id)}
+                  onClick={() => goToTab(t.id)}
                   className="py-4 border-b-2 transition-colors flex flex-col items-center"
                   style={{
                     borderColor: active ? accent : "transparent",
@@ -549,15 +558,6 @@ export default function CampaignClient({
             {tab === "donors" && (
               <>
                 <div className="flex flex-wrap items-center justify-between gap-3 mb-6">
-                  <div className="relative flex-1 max-w-md">
-                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
-                    <input
-                      value={search}
-                      onChange={(e) => setSearch(e.target.value)}
-                      placeholder="Search"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-gray-400 bg-white"
-                    />
-                  </div>
                   <div className="flex items-center gap-2 text-sm">
                     <span className="text-gray-400 uppercase tracking-wide text-xs">Sort By:</span>
                     <select
@@ -569,6 +569,15 @@ export default function CampaignClient({
                       <option value="oldest">Oldest</option>
                       <option value="highest">Highest</option>
                     </select>
+                  </div>
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                    <input
+                      value={search}
+                      onChange={(e) => setSearch(e.target.value)}
+                      placeholder="Search"
+                      className="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-md text-sm focus:outline-none focus:border-gray-400 bg-white"
+                    />
                   </div>
                 </div>
 
@@ -1351,7 +1360,7 @@ function MatchersPanel({ matchers, accent }: { matchers: CampaignMatcher[]; acce
           >
             {m.logo_url ? (
               // eslint-disable-next-line @next/next/no-img-element
-              <img src={m.logo_url} alt={m.name} className="w-14 h-14 rounded-lg object-contain bg-gray-50" />
+              <img src={m.logo_url} alt={m.name} loading="lazy" decoding="async" className="w-14 h-14 rounded-lg object-contain bg-gray-50" />
             ) : (
               <div className="w-14 h-14 rounded-lg text-white flex items-center justify-center font-bold flex-shrink-0" style={{ background: accent }}>
                 {m.name.slice(0, 1).toUpperCase()}
@@ -1848,7 +1857,7 @@ function TeamsPanel({
               </div>
               {t.avatar_url ? (
                 // eslint-disable-next-line @next/next/no-img-element
-                <img src={t.avatar_url} alt={t.name} className="w-10 h-10 rounded-full object-cover" />
+                <img src={t.avatar_url} alt={t.name} loading="lazy" decoding="async" className="w-10 h-10 rounded-full object-cover" />
               ) : (
                 <div className="w-10 h-10 rounded-full text-white flex items-center justify-center font-bold text-sm" style={{ background: accent }}>
                   {t.name.slice(0, 1).toUpperCase()}

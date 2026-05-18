@@ -6,6 +6,7 @@ import {
   Search, Share2, Mail, MessageCircle, Copy, Check, ArrowLeft, Users,
 } from "lucide-react";
 import Footer from "@/components/layout/Footer";
+import HeroImage from "../../HeroImage";
 import {
   formatUsd,
   getActiveMatcher,
@@ -161,12 +162,7 @@ export default function TeamClient({
       {/* ============ TEAM HERO ============ */}
       {(team.avatar_url || campaign.hero_image_url) ? (
         <section className="w-full bg-black">
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src={team.avatar_url || campaign.hero_image_url || ""}
-            alt={team.name}
-            className="block w-full max-h-[70vh] object-contain mx-auto"
-          />
+          <HeroImage src={team.avatar_url || campaign.hero_image_url || ""} alt={team.name} />
         </section>
       ) : (
         <section className="w-full bg-gray-100">
