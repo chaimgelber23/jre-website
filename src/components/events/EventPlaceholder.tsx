@@ -93,18 +93,23 @@ export default function EventPlaceholder({
     hero: {
       eyebrow: "text-[10px] md:text-xs lg:text-sm",
       eyebrowTrack: "tracking-[0.3em] md:tracking-[0.4em] lg:tracking-[0.45em]",
-      title: "text-3xl sm:text-4xl md:text-5xl lg:text-6xl xl:text-7xl",
+      // Mobile starts small (text-2xl) so a long title doesn't crowd the
+      // hero on a phone; scales up from sm. Keep mobile sizes modest here —
+      // see create-event/learnings.md "mobile hero text".
+      title: "text-2xl sm:text-3xl md:text-5xl lg:text-6xl xl:text-7xl",
       meta: "text-xs md:text-sm lg:text-base",
       metaTrack: "tracking-[0.2em] md:tracking-[0.28em] lg:tracking-[0.3em]",
       // Balanced padding for vertically-centered content. The hero now lives
       // in a flex-1 container above a natural-flow info bar, so the placeholder
       // doesn't need heavy bottom padding to clear an absolute-positioned
       // overlay anymore — the info bar takes whatever height it needs and the
-      // placeholder fills the remaining space cleanly.
-      padding: "px-5 py-12 sm:px-8 sm:py-14 md:px-16 md:py-16",
+      // placeholder fills the remaining space cleanly. Mobile uses extra top
+      // padding so the centered eyebrow clears the absolute "Back to Events"
+      // button, and a tighter bottom so the title still breathes.
+      padding: "px-5 pt-16 pb-8 sm:px-8 sm:py-14 md:px-16 md:py-16",
       maxTitle: "max-w-[92%] sm:max-w-3xl md:max-w-4xl",
-      eyebrowGap: "mb-6 sm:mb-8 md:mb-10",
-      metaGap: "mt-6 sm:mt-8 md:mt-10",
+      eyebrowGap: "mb-4 sm:mb-8 md:mb-10",
+      metaGap: "mt-4 sm:mt-8 md:mt-10",
       eyebrowRule: "w-5 sm:w-8 md:w-12 lg:w-14",
       metaRule: "w-7 sm:w-12 md:w-16 lg:w-20",
     },
@@ -148,15 +153,22 @@ export default function EventPlaceholder({
           {/* Title — shown in all variants. Card variant uses line-clamp-2
               to prevent overflow in the fixed h-52 (208px) image area; longer
               titles get an ellipsis. Hero/featured have no clamp because their
-              containers grow with content. */}
-          <motion.h1
+              containers grow with content.
+
+              Rendered as a div, not an <h1>: globals.css has an unlayered
+              `h1 { font-size: 3rem }` rule that beats every Tailwind text-*
+              utility (unlayered CSS outranks @layer utilities in Tailwind v4),
+              which froze this title at 48px on mobile. The pages that use this
+              component already render their own heading, so a div keeps the
+              responsive sizing working without duplicating an <h1>. */}
+          <motion.div
             initial={{ opacity: 0, y: 12 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.7, delay: 0.1 }}
             className={`${s.title} ${s.maxTitle} ${textColor} font-serif font-normal leading-[1.15] tracking-tight break-words ${variant === "card" ? "line-clamp-2" : "[text-wrap:balance]"}`}
           >
             {title}
-          </motion.h1>
+          </motion.div>
 
           {/* Date row: shown only in hero/featured. Card body already shows
               the formatted date below the image area. */}
