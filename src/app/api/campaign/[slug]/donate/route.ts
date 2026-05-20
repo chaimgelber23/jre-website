@@ -3,6 +3,7 @@ import { createServerClient } from "@/lib/supabase/server";
 import { processDirectPayment, setupRecurringPayment } from "@/lib/banquest";
 import { createGrant } from "@/lib/donors-fund";
 import { processCharityCardTransaction } from "@/lib/ojc-fund";
+import { getOrganizationForCampaign } from "@/lib/organizations";
 import {
   getCampaignBySlug,
   getActiveMatcher,
@@ -309,14 +310,37 @@ export async function POST(
         { status: 400 }
       );
     }
+
+    // Multi-tenant: load the campaign's organization and charge against THEIR
+    // OJC account, not a hardcoded one. If the campaign predates the orgs
+    // migration, getOrganizationForCampaign falls back to JRE.
+    const org = await getOrganizationForCampaign(campaign.org_id);
+    if (!org || !org.ojc_org_api_key) {
+      return NextResponse.json(
+        {
+          success: false,
+          error:
+            "This campaign isn't fully set up to accept OJC Charity Card donations yet. Please use a different payment method or contact the organizer.",
+        },
+        { status: 400 }
+      );
+    }
+    if (org.status === "paused" || org.status === "archived") {
+      return NextResponse.json(
+        { success: false, error: "This organization is not currently accepting donations." },
+        { status: 400 }
+      );
+    }
+
     const amountDollars = body.amount_cents / 100;
     // externalReferenceId max length appears undocumented; keep it short + unique.
-    const externalReferenceId = `jre-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`;
+    const externalReferenceId = `${org.slug}-${campaign.slug ?? campaign.id}-${Date.now().toString(36)}`;
     const charge = await processCharityCardTransaction({
       cardNo: body.ojc.cardNumber.trim(),
       expDate: body.ojc.expDate.trim(),
       amount: amountDollars,
       externalReferenceId,
+      orgApiKey: org.ojc_org_api_key,
     });
 
     if (!charge.success) {

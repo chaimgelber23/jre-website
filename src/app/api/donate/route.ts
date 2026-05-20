@@ -4,6 +4,7 @@ import { syncDonationToSheets } from "@/lib/google-sheets/sync";
 import { processDirectPayment } from "@/lib/banquest";
 import { createGrant } from "@/lib/donors-fund";
 import { processCharityCardTransaction } from "@/lib/ojc-fund";
+import { getOrganizationBySlug } from "@/lib/organizations";
 import { sendDonationConfirmation, sendHonoreeNotification, sendPaymentFailureAlert, sendDonationSaveFailedAlert } from "@/lib/email";
 import { verifyTurnstileToken, getClientIp } from "@/lib/turnstile";
 import type { Donation, DonationInsert } from "@/types/database";
@@ -184,12 +185,16 @@ export async function POST(request: NextRequest) {
           { status: 400 }
         );
       }
+      // General donate page is thejre.org/donate — always charges JRE's OJC account.
+      const jreOrg = await getOrganizationBySlug("jre");
+      const orgApiKey = jreOrg?.ojc_org_api_key ?? null; // null -> ojc-fund.ts falls back to env
       const externalReferenceId = `jre-donate-${Date.now().toString(36)}`;
       const charge = await processCharityCardTransaction({
         cardNo: ojc.cardNumber.trim(),
         expDate: ojc.expDate.trim(),
         amount: numericAmount,
         externalReferenceId,
+        orgApiKey,
       });
       if (!charge.success) {
         void sendPaymentFailureAlert({

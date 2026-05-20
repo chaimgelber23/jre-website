@@ -1,16 +1,16 @@
-// OJC Charity Card API client
+// OJC Charity Card API client (multi-tenant)
 // Docs: internal PDF from OJC Fund (office@ojcfund.org)
 // Base URL: https://api.ojcfund.org:3391/api
-// Auth: HTTP Basic (user + pass) — dev creds shared by OJC, production creds TBD
+// Auth: HTTP Basic (platform-wide) + per-org OrgId (passed per call)
 //
 // OJC Charity Cards are Jewish-DAF-style cards (like The Donors' Fund "Giving Card").
-// A donor holds the card; we charge it; OJC moves money from their DAF to our org.
+// A donor holds the card; we charge it; OJC moves money from their DAF to the org
+// identified by `OrgId` in the request.
 //
-// The `OrgId` value in the POST body and the `orgAPIKey` path segment in the void URL
-// are the same value — a per-organization encrypted API key that OJC issues us.
-// We store it as an env var and treat it like a secret (do not log, do not echo).
-
-const USE_SANDBOX = process.env.OJC_USE_SANDBOX === "true";
+// Basic Auth is platform-wide (OJC_BASIC_USER / OJC_BASIC_PASS env). The per-org
+// `OrgId` (== `orgAPIKey` in void URL) is loaded from the `organizations` table
+// in Supabase, then passed into each function as `orgApiKey`. Single-tenant
+// callers can omit it and fall back to the OJC_ORG_API_KEY env var (legacy JRE).
 
 const OJC_BASE_URL = "https://api.ojcfund.org:3391/api";
 
@@ -27,7 +27,13 @@ function getBasicAuthHeader(): string {
   return `Basic ${token}`;
 }
 
-function getOrgApiKey(): string {
+/**
+ * Resolve the per-org OJC key.
+ * - If `explicit` is provided (multi-tenant case), use it.
+ * - Else fall back to OJC_ORG_API_KEY env var (legacy single-tenant JRE).
+ */
+function resolveOrgApiKey(explicit?: string | null): string {
+  if (explicit && explicit.trim()) return explicit.trim();
   return requireEnv("OJC_ORG_API_KEY");
 }
 
@@ -46,6 +52,11 @@ export interface OjcChargeRequest {
   externalReferenceId: string;
   /** Number of months to split the charge across. 0 = charge all at once. */
   splitByMonths?: number;
+  /**
+   * Per-org OJC key (== `OrgId` in OJC's API). Required for multi-tenant.
+   * Omit to fall back to OJC_ORG_API_KEY env var (legacy single-tenant JRE).
+   */
+  orgApiKey?: string | null;
 }
 
 export interface OjcChargeResult {
@@ -125,7 +136,7 @@ export async function processCharityCardTransaction(
     const body = {
       CardNo: cardNo,
       ExpDate: req.expDate,
-      OrgId: getOrgApiKey(),
+      OrgId: resolveOrgApiKey(req.orgApiKey),
       Amount: req.amount,
       ExternalreferenceId: req.externalReferenceId,
       SplitByMonths: req.splitByMonths ?? 0,
@@ -173,9 +184,10 @@ export async function processCharityCardTransaction(
 export async function voidCharityCardTransaction(
   referenceNumber: string | number,
   amount: number,
+  orgApiKey?: string | null,
 ): Promise<OjcVoidResult> {
   try {
-    const orgKey = getOrgApiKey();
+    const orgKey = resolveOrgApiKey(orgApiKey);
     // orgAPIKey may contain `==` and `/` — encode for URL safety.
     const url = `${OJC_BASE_URL}/vouchers/VoidCharityCardTransaction/${encodeURIComponent(
       String(referenceNumber),
@@ -269,4 +281,4 @@ export async function getOrgApiKeyByTaxId(taxId: string): Promise<{
   }
 }
 
-export const __test__ = { USE_SANDBOX, OJC_BASE_URL };
+export const __test__ = { OJC_BASE_URL, resolveOrgApiKey };

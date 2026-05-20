@@ -14,6 +14,11 @@ export interface FaqEntry {
 
 export interface Campaign {
   id: string;
+  /**
+   * Multi-tenant owner — FK to organizations.id. May be null on legacy rows
+   * created before the organizations migration; donate routes fall back to JRE.
+   */
+  org_id: string | null;
   slug: string;
   title: string;
   tagline: string | null;

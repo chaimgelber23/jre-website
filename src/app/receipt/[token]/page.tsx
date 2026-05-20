@@ -67,13 +67,35 @@ export default async function ReceiptPage({ params }: Props) {
 
   const { data: campaign } = await db
     .from("campaigns")
-    .select("title, tax_id, tax_deductible_note")
+    .select("title, tax_id, tax_deductible_note, org_id")
     .eq("id", (donation as DonationRow).campaign_id)
     .maybeSingle();
   if (!campaign) notFound();
 
   const d = donation as DonationRow;
-  const c = campaign as CampaignRow;
+  const c = campaign as CampaignRow & { org_id?: string | null };
+
+  // Multi-tenant: prefer the owning organization's identity over the campaign's
+  // stale defaults (which all say "JRE EIN 20-8978145" from the old single-tenant era).
+  let orgName: string | null = null;
+  let orgEin: string | null = null;
+  let orgLegalName: string | null = null;
+  if (c.org_id) {
+    const { data: org } = await db
+      .from("organizations")
+      .select("name, legal_name, tax_id")
+      .eq("id", c.org_id)
+      .maybeSingle();
+    if (org) {
+      orgName = (org as { name?: string }).name ?? null;
+      orgLegalName = (org as { legal_name?: string | null }).legal_name ?? null;
+      const raw = (org as { tax_id?: string }).tax_id ?? null;
+      // Format as "XX-XXXXXXX" if we have 9 digits.
+      orgEin = raw && /^\d{9}$/.test(raw) ? `${raw.slice(0, 2)}-${raw.slice(2)}` : raw;
+    }
+  }
+  const displayOrgName = orgName || "The JRE";
+  const displayEin = orgEin || c.tax_id || null;
   const amount = (d.amount_cents / 100).toLocaleString("en-US", {
     style: "currency",
     currency: "USD",
@@ -88,7 +110,7 @@ export default async function ReceiptPage({ params }: Props) {
   const method = methodLabel(d.payment_method, d.payment_reference);
   const legalNote =
     c.tax_deductible_note ||
-    "The JRE is a registered 501(c)(3) nonprofit. Please save this receipt for your tax records. No goods or services were provided in exchange for this donation.";
+    `${displayOrgName} is a registered 501(c)(3) nonprofit. Please save this receipt for your tax records. No goods or services were provided in exchange for this donation.`;
   const firstName = (d.name?.trim().split(/\s+/)[0]) || "Friend";
 
   return (
@@ -244,10 +266,16 @@ export default async function ReceiptPage({ params }: Props) {
                     <td className="k">Payment method</td>
                     <td className="v">{method}</td>
                   </tr>
-                  {c.tax_id ? (
+                  {orgLegalName || displayOrgName ? (
+                    <tr>
+                      <td className="k">Donated to</td>
+                      <td className="v">{orgLegalName || displayOrgName}</td>
+                    </tr>
+                  ) : null}
+                  {displayEin ? (
                     <tr>
                       <td className="k">EIN</td>
-                      <td className="v">{c.tax_id}</td>
+                      <td className="v">{displayEin}</td>
                     </tr>
                   ) : null}
                   <tr>

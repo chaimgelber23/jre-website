@@ -22,20 +22,40 @@ interface ApiResponse {
   progress: ProgressRow[];
 }
 
+interface OrgOption {
+  id: string;
+  name: string;
+  slug: string;
+  status: string;
+  has_ojc_key: boolean;
+}
+
 export default function AdminCampaignsPage() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [newSlug, setNewSlug] = useState("");
   const [newTitle, setNewTitle] = useState("");
+  const [newOrgId, setNewOrgId] = useState<string>("");
+  const [orgs, setOrgs] = useState<OrgOption[]>([]);
   const [error, setError] = useState<string | null>(null);
 
   const load = async () => {
     setLoading(true);
     try {
-      const res = await fetch("/api/admin/campaigns");
-      const json = (await res.json()) as ApiResponse;
+      const [campaignsRes, orgsRes] = await Promise.all([
+        fetch("/api/admin/campaigns"),
+        fetch("/api/admin/organizations"),
+      ]);
+      const json = (await campaignsRes.json()) as ApiResponse;
       setData(json);
+      const orgsJson = (await orgsRes.json()) as { success: boolean; organizations: OrgOption[] };
+      if (orgsJson.success) {
+        setOrgs(orgsJson.organizations);
+        // Default to JRE so existing flow doesn't break.
+        const jre = orgsJson.organizations.find((o) => o.slug === "jre");
+        if (jre && !newOrgId) setNewOrgId(jre.id);
+      }
     } finally {
       setLoading(false);
     }
@@ -43,11 +63,16 @@ export default function AdminCampaignsPage() {
 
   useEffect(() => {
     load();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const create = async () => {
     setError(null);
     if (!newSlug || !newTitle) return;
+    if (!newOrgId) {
+      setError("Pick an owning organization for this campaign.");
+      return;
+    }
     const now = new Date();
     const start = new Date(now);
     const end = new Date(now);
@@ -58,6 +83,7 @@ export default function AdminCampaignsPage() {
       body: JSON.stringify({
         slug: newSlug,
         title: newTitle,
+        org_id: newOrgId,
         start_at: start.toISOString(),
         end_at: end.toISOString(),
         status: "draft",
@@ -133,6 +159,29 @@ export default function AdminCampaignsPage() {
               className="px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm outline-none focus:border-[#EF8046]"
             />
           </div>
+          <div className="mt-3">
+            <label className="block text-xs font-medium text-gray-600 mb-1">
+              Owning organization (receives the donations)
+            </label>
+            <select
+              value={newOrgId}
+              onChange={(e) => setNewOrgId(e.target.value)}
+              className="w-full px-3 py-2.5 rounded-xl border border-gray-200 bg-[#FAFAFA] text-sm outline-none focus:border-[#EF8046]"
+            >
+              <option value="" disabled>Choose an organization…</option>
+              {orgs.map((o) => (
+                <option key={o.id} value={o.id} disabled={!o.has_ojc_key && o.slug !== "jre"}>
+                  {o.name} ({o.slug})
+                  {!o.has_ojc_key && o.slug !== "jre" ? " — needs OJC key" : ""}
+                </option>
+              ))}
+            </select>
+            <p className="text-[11px] text-gray-500 mt-1">
+              OJC donations on this campaign will charge the selected org&apos;s OJC Fund account.
+              Orgs without an OJC key on file are disabled — onboard them in{" "}
+              <Link href="/admin/organizations" className="underline">Organizations</Link> first.
+            </p>
+          </div>
           <div className="flex gap-2 mt-4">
             <button
               onClick={create}
@@ -159,12 +208,22 @@ export default function AdminCampaignsPage() {
             const p = progressByCampaign.get(c.id);
             const total = (p?.raised_cents ?? 0) + (p?.matched_cents ?? 0);
             const pct = c.goal_cents > 0 ? Math.min(100, (total / c.goal_cents) * 100) : 0;
+            const owningOrg = orgs.find((o) => o.id === c.org_id);
             return (
               <div key={c.id} className="p-5 flex items-center gap-4 flex-wrap">
                 <div className="flex-1 min-w-[220px]">
-                  <div className="flex items-center gap-2 mb-1">
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
                     <span className="font-semibold text-gray-900">{c.title}</span>
                     <StatusPill status={c.status} />
+                    {owningOrg ? (
+                      <span className="text-[11px] bg-gray-100 text-gray-700 px-2 py-0.5 rounded-full">
+                        {owningOrg.name}
+                      </span>
+                    ) : c.org_id ? null : (
+                      <span className="text-[11px] bg-amber-100 text-amber-800 px-2 py-0.5 rounded-full">
+                        no org
+                      </span>
+                    )}
                   </div>
                   <div className="text-xs text-gray-500">
                     /{c.slug} · {new Date(c.start_at).toLocaleDateString()} → {new Date(c.end_at).toLocaleDateString()}
